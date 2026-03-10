@@ -176,6 +176,22 @@
   .site-footer a { color: var(--accent); text-decoration: none; opacity: 0.65; transition: opacity 0.2s; }
   .site-footer a:hover { opacity: 1; }
 
+  /* LOTTERY BUTTON */
+  .lottery-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: linear-gradient(135deg, #8B0000, #cc2200, #ff6600);
+    border: none; border-radius: 8px; color: #fff;
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 10px 20px; cursor: pointer; text-decoration: none;
+    box-shadow: 0 0 20px rgba(204,34,0,0.35);
+    transition: all 0.25s; position: relative; overflow: hidden;
+  }
+  .lottery-btn:hover { box-shadow: 0 0 32px rgba(255,102,0,0.5); transform: translateY(-1px); opacity: 1; }
+  .lottery-btn:hover svg { animation: spin 1.2s linear infinite; }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  .lottery-btn .coming-soon { font-size: 8px; background: rgba(255,255,255,0.2); padding: 1px 6px; border-radius: 10px; letter-spacing: 0.08em; }
+
   /* EMPTY STATE */
   .empty-state { text-align: center; padding: 48px 24px; color: var(--muted); }
   .empty-icon { font-size: 40px; margin-bottom: 14px; opacity: 0.4; }
@@ -212,6 +228,34 @@
     <button class="nav-tab active" onclick="showPage('board')">Board</button>
     <button class="nav-tab" onclick="showPage('ask')">Ask</button>
     <button class="nav-tab" onclick="showPage('about')">About</button>
+    <a class="lottery-btn" href="https://docs.google.com/document/d/1SZyNhuXfQtIwO27C8KlLtYcZAoLjZuuKOxSdnQg-YMA/edit" target="_blank">
+      <svg width="16" height="16" viewBox="0 0 100 100" style="flex-shrink:0">
+        <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="4"/>
+        <circle cx="50" cy="50" r="8" fill="#fff" opacity="0.9"/>
+        <line x1="50" y1="4" x2="50" y2="96" stroke="rgba(255,255,255,0.35)" stroke-width="3"/>
+        <line x1="4" y1="50" x2="96" y2="50" stroke="rgba(255,255,255,0.35)" stroke-width="3"/>
+        <line x1="17" y1="17" x2="83" y2="83" stroke="rgba(255,255,255,0.35)" stroke-width="3"/>
+        <line x1="83" y1="17" x2="17" y2="83" stroke="rgba(255,255,255,0.35)" stroke-width="3"/>
+        <circle cx="50" cy="4" r="4" fill="#ffd700"/>
+        <circle cx="50" cy="96" r="4" fill="#ffd700"/>
+        <circle cx="4" cy="50" r="4" fill="#ffd700"/>
+        <circle cx="96" cy="50" r="4" fill="#ffd700"/>
+        <circle cx="17" cy="17" r="4" fill="#ffd700"/>
+        <circle cx="83" cy="83" r="4" fill="#ffd700"/>
+        <circle cx="83" cy="17" r="4" fill="#ffd700"/>
+        <circle cx="17" cy="83" r="4" fill="#ffd700"/>
+        <circle cx="50" cy="50" r="6" fill="#ffd700"/>
+      </svg>
+      Lottery Classic <svg width="14" height="14" viewBox="0 0 100 100" style="flex-shrink:0;margin:0 2px">
+        <rect x="5" y="25" width="90" height="50" rx="6" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.5)" stroke-width="3"/>
+        <circle cx="5" cy="50" r="8" fill="#cc2200"/>
+        <circle cx="95" cy="50" r="8" fill="#cc2200"/>
+        <line x1="30" y1="25" x2="30" y2="75" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-dasharray="4,3"/>
+        <line x1="70" y1="25" x2="70" y2="75" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-dasharray="4,3"/>
+        <circle cx="50" cy="42" r="5" fill="#ffd700"/>
+        <circle cx="50" cy="58" r="5" fill="#ffd700"/>
+      </svg> <span class="coming-soon">SOON</span>
+    </a>
   </div>
 </nav>
 
@@ -303,7 +347,7 @@
 
   <div style="text-align:center;margin-top:24px;font-size:11px;color:var(--muted);line-height:1.8;">
     Send <strong style="color:var(--accent)">200,000 LUNC</strong> to the protocol wallet before submitting.<br>
-    <span style="font-size:10px;">Wallet address will be published soon.</span>
+    <span style="font-size:10px;font-family:monospace;color:var(--accent);word-break:break-all;">terra15jt5a9ycsey4hd6nlqgqxccl9aprkmg2mxmfc6</span>
   </div>
 
 </div>
