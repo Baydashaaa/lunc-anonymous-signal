@@ -3,180 +3,190 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Terra Classic · Anonymous Signal Protocol</title>
+<title>Terra Oracle · Anonymous Q&A Protocol</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #03070f;
     --surface: #080e1c;
+    --surface2: #0d1628;
     --border: #0f1e38;
     --accent: #5493f7;
     --accent-dark: #0e3ca5;
     --text: #c8d8f0;
     --muted: #3a5070;
     --green: #66ffaa;
+    --gold: #f5c518;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Space Mono', monospace;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+  body { background: var(--bg); color: var(--text); font-family: 'Space Mono', monospace; min-height: 100vh; overflow-x: hidden; }
 
   body::before {
-    content: '';
-    position: fixed; inset: 0;
-    background-image:
-      linear-gradient(rgba(84,147,247,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(84,147,247,0.03) 1px, transparent 1px);
-    background-size: 44px 44px;
-    pointer-events: none; z-index: 0;
+    content: ''; position: fixed; inset: 0;
+    background-image: linear-gradient(rgba(84,147,247,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(84,147,247,0.03) 1px, transparent 1px);
+    background-size: 44px 44px; pointer-events: none; z-index: 0;
   }
 
   .orb { position: fixed; border-radius: 50%; filter: blur(150px); pointer-events: none; z-index: 0; }
-  .orb-1 { width: 700px; height: 700px; background: rgba(14,60,165,0.2); top: -250px; right: -200px; }
-  .orb-2 { width: 500px; height: 500px; background: rgba(84,147,247,0.07); bottom: -150px; left: -150px; }
+  .orb-1 { width: 600px; height: 600px; background: rgba(14,60,165,0.18); top: -200px; right: -150px; }
+  .orb-2 { width: 400px; height: 400px; background: rgba(84,147,247,0.06); bottom: -100px; left: -100px; }
 
-  .container { position: relative; z-index: 1; max-width: 700px; margin: 0 auto; padding: 64px 24px 80px; }
-
-  .header { text-align: center; margin-bottom: 56px; }
-
-  .logo-row { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 28px; }
-
-  .logo-svg {
-    width: 48px; height: 48px;
-    filter: drop-shadow(0 0 16px rgba(84,147,247,0.5));
+  /* NAV */
+  nav {
+    position: relative; z-index: 10;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 32px; border-bottom: 1px solid var(--border);
+    background: rgba(3,7,15,0.8); backdrop-filter: blur(12px);
+    position: sticky; top: 0;
   }
+  .nav-logo { display: flex; align-items: center; gap: 12px; }
+  .nav-logo svg { width: 32px; height: 32px; filter: drop-shadow(0 0 8px rgba(84,147,247,0.4)); }
+  .nav-logo-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 15px; letter-spacing: 0.12em; color: #fff; text-transform: uppercase; }
+  .nav-logo-badge { font-size: 8px; color: var(--accent); background: rgba(84,147,247,0.1); border: 1px solid rgba(84,147,247,0.25); padding: 1px 6px; border-radius: 3px; margin-left: 4px; vertical-align: middle; }
+  .nav-tabs { display: flex; gap: 4px; }
+  .nav-tab { background: transparent; border: 1px solid transparent; color: var(--muted); font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; padding: 8px 16px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+  .nav-tab:hover { color: var(--text); border-color: var(--border); }
+  .nav-tab.active { color: var(--accent); border-color: rgba(84,147,247,0.3); background: rgba(84,147,247,0.06); }
 
-  .logo-text {
-    font-family: 'Syne', sans-serif;
-    font-weight: 800; font-size: 18px;
-    letter-spacing: 0.14em; color: #fff; text-transform: uppercase;
-  }
+  /* PAGES */
+  .page { display: none; position: relative; z-index: 1; max-width: 760px; margin: 0 auto; padding: 48px 24px 80px; }
+  .page.active { display: block; }
 
-  .logo-badge {
-    font-size: 9px; letter-spacing: 0.12em; color: var(--accent);
-    background: rgba(84,147,247,0.1); border: 1px solid rgba(84,147,247,0.25);
-    padding: 2px 8px; border-radius: 4px; text-transform: uppercase;
-    margin-left: 6px; vertical-align: middle;
-  }
-
-  .tag {
-    display: inline-block; font-size: 10px; letter-spacing: 0.2em;
-    text-transform: uppercase; color: var(--accent);
-    border: 1px solid rgba(84,147,247,0.3); padding: 4px 14px;
-    border-radius: 20px; margin-bottom: 22px; background: rgba(84,147,247,0.05);
-  }
-
-  h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(28px,5vw,44px); line-height: 1.15; color: #fff; margin-bottom: 16px; }
+  /* HEADER */
+  .page-header { text-align: center; margin-bottom: 48px; }
+  .tag { display: inline-block; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); border: 1px solid rgba(84,147,247,0.3); padding: 4px 14px; border-radius: 20px; margin-bottom: 18px; background: rgba(84,147,247,0.05); }
+  h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(26px,4vw,40px); line-height: 1.15; color: #fff; margin-bottom: 12px; }
   h1 span { color: var(--accent); }
+  .subtitle { font-size: 12px; line-height: 1.75; color: var(--muted); }
 
-  .subtitle { font-size: 13px; line-height: 1.75; color: var(--muted); max-width: 500px; margin: 0 auto; }
+  /* CARD */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 32px; position: relative; overflow: hidden; margin-bottom: 16px; }
+  .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent); opacity: 0.4; }
 
-  .guarantees { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 24px; }
-  .guarantee { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
-  .guarantee::before { content: 'checkmark'; content: '✓'; color: var(--green); font-weight: 700; }
-
-  .card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 16px; padding: 44px; position: relative; overflow: hidden;
-  }
-
-  .card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-    background: linear-gradient(90deg, transparent, var(--accent), transparent); opacity: 0.5;
-  }
-
-  .form-group { margin-bottom: 26px; }
-
-  label { display: block; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
-  label .optional { color: #1a2a40; font-size: 9px; text-transform: none; letter-spacing: 0; }
-
-  select, textarea, input[type="text"] {
+  /* FORM ELEMENTS */
+  .form-group { margin-bottom: 20px; }
+  label { display: block; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  select, textarea, input[type="text"], input[type="password"] {
     width: 100%; background: rgba(84,147,247,0.03); border: 1px solid var(--border);
     border-radius: 8px; color: var(--text); font-family: 'Space Mono', monospace;
-    font-size: 13px; padding: 14px 16px; outline: none;
+    font-size: 13px; padding: 12px 14px; outline: none;
     transition: border-color 0.2s, box-shadow 0.2s; -webkit-appearance: none;
   }
-
-  select {
-    cursor: pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%233a5070' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 16px center; padding-right: 40px;
-  }
-
+  select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%233a5070' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
   select option { background: #080e1c; }
-
-  select:focus, textarea:focus, input[type="text"]:focus {
-    border-color: var(--accent); box-shadow: 0 0 0 3px rgba(84,147,247,0.08);
-  }
-
-  textarea { resize: vertical; min-height: 160px; line-height: 1.65; }
+  select:focus, textarea:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(84,147,247,0.08); }
+  textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
   ::placeholder { color: #162030; }
 
-  .char-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
-  .char-hint { font-size: 10px; color: var(--muted); }
-  .char-count { font-size: 10px; color: var(--muted); transition: color 0.2s; }
-  .char-count.warning { color: #ff8c00; }
+  /* ADMIN KEY FIELD */
+  .admin-key-wrap { position: relative; }
+  .admin-key-wrap input { padding-right: 100px; }
+  .admin-key-hint { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 9px; color: var(--muted); letter-spacing: 0.05em; pointer-events: none; }
+  .admin-key-wrap.valid input { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(245,197,24,0.1); }
+  .admin-key-wrap.valid .admin-key-hint { color: var(--gold); }
 
-  .encrypt-note {
-    display: flex; align-items: flex-start; gap: 12px;
-    background: rgba(84,147,247,0.04); border: 1px solid rgba(84,147,247,0.12);
-    border-radius: 8px; padding: 14px 16px; margin-bottom: 30px;
-    font-size: 11px; color: var(--muted); line-height: 1.7;
-  }
-  .encrypt-note .icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  /* BUTTONS */
+  .btn { font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; padding: 13px 28px; border-radius: 8px; cursor: pointer; transition: all 0.25s; border: 1.5px solid; }
+  .btn-primary { background: transparent; border-color: var(--accent); color: var(--accent); position: relative; overflow: hidden; z-index: 1; }
+  .btn-primary::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, var(--accent-dark), var(--accent)); transform: translateX(-101%); transition: transform 0.3s; z-index: -1; }
+  .btn-primary:hover { color: #fff; box-shadow: 0 0 24px rgba(84,147,247,0.3); }
+  .btn-primary:hover::before { transform: translateX(0); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-full { width: 100%; }
 
-  .btn-submit {
-    width: 100%; background: transparent; border: 1.5px solid var(--accent);
-    color: var(--accent); font-family: 'Space Mono', monospace; font-size: 13px;
-    font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase;
-    padding: 16px 32px; border-radius: 8px; cursor: pointer;
-    transition: all 0.25s; position: relative; overflow: hidden; z-index: 1;
-  }
-  .btn-submit::before {
-    content: ''; position: absolute; inset: 0;
-    background: linear-gradient(135deg, var(--accent-dark), var(--accent));
-    transform: translateX(-101%); transition: transform 0.3s; z-index: -1;
-  }
-  .btn-submit:hover { color: #fff; box-shadow: 0 0 32px rgba(84,147,247,0.35); }
-  .btn-submit:hover::before { transform: translateX(0); }
-  .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-sm { padding: 7px 14px; font-size: 10px; }
+  .btn-answer { background: transparent; border-color: rgba(84,147,247,0.3); color: var(--accent); }
+  .btn-answer:hover { background: rgba(84,147,247,0.08); }
 
-  .divider {
-    display: flex; align-items: center; gap: 16px; margin: 30px 0;
-    color: var(--muted); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
-  }
+  /* DIVIDER */
+  .divider { display: flex; align-items: center; gap: 14px; margin: 24px 0; color: var(--muted); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
   .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
-  .success-state { display: none; text-align: center; padding: 24px 0; }
-  .success-state.visible { display: block; }
-  .success-icon { font-size: 52px; margin-bottom: 18px; animation: pulse 2s ease-in-out infinite; }
-  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
-  .success-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 24px; color: var(--green); margin-bottom: 12px; }
-  .success-text { font-size: 12px; color: var(--muted); line-height: 1.8; }
-  .success-id {
-    display: inline-block; margin-top: 18px; font-size: 11px; color: var(--accent);
-    background: rgba(84,147,247,0.07); border: 1px solid rgba(84,147,247,0.2);
-    padding: 6px 18px; border-radius: 20px; letter-spacing: 0.12em;
+  /* QUESTION BOARD */
+  .board-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .board-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 18px; color: #fff; }
+  .board-count { font-size: 11px; color: var(--muted); }
+
+  .q-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 12px; transition: border-color 0.2s; }
+  .q-card:hover { border-color: rgba(84,147,247,0.3); }
+
+  .q-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+
+  .q-alias { font-size: 11px; color: var(--muted); }
+
+  /* ADMIN BADGE */
+  .badge-admin {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+    color: #0a0800; background: var(--gold);
+    padding: 3px 10px; border-radius: 20px;
+    box-shadow: 0 0 12px rgba(245,197,24,0.4);
   }
 
-  .footer { text-align: center; margin-top: 40px; font-size: 11px; color: var(--muted); line-height: 1.9; }
-  .footer a { color: var(--accent); text-decoration: none; opacity: 0.65; transition: opacity 0.2s; }
-  .footer a:hover { opacity: 1; }
+  .badge-title { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; color: var(--accent); background: rgba(84,147,247,0.1); border: 1px solid rgba(84,147,247,0.2); padding: 2px 8px; border-radius: 10px; }
+
+  .q-ref { font-size: 10px; color: var(--muted); margin-left: auto; }
+  .q-category { font-size: 10px; color: var(--muted); background: rgba(84,147,247,0.05); border: 1px solid var(--border); padding: 2px 8px; border-radius: 10px; }
+  .q-timer { font-size: 10px; color: #ff8c00; }
+
+  .q-text { font-size: 13px; line-height: 1.7; color: var(--text); margin-bottom: 16px; }
+
+  .q-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .q-votes { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+  .vote-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); font-family: 'Space Mono', monospace; font-size: 11px; padding: 4px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+  .vote-btn:hover { border-color: var(--green); color: var(--green); }
+  .vote-btn.voted { border-color: var(--green); color: var(--green); background: rgba(102,255,170,0.06); }
+
+  /* ANSWERS */
+  .answers-section { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px; display: none; }
+  .answers-section.open { display: block; }
+
+  .answer-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 10px; }
+  .answer-item.admin-answer { border-color: rgba(245,197,24,0.3); background: rgba(245,197,24,0.03); }
+
+  .answer-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .answer-text { font-size: 12px; line-height: 1.7; color: var(--text); }
+  .answer-votes { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
+
+  /* ANSWER FORM */
+  .answer-form { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-top: 12px; display: none; }
+  .answer-form.open { display: block; }
+  .answer-form-title { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+
+  /* ENCRYPT NOTE */
+  .note { display: flex; align-items: flex-start; gap: 10px; background: rgba(84,147,247,0.04); border: 1px solid rgba(84,147,247,0.12); border-radius: 8px; padding: 12px 14px; margin-bottom: 20px; font-size: 11px; color: var(--muted); line-height: 1.7; }
+
+  /* SUCCESS */
+  .success-state { display: none; text-align: center; padding: 20px 0; }
+  .success-state.visible { display: block; }
+  .success-icon { font-size: 48px; margin-bottom: 14px; animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+  .success-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; color: var(--green); margin-bottom: 10px; }
+  .success-text { font-size: 12px; color: var(--muted); line-height: 1.8; }
+  .success-ref { display: inline-block; margin-top: 14px; font-size: 11px; color: var(--accent); background: rgba(84,147,247,0.07); border: 1px solid rgba(84,147,247,0.2); padding: 5px 16px; border-radius: 20px; letter-spacing: 0.1em; }
 
   .loading-dots span { animation: blink 1.2s infinite; opacity: 0; }
   .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
   .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
   @keyframes blink { 0%,80%,100%{opacity:0} 40%{opacity:1} }
 
+  /* FOOTER */
+  .site-footer { text-align: center; margin-top: 60px; padding-top: 24px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); line-height: 1.9; position: relative; z-index: 1; }
+  .site-footer a { color: var(--accent); text-decoration: none; opacity: 0.65; transition: opacity 0.2s; }
+  .site-footer a:hover { opacity: 1; }
+
+  /* EMPTY STATE */
+  .empty-state { text-align: center; padding: 48px 24px; color: var(--muted); }
+  .empty-icon { font-size: 40px; margin-bottom: 14px; opacity: 0.4; }
+  .empty-text { font-size: 12px; line-height: 1.7; }
+
   @media (max-width: 480px) {
-    .card { padding: 24px 18px; }
-    .guarantees { flex-direction: column; align-items: center; }
+    nav { padding: 14px 16px; }
+    .nav-tabs { gap: 2px; }
+    .nav-tab { padding: 6px 10px; font-size: 10px; }
+    .card, .q-card { padding: 20px 16px; }
+    .page { padding: 32px 16px 60px; }
   }
 </style>
 </head>
@@ -185,165 +195,403 @@
 <div class="orb orb-1"></div>
 <div class="orb orb-2"></div>
 
-<div class="container">
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600">
+      <path fill="#0e3ca5" d="M251.2,410.28c12.19,45.11,55.94,79.54,78,78.12.77,0,83.8-15.53,129.25-91.47,35.37-59.1,23.33-116.16-24.78-117.4C416.4,280.79,228,324.33,251.2,410.28"/>
+      <path fill="#0e3ca5" d="M429.23,120.51l-.05,0,.07,0A211.16,211.16,0,0,0,206.72,88.32a125.88,125.88,0,0,0-13.38,6.55c-3,1.58-5.93,3.15-8.8,4.86l.7.22A96.38,96.38,0,0,0,163,121c-60.6,80.07,142.52,138.26,251.11,138.45C464,295.35,478.05,158.52,429.23,120.51Z"/>
+      <path fill="#5493f7" d="M219,122.14C191.07,164.08,98.11,193.63,82.83,189l-.1-.2c.62-1.26,1.26-2.52,1.91-3.77a223.54,223.54,0,0,1,66.27-77.33q8.58-6.28,17.76-11.76c13-7.53,26.35-8,30.73-8.18,41.4.79,19.78,34,19.56,34.35"/>
+      <path fill="#5493f7" d="M196.08,418.53c2,13.18-.06,65.23-2.75,69.62-2.32.14-7.16.44-21.17-7.42a223,223,0,0,1-47.18-36A222.8,222.8,0,0,1,71.14,217q1.13-3.36,2.34-6.66h0c16.05,21.34,34.61,40.64,50.39,62.19,15,20.52,35.71,54,39.91,61.12,26.13,44.37,30.29,71.75,32.29,84.9"/>
+      <path fill="#5493f7" d="M504.86,287.33a221.94,221.94,0,0,1-15.49,81.74c-26.2,28.17-202.93-41.18-204.66-41.94-24.18-10.59-97.75-42.82-104.38-93.45-9.55-72.83,138.21-123.58,203.15-125.51,7.78.09,31.48.37,45.29,11.59a222,222,0,0,1,76.09,167.57"/>
+      <path fill="#5493f7" d="M385.23,484.71c-19.26,9-40.47,2.44-35-16.32,10.58-36,103-73,123.36-75,2.51-.24,3.58,1.47,2.47,3.43a224.86,224.86,0,0,1-90.87,87.86"/>
+    </svg>
+    <span class="nav-logo-text">Terra Oracle <span class="nav-logo-badge">LUNC</span></span>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('board')">Board</button>
+    <button class="nav-tab" onclick="showPage('ask')">Ask</button>
+    <button class="nav-tab" onclick="showPage('about')">About</button>
+  </div>
+</nav>
 
-  <div class="header">
-    <div class="logo-row">
-      <svg class="logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600">
-        <path fill="#0e3ca5" d="M251.2,410.28c12.19,45.11,55.94,79.54,78,78.12.77,0,83.8-15.53,129.25-91.47,35.37-59.1,23.33-116.16-24.78-117.4C416.4,280.79,228,324.33,251.2,410.28"/>
-        <path fill="#0e3ca5" d="M429.23,120.51l-.05,0,.07,0A211.16,211.16,0,0,0,206.72,88.32a125.88,125.88,0,0,0-13.38,6.55c-3,1.58-5.93,3.15-8.8,4.86l.7.22A96.38,96.38,0,0,0,163,121c-60.6,80.07,142.52,138.26,251.11,138.45C464,295.35,478.05,158.52,429.23,120.51Z"/>
-        <path fill="#5493f7" d="M219,122.14C191.07,164.08,98.11,193.63,82.83,189l-.1-.2c.62-1.26,1.26-2.52,1.91-3.77a223.54,223.54,0,0,1,66.27-77.33q8.58-6.28,17.76-11.76c13-7.53,26.35-8,30.73-8.18,41.4.79,19.78,34,19.56,34.35"/>
-        <path fill="#5493f7" d="M196.08,418.53c2,13.18-.06,65.23-2.75,69.62-2.32.14-7.16.44-21.17-7.42a223,223,0,0,1-47.18-36A222.8,222.8,0,0,1,71.14,217q1.13-3.36,2.34-6.66h0c16.05,21.34,34.61,40.64,50.39,62.19,15,20.52,35.71,54,39.91,61.12,26.13,44.37,30.29,71.75,32.29,84.9"/>
-        <path fill="#5493f7" d="M504.86,287.33a221.94,221.94,0,0,1-15.49,81.74c-26.2,28.17-202.93-41.18-204.66-41.94-24.18-10.59-97.75-42.82-104.38-93.45-9.55-72.83,138.21-123.58,203.15-125.51,7.78.09,31.48.37,45.29,11.59a222,222,0,0,1,76.09,167.57"/>
-        <path fill="#5493f7" d="M385.23,484.71c-19.26,9-40.47,2.44-35-16.32,10.58-36,103-73,123.36-75,2.51-.24,3.58,1.47,2.47,3.43a224.86,224.86,0,0,1-90.87,87.86"/>
-      </svg>
-      <span class="logo-text">Terra Classic <span class="logo-badge">LUNC</span></span>
-    </div>
-    <div class="tag">Anonymous Signal Protocol</div>
-    <h1>Speak <span>Freely.</span><br>Stay Safe.</h1>
-    <p class="subtitle">
-      A community-run protocol for the Terra Classic ecosystem.<br>
-      Report issues, share feedback, or flag concerns — fully anonymously.
-    </p>
-    <div class="guarantees">
-      <span class="guarantee">No IP logging</span>
-      <span class="guarantee">No account required</span>
-      <span class="guarantee">No metadata stored</span>
-      <span class="guarantee">Open source</span>
+<!-- ═══════════════════════════════════════════════
+     PAGE: BOARD
+════════════════════════════════════════════════ -->
+<div class="page active" id="page-board">
+
+  <div class="board-header">
+    <div>
+      <div class="board-title">Active Questions</div>
+      <div class="board-count" id="board-count">Loading...</div>
     </div>
   </div>
 
+  <div id="questions-list"></div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     PAGE: ASK
+════════════════════════════════════════════════ -->
+<div class="page" id="page-ask">
+
+  <div class="page-header">
+    <div class="tag">Submit Question</div>
+    <h1>Ask the <span>Community</span></h1>
+    <p class="subtitle">Pay 200,000 LUNC · Stay anonymous · Get expert answers</p>
+  </div>
+
   <div class="card">
-    <div id="form-section">
-      <div class="encrypt-note">
-        <span class="icon">🔒</span>
-        <span>This form transmits over HTTPS and collects zero identifying information. Your message goes directly to Terra Classic community stewards. It cannot be traced back to you.</span>
+
+    <div id="ask-form-section">
+      <div class="note">
+        🔒 Your identity is never stored. Submit your TX hash after sending 200,000 LUNC — it will NOT be linked to your question content.
       </div>
 
-      <form id="anon-form" action="https://formspree.io/f/maqpebee" method="POST">
+      <form id="ask-form" action="https://formspree.io/f/maqpebee" method="POST">
         <input type="text" name="_gotcha" style="display:none">
-        <input type="hidden" name="_subject" value="[Terra Classic Anonymous Signal]">
+        <input type="hidden" name="_subject" value="[Terra Oracle] New Question Submitted">
 
         <div class="form-group">
           <label>Category</label>
           <select name="category" required>
-            <option value="" disabled selected>Select a category...</option>
-            <option value="security">🔐 Security / Vulnerability</option>
-            <option value="bug">🐛 Protocol Bug</option>
-            <option value="governance">🗳️ Governance Concern</option>
-            <option value="proposal">💡 Proposal / Idea</option>
-            <option value="validator">⚙️ Validator Issue</option>
-            <option value="community">🌐 Community Conduct</option>
-            <option value="fraud">⚠️ Fraud / Manipulation</option>
-            <option value="other">📝 Other</option>
+            <option value="" disabled selected>Select category...</option>
+            <option>🔐 Security / Vulnerability</option>
+            <option>🐛 Protocol Bug</option>
+            <option>🗳️ Governance</option>
+            <option>💡 Proposal / Idea</option>
+            <option>⚙️ Validator Issue</option>
+            <option>🌐 Community</option>
+            <option>⚠️ Fraud / Manipulation</option>
+            <option>📝 Other</option>
           </select>
         </div>
 
         <div class="form-group">
-          <label>Priority</label>
-          <select name="priority">
-            <option value="normal" selected>Normal</option>
-            <option value="high">High — needs attention soon</option>
-            <option value="critical">Critical — urgent / ongoing risk</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>Your Message</label>
-          <textarea
-            name="message"
-            id="message-field"
-            placeholder="Describe the issue or share your feedback in detail. Include tx hashes, wallet addresses, dates, or any context that helps the community act."
-            required
-            maxlength="3000"
-          ></textarea>
-          <div class="char-row">
-            <span class="char-hint">The more specific, the more actionable.</span>
-            <span class="char-count" id="char-count">0 / 3000</span>
+          <label>Your Question</label>
+          <textarea name="message" id="ask-message" placeholder="Ask anything about Terra Classic — governance, technical, community, market..." required maxlength="2000"></textarea>
+          <div style="display:flex;justify-content:flex-end;margin-top:6px;">
+            <span style="font-size:10px;color:var(--muted)" id="ask-count">0 / 2000</span>
           </div>
         </div>
 
         <div class="form-group">
-          <label>Evidence / Links <span class="optional">(optional)</span></label>
-          <input type="text" name="evidence" placeholder="https://finder.terra.money/classic/tx/... or any relevant links">
+          <label>TX Hash (proof of payment)</label>
+          <input type="text" name="tx_hash" placeholder="Your 200,000 LUNC transaction hash..." required>
         </div>
 
         <div class="form-group">
-          <label>Recipient <span class="optional">(optional — who should see this?)</span></label>
-          <select name="recipient">
-            <option value="stewards" selected>Terra Classic Community Stewards</option>
-            <option value="validators">Validator Working Group</option>
-            <option value="governance">Governance Committee</option>
-            <option value="security">Security Team</option>
-          </select>
+          <label>Evidence / Links <span style="font-size:9px;color:var(--muted);text-transform:none">(optional)</span></label>
+          <input type="text" name="evidence" placeholder="https://finder.terra.money/classic/tx/...">
         </div>
 
-        <div class="divider">Transmission</div>
+        <div class="divider">Submit</div>
 
-        <button type="submit" class="btn-submit" id="submit-btn">
-          Transmit Signal →
-        </button>
+        <button type="submit" class="btn btn-primary btn-full" id="ask-btn">Transmit Question →</button>
       </form>
     </div>
 
-    <div class="success-state" id="success-state">
+    <div class="success-state" id="ask-success">
       <div class="success-icon">📡</div>
-      <div class="success-title">Signal Received</div>
-      <p class="success-text">
-        Your anonymous message has been delivered to the Terra Classic community.<br>
-        It will be reviewed by the appropriate stewards.
-      </p>
-      <div class="success-id" id="success-id">REF: loading...</div>
+      <div class="success-title">Question Received</div>
+      <p class="success-text">Your anonymous question has been submitted.<br>It will appear on the board shortly.</p>
+      <div class="success-ref" id="ask-ref">REF: loading...</div>
     </div>
+
   </div>
 
-  <div class="footer">
-    <p>Terra Classic Community · Anonymous Signal Protocol</p>
-    <p style="margin-top:6px;font-size:10px;opacity:0.5;">
-      Open source ·
-      <a href="https://github.com/YOUR_ORG/lunc-anonymous-signal" target="_blank">View on GitHub</a>
-      · <a href="https://www.terra-classic.io" target="_blank">terra-classic.io</a>
-    </p>
+  <div style="text-align:center;margin-top:24px;font-size:11px;color:var(--muted);line-height:1.8;">
+    Send <strong style="color:var(--accent)">200,000 LUNC</strong> to the protocol wallet before submitting.<br>
+    <span style="font-size:10px;">Wallet address will be published soon.</span>
   </div>
 
 </div>
 
+<!-- ═══════════════════════════════════════════════
+     PAGE: ABOUT
+════════════════════════════════════════════════ -->
+<div class="page" id="page-about">
+
+  <div class="page-header">
+    <div class="tag">Protocol Info</div>
+    <h1>Terra <span>Oracle</span></h1>
+    <p class="subtitle">Community intelligence. Fully anonymous. Powered by LUNC.</p>
+  </div>
+
+  <div class="card">
+    <div style="font-size:12px;line-height:1.9;color:var(--muted);">
+      <p style="margin-bottom:14px;color:var(--text);">Terra Oracle is a community-run anonymous Q&A protocol for the Terra Classic ecosystem. Pay 200,000 LUNC to ask, answer for free, earn titles.</p>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0;">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center;">
+          <div style="font-size:22px;margin-bottom:6px;">50%</div>
+          <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;">Reward Pool</div>
+        </div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center;">
+          <div style="font-size:22px;margin-bottom:6px;">30% 🔥</div>
+          <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;">Burned</div>
+        </div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center;">
+          <div style="font-size:22px;margin-bottom:6px;">10%</div>
+          <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;">Marketing</div>
+        </div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center;">
+          <div style="font-size:22px;margin-bottom:6px;">10%</div>
+          <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;">Developers</div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;">
+        <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);margin-bottom:12px;">Title System</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;align-items:center;gap:10px;font-size:12px;">🌱 <strong>Seeker</strong> <span style="color:var(--muted);margin-left:auto;">First answer</span></div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:12px;">🔵 <strong>Validator</strong> <span style="color:var(--muted);margin-left:auto;">5 top answers</span></div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:12px;">⚡ <strong>Oracle</strong> <span style="color:var(--muted);margin-left:auto;">20 top answers</span></div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:12px;">🔥 <strong>Terra Legend</strong> <span style="color:var(--muted);margin-left:auto;">50 top answers</span></div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border);font-size:10px;color:var(--muted);">
+        Prices and title conditions may change via community governance vote.<br>
+        <a href="https://github.com/Baydashaaa/lunc-anonymous-signal" target="_blank" style="color:var(--accent);text-decoration:none;">View documentation on GitHub →</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="site-footer" style="max-width:760px;margin:0 auto;padding:0 24px 40px;">
+  <p>Terra Classic Community · Terra Oracle Protocol</p>
+  <p style="margin-top:4px;font-size:10px;opacity:0.5;">
+    <a href="https://www.terra-classic.io" target="_blank">terra-classic.io</a> ·
+    <a href="https://github.com/Baydashaaa/lunc-anonymous-signal" target="_blank">GitHub</a>
+  </p>
+</div>
+
 <script>
-  const msgField = document.getElementById('message-field');
-  const charCount = document.getElementById('char-count');
-  msgField.addEventListener('input', () => {
-    const len = msgField.value.length;
-    charCount.textContent = `${len} / 3000`;
-    charCount.className = 'char-count' + (len > 2700 ? ' warning' : '');
-  });
+// ─── ADMIN KEY ───────────────────────────────────────────────
+const ADMIN_KEY = 'TerraOracle#9X4K-2025';
 
-  const form = document.getElementById('anon-form');
-  const submitBtn = document.getElementById('submit-btn');
-  const formSection = document.getElementById('form-section');
-  const successState = document.getElementById('success-state');
-  const successId = document.getElementById('success-id');
+// ─── DEMO QUESTIONS (in real version these come from backend) ─
+const DEMO_QUESTIONS = [
+  {
+    id: 'LUNC-A3F9K2B',
+    alias: 'Anonymous#4471',
+    isAdmin: false,
+    title: '🌱 Seeker',
+    category: '🗳️ Governance',
+    text: 'What is the plan for USTC re-peg after the SDK 0.53 upgrade? Has any formal proposal been submitted to the governance forum yet?',
+    time: '34 min ago',
+    votes: 12,
+    answers: [
+      { alias: 'Anonymous#8821', isAdmin: false, title: '⚡ Oracle', text: 'No formal proposal yet, but several validators have discussed it in the bi-weekly call. The main blocker is liquidity depth — USTC needs at least $50M TVL before a peg mechanism is viable.', votes: 8, voted: false },
+      { alias: 'Admin', isAdmin: true, title: null, text: 'This is being tracked. A governance discussion thread will be opened within the next 2 weeks following the SDK upgrade completion. Stay tuned to the official Terra Classic channels.', votes: 24, voted: false },
+    ],
+    voted: false,
+    open: false,
+    formOpen: false,
+  },
+  {
+    id: 'LUNC-B7M2X1C',
+    alias: 'Anonymous#2209',
+    isAdmin: false,
+    title: null,
+    category: '⚙️ Validator Issue',
+    text: 'Is there a minimum self-delegation requirement for validators after MM 2.0 activates? Some validators seem to be running with very low self-stake.',
+    time: '2 hrs ago',
+    votes: 7,
+    answers: [],
+    voted: false,
+    open: false,
+    formOpen: false,
+  },
+];
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = 'Transmitting<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>';
-    try {
-      const response = await fetch(form.action, {
-        method: 'POST',
-        body: new FormData(form),
-        headers: { 'Accept': 'application/json' }
-      });
-      if (response.ok) {
-        formSection.style.display = 'none';
-        successState.classList.add('visible');
-        successId.textContent = 'REF: LUNC-' + Date.now().toString(36).toUpperCase().slice(-7);
-      } else { throw new Error('fail'); }
-    } catch {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = 'Transmit Signal →';
-      alert('Transmission failed. Check your connection and try again.');
-    }
+let questions = [...DEMO_QUESTIONS];
+
+// ─── NAVIGATION ───────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'board') renderBoard();
+}
+
+// ─── RENDER BOARD ────────────────────────────────────────────
+function renderBoard() {
+  const list = document.getElementById('questions-list');
+  const count = document.getElementById('board-count');
+  count.textContent = questions.length + ' open question' + (questions.length !== 1 ? 's' : '');
+
+  if (questions.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No questions yet.<br>Be the first to ask the community.</div></div>`;
+    return;
+  }
+
+  list.innerHTML = questions.map((q, qi) => `
+    <div class="q-card" id="qcard-${qi}">
+      <div class="q-meta">
+        ${q.isAdmin
+          ? `<span class="badge-admin">🛡️ Admin</span>`
+          : `<span class="q-alias">${q.alias}</span>`
+        }
+        ${q.title && !q.isAdmin ? `<span class="badge-title">${q.title}</span>` : ''}
+        <span class="q-category">${q.category}</span>
+        <span class="q-timer">⏱ ${q.time}</span>
+        <span class="q-ref">${q.id}</span>
+      </div>
+      <div class="q-text">${q.text}</div>
+      <div class="q-footer">
+        <div class="q-votes">
+          <button class="vote-btn ${q.voted ? 'voted' : ''}" onclick="voteQuestion(${qi})">👍 ${q.votes}</button>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-sm btn-answer" onclick="toggleAnswers(${qi})">
+            💬 ${q.answers.length} answer${q.answers.length !== 1 ? 's' : ''}
+          </button>
+          <button class="btn btn-sm btn-answer" onclick="toggleAnswerForm(${qi})">+ Answer</button>
+        </div>
+      </div>
+
+      <!-- ANSWERS -->
+      <div class="answers-section ${q.open ? 'open' : ''}" id="answers-${qi}">
+        ${q.answers.length === 0 ? `<div style="font-size:12px;color:var(--muted);padding:8px 0;">No answers yet — be the first!</div>` : ''}
+        ${q.answers.map((a, ai) => `
+          <div class="answer-item ${a.isAdmin ? 'admin-answer' : ''}">
+            <div class="answer-meta">
+              ${a.isAdmin
+                ? `<span class="badge-admin">🛡️ Admin</span>`
+                : `<span class="q-alias">${a.alias}</span>`
+              }
+              ${a.title && !a.isAdmin ? `<span class="badge-title">${a.title}</span>` : ''}
+            </div>
+            <div class="answer-text">${a.text}</div>
+            <div class="answer-votes">
+              <button class="vote-btn ${a.voted ? 'voted' : ''}" onclick="voteAnswer(${qi},${ai})">👍 ${a.votes}</button>
+            </div>
+          </div>
+        `).join('')}
+
+        <!-- ANSWER FORM -->
+        <div class="answer-form ${q.formOpen ? 'open' : ''}" id="aform-${qi}">
+          <div class="answer-form-title">Submit anonymous answer</div>
+          <div class="form-group">
+            <label>Your Answer</label>
+            <textarea id="atext-${qi}" placeholder="Share your knowledge anonymously..." rows="4"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Admin Key <span style="font-size:9px;color:var(--muted);text-transform:none">(optional — leave blank to answer anonymously)</span></label>
+            <div class="admin-key-wrap" id="akwrap-${qi}">
+              <input type="password" id="akey-${qi}" placeholder="Enter key to post as Admin..." oninput="checkAdminKey(${qi})">
+              <span class="admin-key-hint" id="akeyhint-${qi}">optional</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;margin-top:4px;">
+            <button class="btn btn-primary btn-sm" onclick="submitAnswer(${qi})">Post Answer</button>
+            <span style="font-size:10px;color:var(--muted)" id="apreview-${qi}">Will post as: Anonymous#????</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── ADMIN KEY CHECK ─────────────────────────────────────────
+function checkAdminKey(qi) {
+  const key = document.getElementById('akey-' + qi).value;
+  const wrap = document.getElementById('akwrap-' + qi);
+  const hint = document.getElementById('akeyhint-' + qi);
+  const preview = document.getElementById('apreview-' + qi);
+  const isAdmin = key === ADMIN_KEY;
+  wrap.className = 'admin-key-wrap' + (key.length > 0 && isAdmin ? ' valid' : '');
+  hint.textContent = isAdmin ? '🛡️ Admin verified' : 'optional';
+  preview.innerHTML = isAdmin
+    ? 'Will post as: <span class="badge-admin" style="font-size:9px;padding:1px 7px;">🛡️ Admin</span>'
+    : 'Will post as: Anonymous#' + Math.floor(1000 + Math.random() * 9000);
+}
+
+// ─── TOGGLE ANSWERS ───────────────────────────────────────────
+function toggleAnswers(qi) {
+  questions[qi].open = !questions[qi].open;
+  renderBoard();
+}
+
+function toggleAnswerForm(qi) {
+  questions[qi].formOpen = !questions[qi].formOpen;
+  questions[qi].open = true;
+  renderBoard();
+}
+
+// ─── SUBMIT ANSWER ────────────────────────────────────────────
+function submitAnswer(qi) {
+  const text = document.getElementById('atext-' + qi).value.trim();
+  const key = document.getElementById('akey-' + qi).value;
+  if (!text) { alert('Please write your answer first.'); return; }
+
+  const isAdmin = key === ADMIN_KEY;
+  const alias = isAdmin ? 'Admin' : 'Anonymous#' + Math.floor(1000 + Math.random() * 9000);
+
+  questions[qi].answers.push({
+    alias, isAdmin,
+    title: null,
+    text,
+    votes: 0,
+    voted: false,
   });
+  questions[qi].formOpen = false;
+  questions[qi].open = true;
+  renderBoard();
+}
+
+// ─── VOTING ───────────────────────────────────────────────────
+function voteQuestion(qi) {
+  if (questions[qi].voted) return;
+  questions[qi].votes++;
+  questions[qi].voted = true;
+  renderBoard();
+}
+
+function voteAnswer(qi, ai) {
+  if (questions[qi].answers[ai].voted) return;
+  questions[qi].answers[ai].votes++;
+  questions[qi].answers[ai].voted = true;
+  renderBoard();
+}
+
+// ─── ASK FORM ────────────────────────────────────────────────
+document.getElementById('ask-message').addEventListener('input', function() {
+  document.getElementById('ask-count').textContent = this.value.length + ' / 2000';
+});
+
+document.getElementById('ask-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const btn = document.getElementById('ask-btn');
+  btn.disabled = true;
+  btn.innerHTML = 'Transmitting<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>';
+
+  try {
+    const res = await fetch(this.action, {
+      method: 'POST', body: new FormData(this), headers: { 'Accept': 'application/json' }
+    });
+    if (res.ok) {
+      document.getElementById('ask-form-section').style.display = 'none';
+      const success = document.getElementById('ask-success');
+      success.classList.add('visible');
+      const ref = 'LUNC-' + Date.now().toString(36).toUpperCase().slice(-7);
+      document.getElementById('ask-ref').textContent = 'REF: ' + ref;
+    } else { throw new Error(); }
+  } catch {
+    btn.disabled = false;
+    btn.innerHTML = 'Transmit Question →';
+    alert('Transmission failed. Please try again.');
+  }
+});
+
+// ─── INIT ─────────────────────────────────────────────────────
+renderBoard();
 </script>
 </body>
 </html>
