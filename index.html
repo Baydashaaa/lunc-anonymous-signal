@@ -290,12 +290,62 @@
 
     <div id="ask-form-section">
       <div class="note">
-        🔒 Your identity is never stored. Submit your TX hash after sending 200,000 LUNC — it will NOT be linked to your question content.
+        🔒 Your identity is never stored. Connect Keplr to verify your 200,000 LUNC payment — wallet address will NOT be linked to your question.
       </div>
 
-      <form id="ask-form" action="https://formspree.io/f/maqpebee" method="POST">
+      <!-- STEP 1: KEPLR -->
+      <div id="keplr-section">
+        <div id="keplr-disconnected">
+          <div style="text-align:center;padding:4px 0 20px;">
+            <div style="font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;">Step 1 — Connect Wallet</div>
+            <button class="btn btn-primary btn-full" id="keplr-connect-btn" onclick="connectKeplr()">
+              🔑 Connect Keplr Wallet
+            </button>
+            <div style="margin-top:14px;padding:12px;background:rgba(84,147,247,0.04);border:1px solid rgba(84,147,247,0.1);border-radius:8px;">
+              <div style="font-size:10px;color:var(--muted);margin-bottom:8px;">Don't have Keplr yet?</div>
+              <a href="https://www.keplr.app/download" target="_blank" style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#5493f7;text-decoration:none;letter-spacing:0.08em;">
+                📥 Download Keplr Wallet →
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div id="keplr-connected" style="display:none;">
+          <div style="display:flex;align-items:center;gap:10px;background:rgba(102,255,170,0.05);border:1px solid rgba(102,255,170,0.2);border-radius:8px;padding:12px 14px;margin-bottom:20px;">
+            <span>✅</span>
+            <div>
+              <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--green);margin-bottom:2px;">Wallet Connected</div>
+              <div style="font-size:11px;color:var(--muted);font-family:monospace;" id="connected-addr">terra1...</div>
+            </div>
+            <button onclick="disconnectKeplr()" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;">✕</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: TX VERIFY -->
+      <div id="tx-section" style="display:none;">
+        <div style="font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;text-align:center;">Step 2 — Verify Payment</div>
+        <div class="form-group">
+          <label>TX Hash</label>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="tx-input" placeholder="Paste your 200,000 LUNC transaction hash..." style="flex:1;">
+            <button class="btn btn-primary" onclick="verifyTX()" id="verify-btn" style="white-space:nowrap;padding:12px 16px;">Verify</button>
+          </div>
+        </div>
+        <div id="tx-status" style="display:none;border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12px;line-height:1.6;"></div>
+      </div>
+
+      <!-- STEP 3: QUESTION FORM (unlocked after verify) -->
+      <form id="ask-form" action="https://formspree.io/f/maqpebee" method="POST" style="display:none;">
         <input type="text" name="_gotcha" style="display:none">
         <input type="hidden" name="_subject" value="[Terra Oracle] New Question Submitted">
+        <input type="hidden" name="tx_hash" id="verified-tx-hidden">
+        <input type="hidden" name="wallet" id="verified-wallet-hidden">
+
+        <div style="display:flex;align-items:center;gap:10px;background:rgba(102,255,170,0.05);border:1px solid rgba(102,255,170,0.2);border-radius:8px;padding:12px 14px;margin-bottom:20px;">
+          <span>🔓</span>
+          <div style="font-size:12px;color:var(--green);">Payment verified — form unlocked!</div>
+        </div>
 
         <div class="form-group">
           <label>Category</label>
@@ -321,17 +371,11 @@
         </div>
 
         <div class="form-group">
-          <label>TX Hash (proof of payment)</label>
-          <input type="text" name="tx_hash" placeholder="Your 200,000 LUNC transaction hash..." required>
-        </div>
-
-        <div class="form-group">
           <label>Evidence / Links <span style="font-size:9px;color:var(--muted);text-transform:none">(optional)</span></label>
           <input type="text" name="evidence" placeholder="https://finder.terra.money/classic/tx/...">
         </div>
 
         <div class="divider">Submit</div>
-
         <button type="submit" class="btn btn-primary btn-full" id="ask-btn">Transmit Question →</button>
       </form>
     </div>
@@ -634,8 +678,434 @@ document.getElementById('ask-form').addEventListener('submit', async function(e)
   }
 });
 
+// ─── KEPLR ────────────────────────────────────────────────────
+const PROTOCOL_WALLET = 'terra15jt5a9ycsey4hd6nlqgqxccl9aprkmg2mxmfc6';
+const REQUIRED_LUNC = 200000000000; // 200,000 LUNC in uLUNC (6 decimals)
+let connectedAddress = null;
+
+async function connectKeplr() {
+  const btn = document.getElementById('keplr-connect-btn');
+  if (!window.keplr) {
+    if (confirm('Keplr wallet not found. Open Keplr website to install?')) {
+      window.open('https://www.keplr.app/', '_blank');
+    }
+    return;
+  }
+  try {
+    btn.textContent = 'Connecting...';
+    btn.disabled = true;
+    await window.keplr.enable('columbus-5');
+    const offlineSigner = window.keplr.getOfflineSigner('columbus-5');
+    const accounts = await offlineSigner.getAccounts();
+    connectedAddress = accounts[0].address;
+    document.getElementById('connected-addr').textContent = connectedAddress.slice(0,12) + '...' + connectedAddress.slice(-6);
+    document.getElementById('verified-wallet-hidden').value = connectedAddress;
+    document.getElementById('keplr-disconnected').style.display = 'none';
+    document.getElementById('keplr-connected').style.display = 'block';
+    document.getElementById('tx-section').style.display = 'block';
+  } catch(e) {
+    btn.textContent = '🔑 Connect Keplr Wallet';
+    btn.disabled = false;
+    alert('Connection failed: ' + (e.message || e));
+  }
+}
+
+function disconnectKeplr() {
+  connectedAddress = null;
+  document.getElementById('keplr-disconnected').style.display = 'block';
+  document.getElementById('keplr-connected').style.display = 'none';
+  document.getElementById('tx-section').style.display = 'none';
+  document.getElementById('ask-form').style.display = 'none';
+  document.getElementById('tx-status').style.display = 'none';
+  document.getElementById('keplr-connect-btn').textContent = '🔑 Connect Keplr Wallet';
+  document.getElementById('keplr-connect-btn').disabled = false;
+}
+
+async function verifyTX() {
+  const txHash = document.getElementById('tx-input').value.trim();
+  const statusEl = document.getElementById('tx-status');
+  const btn = document.getElementById('verify-btn');
+  if (!txHash) { alert('Please enter a TX hash'); return; }
+
+  btn.textContent = 'Checking...';
+  btn.disabled = true;
+  statusEl.style.display = 'none';
+
+  const FCD_NODES = [
+    'https://fcd.terra-classic.io',
+    'https://fcd.terraclassic.community',
+  ];
+
+  let txData = null;
+  for (const node of FCD_NODES) {
+    try {
+      const res = await fetch(`${node}/v1/tx/${txHash}`);
+      if (res.ok) { txData = await res.json(); break; }
+    } catch(e) { continue; }
+  }
+
+  btn.textContent = 'Verify';
+  btn.disabled = false;
+
+  if (!txData || txData.error) {
+    showTxStatus('error', '❌ Transaction not found. Check the hash and try again.');
+    return;
+  }
+
+  // FCD format check
+  if (txData.code && txData.code !== 0) {
+    showTxStatus('error', '❌ Transaction failed on-chain.');
+    return;
+  }
+
+  // Check messages — FCD format
+  const msgs = txData.tx?.value?.msg || txData.tx?.body?.messages || [];
+  let valid = false;
+  let foundAmount = 0;
+
+  for (const msg of msgs) {
+    const type = msg.type || msg['@type'] || '';
+    const val = msg.value || msg;
+    if (type.includes('MsgSend') || type.includes('bank')) {
+      const toAddr = val.to_address || val.toAddress;
+      const coins = val.amount || [];
+      const lunc = Array.isArray(coins)
+        ? coins.find(c => c.denom === 'uluna')
+        : (coins.denom === 'uluna' ? coins : null);
+      if (toAddr === PROTOCOL_WALLET && lunc) {
+        foundAmount = parseInt(lunc.amount);
+        if (foundAmount >= REQUIRED_LUNC) { valid = true; break; }
+      }
+    }
+  }
+
+  if (!valid) {
+    const found = (foundAmount / 1000000).toLocaleString();
+    showTxStatus('error', `❌ Invalid payment. Expected 200,000 LUNC to protocol wallet. Found: ${found} LUNC.`);
+    return;
+  }
+
+  // All good!
+  document.getElementById('verified-tx-hidden').value = txHash;
+  showTxStatus('success', '✅ Payment verified! 200,000 LUNC confirmed. Form unlocked.');
+  setTimeout(() => {
+    document.getElementById('tx-section').style.display = 'none';
+    document.getElementById('keplr-connected').style.display = 'none';
+    document.getElementById('ask-form').style.display = 'block';
+  }, 1200);
+}
+
+function showTxStatus(type, msg) {
+  const el = document.getElementById('tx-status');
+  el.style.display = 'block';
+  el.style.background = type === 'success' ? 'rgba(102,255,170,0.06)' : 'rgba(255,60,60,0.06)';
+  el.style.border = type === 'success' ? '1px solid rgba(102,255,170,0.25)' : '1px solid rgba(255,60,60,0.25)';
+  el.style.color = type === 'success' ? 'var(--green)' : '#ff6060';
+  el.textContent = msg;
+}
+
 // ─── INIT ─────────────────────────────────────────────────────
 renderBoard();
 </script>
+
+<!-- ═══════════════════════════════════════════════
+     COMMUNITY CHAT WIDGET
+════════════════════════════════════════════════ -->
+<style>
+  .chat-widget {
+    position: fixed; bottom: 24px; left: 24px; z-index: 999;
+    display: flex; flex-direction: column; align-items: flex-start;
+  }
+
+  .chat-toggle {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 20px rgba(84,147,247,0.4);
+    transition: all 0.3s; font-size: 20px;
+    position: relative;
+  }
+
+  .chat-toggle:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(84,147,247,0.5); }
+
+  .chat-badge {
+    position: absolute; top: -4px; right: -4px;
+    background: var(--green); color: #000; font-size: 9px; font-weight: 700;
+    width: 18px; height: 18px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    display: none;
+  }
+
+  .chat-box {
+    width: 320px; height: 420px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; margin-bottom: 12px;
+    display: none; flex-direction: column;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    overflow: hidden;
+    animation: slideUp 0.25s ease;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .chat-box.open { display: flex; }
+
+  .chat-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+    background: rgba(84,147,247,0.06);
+  }
+
+  .chat-header-left { display: flex; align-items: center; gap: 8px; }
+  .chat-header-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse-dot 2s infinite; }
+  @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .chat-header-title { font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: 0.05em; }
+  .chat-header-sub { font-size: 10px; color: var(--muted); }
+  .chat-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; transition: color 0.2s; }
+  .chat-close:hover { color: var(--text); }
+
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding: 12px;
+    display: flex; flex-direction: column; gap: 8px;
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  }
+
+  .chat-msg {
+    max-width: 85%; padding: 8px 12px; border-radius: 10px;
+    font-size: 12px; line-height: 1.5; word-break: break-word;
+    animation: fadeMsg 0.2s ease;
+  }
+
+  @keyframes fadeMsg { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+
+  .chat-msg.anon {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); align-self: flex-start;
+  }
+
+  .chat-msg.anon .msg-author {
+    font-size: 9px; letter-spacing: 0.1em; color: var(--muted);
+    margin-bottom: 3px; text-transform: uppercase;
+  }
+
+  .chat-msg.anon .msg-author .anon-badge {
+    background: rgba(84,147,247,0.15); color: var(--accent);
+    padding: 1px 5px; border-radius: 4px; font-size: 8px; margin-left: 4px;
+  }
+
+  .chat-msg-time { font-size: 9px; color: var(--muted); margin-top: 3px; }
+
+  .chat-system {
+    text-align: center; font-size: 10px; color: var(--muted);
+    padding: 4px 0; letter-spacing: 0.05em;
+  }
+
+  .chat-footer {
+    padding: 10px 12px; border-top: 1px solid var(--border);
+    background: rgba(0,0,0,0.2);
+  }
+
+  .chat-mode-switch {
+    display: flex; gap: 6px; margin-bottom: 8px;
+  }
+
+  .mode-btn {
+    flex: 1; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); font-family: 'Space Mono', monospace;
+    font-size: 10px; cursor: pointer; transition: all 0.2s; letter-spacing: 0.05em;
+  }
+
+  .mode-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(84,147,247,0.08); }
+
+  .chat-input-row { display: flex; gap: 6px; }
+
+  .chat-input {
+    flex: 1; background: rgba(84,147,247,0.04); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-family: 'Space Mono', monospace;
+    font-size: 11px; padding: 8px 10px; outline: none; resize: none;
+    transition: border-color 0.2s;
+  }
+
+  .chat-input:focus { border-color: var(--accent); }
+  .chat-input::placeholder { color: var(--muted); }
+
+  .chat-send {
+    background: var(--accent); border: none; border-radius: 8px;
+    color: white; padding: 8px 12px; cursor: pointer; font-size: 14px;
+    transition: all 0.2s; flex-shrink: 0;
+  }
+
+  .chat-send:hover { background: #6aa0ff; }
+  .chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
+</style>
+
+<div class="chat-widget">
+  <div class="chat-box" id="chat-box">
+    <div class="chat-header">
+      <div class="chat-header-left">
+        <div class="chat-header-dot"></div>
+        <div>
+          <div class="chat-header-title">Community Chat</div>
+          <div class="chat-header-sub">Terra Oracle · Public</div>
+        </div>
+      </div>
+      <button class="chat-close" onclick="toggleChat()">✕</button>
+    </div>
+
+    <div class="chat-messages" id="chat-messages">
+      <div class="chat-system">Welcome to Terra Oracle Community Chat 🌍</div>
+    </div>
+
+    <div class="chat-footer">
+      <div class="chat-mode-switch">
+        <button class="mode-btn active" id="mode-anon" onclick="setMode('anon')">👤 Anon</button>
+        <button class="mode-btn" id="mode-named" onclick="setMode('named')">✏️ Set Name</button>
+      </div>
+      <div id="name-input-wrap" style="display:none;margin-bottom:8px;">
+        <input type="text" id="chat-name-input" class="chat-input" placeholder="Your display name..." maxlength="20" style="width:100%;">
+      </div>
+      <div class="chat-input-row">
+        <textarea class="chat-input" id="chat-input" placeholder="Type a message..." rows="1" maxlength="300" onkeydown="handleKey(event)"></textarea>
+        <button class="chat-send" id="chat-send-btn" onclick="sendMessage()">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <button class="chat-toggle" onclick="toggleChat()">
+    💬
+    <span class="chat-badge" id="chat-badge">0</span>
+  </button>
+</div>
+
+<!-- FIREBASE -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, push, onValue, serverTimestamp, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyALxKpR-Z2tXkN29cjmhCxb9z-YMLoJog8",
+    authDomain: "terra-oracle-chat.firebaseapp.com",
+    databaseURL: "https://terra-oracle-chat-default-rtdb.firebaseio.com",
+    projectId: "terra-oracle-chat",
+    storageBucket: "terra-oracle-chat.firebasestorage.app",
+    messagingSenderId: "481889685290",
+    appId: "1:481889685290:web:78eaf59877dfd393705853"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const messagesRef = ref(db, 'chat/messages');
+
+  let chatMode = 'anon';
+  let customName = '';
+  let unreadCount = 0;
+  let chatOpen = false;
+  let lastMsgCount = 0;
+
+  window.toggleChat = function() {
+    chatOpen = !chatOpen;
+    const box = document.getElementById('chat-box');
+    box.classList.toggle('open', chatOpen);
+    if (chatOpen) {
+      unreadCount = 0;
+      const badge = document.getElementById('chat-badge');
+      badge.style.display = 'none';
+      setTimeout(() => {
+        const msgs = document.getElementById('chat-messages');
+        msgs.scrollTop = msgs.scrollHeight;
+        document.getElementById('chat-input').focus();
+      }, 100);
+    }
+  }
+
+  window.setMode = function(mode) {
+    chatMode = mode;
+    document.getElementById('mode-anon').classList.toggle('active', mode === 'anon');
+    document.getElementById('mode-named').classList.toggle('active', mode === 'named');
+    document.getElementById('name-input-wrap').style.display = mode === 'named' ? 'block' : 'none';
+  }
+
+  window.handleKey = function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.sendMessage(); }
+  }
+
+  window.sendMessage = async function() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+
+    const btn = document.getElementById('chat-send-btn');
+    btn.disabled = true;
+
+    let author;
+    if (chatMode === 'anon') {
+      author = { name: 'Anonymous#' + Math.floor(1000 + Math.random() * 9000), isAnon: true };
+    } else {
+      const nameInput = document.getElementById('chat-name-input').value.trim();
+      customName = nameInput || customName || 'Anonymous#' + Math.floor(1000 + Math.random() * 9000);
+      author = { name: customName, isAnon: false };
+    }
+
+    try {
+      await push(messagesRef, {
+        text, author: author.name, isAnon: author.isAnon,
+        timestamp: serverTimestamp()
+      });
+      input.value = '';
+    } catch(e) {
+      console.error('Send error:', e);
+    }
+
+    btn.disabled = false;
+    input.focus();
+  }
+
+  function formatTime(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+  }
+
+  // Listen for messages
+  const recentMessages = query(messagesRef, limitToLast(50));
+  onValue(recentMessages, (snapshot) => {
+    const container = document.getElementById('chat-messages');
+    const msgs = [];
+    snapshot.forEach(child => msgs.push({ id: child.key, ...child.val() }));
+
+    // Count new messages
+    if (msgs.length > lastMsgCount && lastMsgCount > 0 && !chatOpen) {
+      unreadCount += msgs.length - lastMsgCount;
+      const badge = document.getElementById('chat-badge');
+      badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+      badge.style.display = 'flex';
+    }
+    lastMsgCount = msgs.length;
+
+    const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 40;
+
+    container.innerHTML = '<div class="chat-system">Welcome to Terra Oracle Community Chat 🌍</div>';
+    msgs.forEach(msg => {
+      const el = document.createElement('div');
+      el.className = 'chat-msg anon';
+      el.innerHTML = `
+        <div class="msg-author">
+          ${msg.author}
+          ${msg.isAnon ? '<span class="anon-badge">ANON</span>' : ''}
+        </div>
+        <div>${msg.text}</div>
+        <div class="chat-msg-time">${formatTime(msg.timestamp)}</div>
+      `;
+      container.appendChild(el);
+    });
+
+    if (wasAtBottom || chatOpen) container.scrollTop = container.scrollHeight;
+  });
+</script>
+
 </body>
 </html>
