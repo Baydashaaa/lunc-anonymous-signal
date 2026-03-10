@@ -176,6 +176,68 @@
   .site-footer a { color: var(--accent); text-decoration: none; opacity: 0.65; transition: opacity 0.2s; }
   .site-footer a:hover { opacity: 1; }
 
+  /* WALLET BUTTON */
+  .wallet-btn-wrap { position: relative; }
+
+  .wallet-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: transparent; border: 1px solid rgba(84,147,247,0.3);
+    border-radius: 8px; color: var(--accent);
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 9px 14px; cursor: pointer; transition: all 0.2s;
+  }
+  .wallet-btn:hover { background: rgba(84,147,247,0.08); border-color: var(--accent); }
+  .wallet-btn.connected { border-color: rgba(102,255,170,0.4); color: var(--green); background: rgba(102,255,170,0.05); }
+  .wallet-btn svg { width: 14px; height: 14px; }
+
+  .wallet-dropdown {
+    position: absolute; top: calc(100% + 8px); right: 0;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px; min-width: 200px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    display: none; z-index: 200;
+    animation: dropDown 0.18s ease;
+  }
+
+  @keyframes dropDown { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+
+  .wallet-dropdown.open { display: block; }
+
+  .wallet-dropdown-title {
+    font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--muted); padding: 4px 8px 8px; border-bottom: 1px solid var(--border);
+    margin-bottom: 6px;
+  }
+
+  .wallet-option {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 10px; border-radius: 7px; cursor: pointer;
+    transition: background 0.15s; border: none; background: none;
+    width: 100%; text-align: left; color: var(--text);
+    font-family: 'Space Mono', monospace; font-size: 11px;
+  }
+  .wallet-option:hover { background: rgba(84,147,247,0.07); }
+  .wallet-option img { width: 28px; height: 28px; border-radius: 6px; }
+  .wallet-option-info { display: flex; flex-direction: column; gap: 1px; }
+  .wallet-option-name { font-size: 12px; font-weight: 700; color: var(--text); }
+  .wallet-option-type { font-size: 9px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+
+  .wallet-connected-info {
+    padding: 8px 10px; font-size: 10px; color: var(--green);
+    border-bottom: 1px solid var(--border); margin-bottom: 6px;
+    font-family: monospace; word-break: break-all;
+  }
+
+  .wallet-disconnect {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px; border-radius: 7px; cursor: pointer;
+    transition: background 0.15s; border: none; background: none;
+    width: 100%; color: #ff6060; font-family: 'Space Mono', monospace;
+    font-size: 11px;
+  }
+  .wallet-disconnect:hover { background: rgba(255,60,60,0.08); }
+
   /* LOTTERY BUTTON */
   .lottery-btn {
     display: inline-flex; align-items: center; gap: 8px;
@@ -228,6 +290,38 @@
     <button class="nav-tab active" onclick="showPage('board')">Board</button>
     <button class="nav-tab" onclick="showPage('ask')">Ask</button>
     <button class="nav-tab" onclick="showPage('about')">About</button>
+    <div class="wallet-btn-wrap" id="wallet-wrap">
+      <button class="wallet-btn" id="wallet-main-btn" onclick="toggleWalletDropdown()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 12h2"/><path d="M2 10V5a2 2 0 012-2h16a2 2 0 012 2v5"/>
+        </svg>
+        <span id="wallet-btn-label">Connect</span>
+      </button>
+      <div class="wallet-dropdown" id="wallet-dropdown">
+        <div class="wallet-dropdown-title">Select Wallet</div>
+        <div id="wallet-not-connected">
+          <button class="wallet-option" onclick="connectWallet('keplr-ext')">
+            <img src="https://assets.leapwallet.io/keplr-extension.png" onerror="this.style.background='#1a6cf0';this.style.borderRadius='6px';this.textContent='K'">
+            <div class="wallet-option-info">
+              <span class="wallet-option-name">Keplr</span>
+              <span class="wallet-option-type">Browser Extension</span>
+            </div>
+          </button>
+          <button class="wallet-option" onclick="connectWallet('keplr-mobile')">
+            <img src="https://assets.leapwallet.io/keplr-extension.png" onerror="this.style.background='#1a6cf0';this.style.borderRadius='6px'">
+            <div class="wallet-option-info">
+              <span class="wallet-option-name">Keplr Mobile</span>
+              <span class="wallet-option-type">WalletConnect</span>
+            </div>
+          </button>
+        </div>
+        <div id="wallet-connected-panel" style="display:none;">
+          <div class="wallet-connected-info" id="wallet-connected-addr"></div>
+          <button class="wallet-disconnect" onclick="disconnectWallet()">✕ Disconnect</button>
+        </div>
+      </div>
+    </div>
+
     <a class="lottery-btn" href="https://baydashaaa.github.io/lottery-classic" target="_blank">
       <svg width="16" height="16" viewBox="0 0 100 100" style="flex-shrink:0">
         <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="4"/>
@@ -804,6 +898,74 @@ function showTxStatus(type, msg) {
   el.textContent = msg;
 }
 
+// ─── WALLET CONNECT ───────────────────────────────────────────
+let globalWalletAddress = null;
+
+window.toggleWalletDropdown = function() {
+  document.getElementById('wallet-dropdown').classList.toggle('open');
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  if (!document.getElementById('wallet-wrap').contains(e.target)) {
+    document.getElementById('wallet-dropdown').classList.remove('open');
+  }
+});
+
+window.connectWallet = async function(type) {
+  if (type === 'keplr-ext') {
+    if (!window.keplr) {
+      if (confirm('Keplr extension not found. Install Keplr?')) {
+        window.open('https://www.keplr.app/download', '_blank');
+      }
+      return;
+    }
+    try {
+      document.getElementById('wallet-btn-label').textContent = 'Connecting...';
+      await window.keplr.enable('columbus-5');
+      const signer = window.keplr.getOfflineSigner('columbus-5');
+      const accounts = await signer.getAccounts();
+      setWalletConnected(accounts[0].address);
+    } catch(e) {
+      document.getElementById('wallet-btn-label').textContent = 'Connect';
+      alert('Connection failed: ' + (e.message || e));
+    }
+  } else if (type === 'keplr-mobile') {
+    alert('Keplr Mobile (WalletConnect) coming soon! Use Keplr Extension for now.');
+  }
+}
+
+function setWalletConnected(address) {
+  globalWalletAddress = address;
+  const short = address.slice(0,8) + '...' + address.slice(-4);
+  document.getElementById('wallet-btn-label').textContent = short;
+  document.getElementById('wallet-main-btn').classList.add('connected');
+  document.getElementById('wallet-connected-addr').textContent = address;
+  document.getElementById('wallet-not-connected').style.display = 'none';
+  document.getElementById('wallet-connected-panel').style.display = 'block';
+  document.getElementById('wallet-dropdown').classList.remove('open');
+
+  // Auto-connect chat Keplr too
+  if (window.keplrChatAddress !== undefined) {
+    keplrChatAddress = address;
+    const addrShort = address.slice(0,8) + '...' + address.slice(-4);
+    document.getElementById('keplr-chat-addr').textContent = addrShort;
+    document.getElementById('keplr-verified-bar').style.display = 'flex';
+    document.getElementById('mode-keplr').textContent = '🔑 ' + addrShort;
+    setMode('keplr');
+  }
+}
+
+window.disconnectWallet = function() {
+  globalWalletAddress = null;
+  document.getElementById('wallet-btn-label').textContent = 'Connect';
+  document.getElementById('wallet-main-btn').classList.remove('connected');
+  document.getElementById('wallet-not-connected').style.display = 'block';
+  document.getElementById('wallet-connected-panel').style.display = 'none';
+  document.getElementById('wallet-dropdown').classList.remove('open');
+  disconnectChatKeplr();
+}
+
 // ─── INIT ─────────────────────────────────────────────────────
 renderBoard();
 </script>
@@ -963,10 +1125,12 @@ renderBoard();
     <div class="chat-footer">
       <div class="chat-mode-switch">
         <button class="mode-btn active" id="mode-anon" onclick="setMode('anon')">👤 Anon</button>
-        <button class="mode-btn" id="mode-named" onclick="setMode('named')">✏️ Set Name</button>
+        <button class="mode-btn" id="mode-keplr" onclick="connectChatKeplr()">🔑 Keplr</button>
       </div>
-      <div id="name-input-wrap" style="display:none;margin-bottom:8px;">
-        <input type="text" id="chat-name-input" class="chat-input" placeholder="Your display name..." maxlength="20" style="width:100%;">
+      <div id="keplr-verified-bar" style="display:none;margin-bottom:8px;background:rgba(102,255,170,0.05);border:1px solid rgba(102,255,170,0.2);border-radius:6px;padding:6px 10px;font-size:10px;color:var(--green);align-items:center;gap:6px;">
+        <span>✓ VERIFIED</span>
+        <span id="keplr-chat-addr" style="font-family:monospace;font-size:10px;color:var(--muted);"></span>
+        <button onclick="disconnectChatKeplr()" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;">✕</button>
       </div>
       <div class="chat-input-row">
         <textarea class="chat-input" id="chat-input" placeholder="Type a message..." rows="1" maxlength="300" onkeydown="handleKey(event)"></textarea>
@@ -1001,7 +1165,7 @@ renderBoard();
   const messagesRef = ref(db, 'chat/messages');
 
   let chatMode = 'anon';
-  let customName = '';
+  let keplrChatAddress = null;
   let unreadCount = 0;
   let chatOpen = false;
   let lastMsgCount = 0;
@@ -1025,8 +1189,36 @@ renderBoard();
   window.setMode = function(mode) {
     chatMode = mode;
     document.getElementById('mode-anon').classList.toggle('active', mode === 'anon');
-    document.getElementById('mode-named').classList.toggle('active', mode === 'named');
-    document.getElementById('name-input-wrap').style.display = mode === 'named' ? 'block' : 'none';
+    document.getElementById('mode-keplr').classList.toggle('active', mode === 'keplr');
+  }
+
+  window.connectChatKeplr = async function() {
+    if (!window.keplr) {
+      if (confirm('Keplr not found. Open keplr.app to install?')) window.open('https://www.keplr.app/', '_blank');
+      return;
+    }
+    try {
+      document.getElementById('mode-keplr').textContent = '⏳ Connecting...';
+      await window.keplr.enable('columbus-5');
+      const signer = window.keplr.getOfflineSigner('columbus-5');
+      const accounts = await signer.getAccounts();
+      keplrChatAddress = accounts[0].address;
+      const short = keplrChatAddress.slice(0,8) + '...' + keplrChatAddress.slice(-4);
+      document.getElementById('keplr-chat-addr').textContent = short;
+      document.getElementById('keplr-verified-bar').style.display = 'flex';
+      document.getElementById('mode-keplr').textContent = '🔑 ' + short;
+      setMode('keplr');
+    } catch(e) {
+      document.getElementById('mode-keplr').textContent = '🔑 Keplr';
+      alert('Connection failed: ' + (e.message || e));
+    }
+  }
+
+  window.disconnectChatKeplr = function() {
+    keplrChatAddress = null;
+    document.getElementById('keplr-verified-bar').style.display = 'none';
+    document.getElementById('mode-keplr').textContent = '🔑 Keplr';
+    setMode('anon');
   }
 
   window.handleKey = function(e) {
@@ -1042,17 +1234,17 @@ renderBoard();
     btn.disabled = true;
 
     let author;
-    if (chatMode === 'anon') {
-      author = { name: 'Anonymous#' + Math.floor(1000 + Math.random() * 9000), isAnon: true };
+    if (chatMode === 'keplr' && keplrChatAddress) {
+      const short = keplrChatAddress.slice(0,8) + '...' + keplrChatAddress.slice(-4);
+      author = { name: short, fullAddr: keplrChatAddress, isAnon: false, isVerified: true };
     } else {
-      const nameInput = document.getElementById('chat-name-input').value.trim();
-      customName = nameInput || customName || 'Anonymous#' + Math.floor(1000 + Math.random() * 9000);
-      author = { name: customName, isAnon: false };
+      author = { name: 'Anonymous#' + Math.floor(1000 + Math.random() * 9000), isAnon: true, isVerified: false };
     }
 
     try {
       await push(messagesRef, {
         text, author: author.name, isAnon: author.isAnon,
+        isVerified: author.isVerified || false,
         timestamp: serverTimestamp()
       });
       input.value = '';
