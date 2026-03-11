@@ -3273,9 +3273,10 @@ async function loadSupplyChart(period) {
       const actualSec = period === 'M' ? (30.44 * 86400) : cfg.secPerCandle;
       const candleEnd = d.time + actualSec;
 
-      // Tax burn (volume-proportional)
+      // Tax burn: volume-proportional but with floor at 60% of average
+      // Real burn never stops completely — blocks are always produced
       const volRatio = avgVol > 0 ? d.volumefrom / avgVol : 1;
-      const taxBurn = avgBurnPerCandle * Math.max(0.3, Math.min(3.0, volRatio));
+      const taxBurn = avgBurnPerCandle * Math.max(0.6, Math.min(2.5, volRatio));
 
       // Binance event burn (if this candle covers a burn date)
       const binanceBurn = getBinanceBurn(d.time, candleEnd, period);
