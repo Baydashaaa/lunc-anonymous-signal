@@ -3049,6 +3049,9 @@ async function loadAllStats() {
 // ─── INIT ─────────────────────────────────────────────────────
 renderBoard();
 
+// Scroll to top on every page load/refresh
+window.scrollTo(0, 0);
+if (history.scrollRestoration) history.scrollRestoration = 'manual';
 
 </script>
 </body>
