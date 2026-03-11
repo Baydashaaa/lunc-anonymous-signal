@@ -399,18 +399,70 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="showPage('home')" style="cursor:pointer;" title="Go to Home">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600">
-      <path fill="#0e3ca5" d="M251.2,410.28c12.19,45.11,55.94,79.54,78,78.12.77,0,83.8-15.53,129.25-91.47,35.37-59.1,23.33-116.16-24.78-117.4C416.4,280.79,228,324.33,251.2,410.28"/>
-      <path fill="#0e3ca5" d="M429.23,120.51l-.05,0,.07,0A211.16,211.16,0,0,0,206.72,88.32a125.88,125.88,0,0,0-13.38,6.55c-3,1.58-5.93,3.15-8.8,4.86l.7.22A96.38,96.38,0,0,0,163,121c-60.6,80.07,142.52,138.26,251.11,138.45C464,295.35,478.05,158.52,429.23,120.51Z"/>
-      <path fill="#5493f7" d="M219,122.14C191.07,164.08,98.11,193.63,82.83,189l-.1-.2c.62-1.26,1.26-2.52,1.91-3.77a223.54,223.54,0,0,1,66.27-77.33q8.58-6.28,17.76-11.76c13-7.53,26.35-8,30.73-8.18,41.4.79,19.78,34,19.56,34.35"/>
-      <path fill="#5493f7" d="M196.08,418.53c2,13.18-.06,65.23-2.75,69.62-2.32.14-7.16.44-21.17-7.42a223,223,0,0,1-47.18-36A222.8,222.8,0,0,1,71.14,217q1.13-3.36,2.34-6.66h0c16.05,21.34,34.61,40.64,50.39,62.19,15,20.52,35.71,54,39.91,61.12,26.13,44.37,30.29,71.75,32.29,84.9"/>
-      <path fill="#5493f7" d="M504.86,287.33a221.94,221.94,0,0,1-15.49,81.74c-26.2,28.17-202.93-41.18-204.66-41.94-24.18-10.59-97.75-42.82-104.38-93.45-9.55-72.83,138.21-123.58,203.15-125.51,7.78.09,31.48.37,45.29,11.59a222,222,0,0,1,76.09,167.57"/>
-      <path fill="#5493f7" d="M385.23,484.71c-19.26,9-40.47,2.44-35-16.32,10.58-36,103-73,123.36-75,2.51-.24,3.58,1.47,2.47,3.43a224.86,224.86,0,0,1-90.87,87.86"/>
-    </svg>
-    <div>
-      <div class="nav-logo-text">Terra Oracle <span class="nav-logo-badge">CLASSIC</span></div>
-      <div style="font-size:8px;color:var(--gold);letter-spacing:0.15em;margin-top:1px;opacity:0.8;">TCO · LUNC ECOSYSTEM</div>
+  <div class="nav-logo" onclick="showPage('home')" style="cursor:pointer;position:relative;" title="Go to Home">
+    <!-- Big crystal background + text overlay -->
+    <div style="display:flex;align-items:center;gap:10px;">
+      <!-- Crystal icon -->
+      <svg width="34" height="38" viewBox="0 0 34 38" xmlns="http://www.w3.org/2000/svg"
+        style="flex-shrink:0;filter:drop-shadow(0 0 8px rgba(84,147,247,0.6)) drop-shadow(0 0 3px rgba(255,215,0,0.25));">
+        <defs>
+          <linearGradient id="cg1" x1="20%" y1="0%" x2="80%" y2="100%">
+            <stop offset="0%" stop-color="#c8d8ff" stop-opacity="0.95"/>
+            <stop offset="45%" stop-color="#5493f7" stop-opacity="0.9"/>
+            <stop offset="100%" stop-color="#0e2a6e" stop-opacity="0.95"/>
+          </linearGradient>
+          <linearGradient id="cg2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.75"/>
+            <stop offset="100%" stop-color="#3a6fd8" stop-opacity="0.25"/>
+          </linearGradient>
+          <linearGradient id="cgray" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#ffd700" stop-opacity="0.0"/>
+            <stop offset="45%" stop-color="#ffffff" stop-opacity="1"/>
+            <stop offset="100%" stop-color="#a0d0ff" stop-opacity="0.0"/>
+          </linearGradient>
+          <filter id="glow2">
+            <feGaussianBlur stdDeviation="1.2" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <!-- Diamond shape: top point, wide middle, bottom point -->
+        <polygon points="17,1 33,14 17,37 1,14" fill="url(#cg1)" stroke="rgba(140,180,255,0.5)" stroke-width="0.7"/>
+        <!-- Left facet -->
+        <polygon points="17,1 1,14 17,20" fill="url(#cg2)" opacity="0.9"/>
+        <!-- Top-right facet -->
+        <polygon points="17,1 33,14 17,20" fill="rgba(84,147,247,0.3)"/>
+        <!-- Bottom facet -->
+        <polygon points="1,14 33,14 17,37" fill="rgba(8,20,70,0.35)"/>
+        <!-- Horizontal middle line -->
+        <line x1="1" y1="14" x2="33" y2="14" stroke="rgba(160,200,255,0.3)" stroke-width="0.5"/>
+        <!-- Outline -->
+        <polygon points="17,1 33,14 17,37 1,14" fill="none" stroke="rgba(160,200,255,0.55)" stroke-width="0.8"/>
+
+        <!-- Light ray: top-left → refract → bottom-right -->
+        <line x1="1" y1="5" x2="13" y2="13" stroke="rgba(255,245,150,0.7)" stroke-width="1.2" filter="url(#glow2)"/>
+        <line x1="13" y1="13" x2="23" y2="20" stroke="url(#cgray)" stroke-width="2" filter="url(#glow2)"/>
+        <line x1="23" y1="20" x2="33" y2="32" stroke="rgba(160,215,255,0.6)" stroke-width="1.5" filter="url(#glow2)"/>
+        <!-- Dispersion -->
+        <line x1="23" y1="20" x2="33" y2="26" stroke="rgba(255,160,60,0.4)" stroke-width="1"/>
+        <line x1="23" y1="20" x2="31" y2="34" stroke="rgba(100,200,255,0.4)" stroke-width="1"/>
+        <!-- Entry spark -->
+        <circle cx="1" cy="5" r="1.8" fill="rgba(255,240,130,0.95)" filter="url(#glow2)"/>
+        <!-- Center gem -->
+        <circle cx="17" cy="16" r="2" fill="white" opacity="0.5" filter="url(#glow2)"/>
+        <line x1="17" y1="13" x2="17" y2="19" stroke="white" stroke-width="0.6" opacity="0.5"/>
+        <line x1="14" y1="16" x2="20" y2="16" stroke="white" stroke-width="0.6" opacity="0.5"/>
+      </svg>
+
+      <!-- Text -->
+      <div style="display:flex;flex-direction:column;justify-content:center;">
+        <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:14px;
+          letter-spacing:0.1em;color:#fff;text-transform:uppercase;line-height:1.2;white-space:nowrap;">
+          Terra Oracle <span style="color:#7eb8ff;">Classic</span>
+        </div>
+        <div style="font-size:7.5px;color:var(--gold);letter-spacing:0.18em;margin-top:2px;opacity:0.8;white-space:nowrap;">
+          TCO · LUNC ECOSYSTEM
+        </div>
+      </div>
     </div>
   </div>
   <div class="nav-tabs">
