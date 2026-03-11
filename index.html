@@ -3240,7 +3240,8 @@ function renderSupplyChart(candles, period) {
   const deltaEl = document.getElementById('supply-delta');
   if (deltaEl) {
     const sign = delta < 0 ? '' : '+';
-    deltaEl.innerHTML = `<span style="font-size:14px;">${delta < 0 ? '↘' : '↗'}</span> ${sign}${fmtS(Math.abs(delta))} in latest candlestick`;
+    const fmtDelta = v => Math.round(v).toLocaleString('en-US');
+    deltaEl.innerHTML = `<span style="font-size:14px;">${delta < 0 ? '↘' : '↗'}</span> ${delta < 0 ? '-' : '+'}${fmtDelta(Math.abs(delta))} in latest candlestick`;
     deltaEl.style.color = delta < 0 ? '#ff6b6b' : 'var(--green)';
   }
   drawCandleChart(candles, period);
@@ -3267,14 +3268,26 @@ function drawCandleChart(candles, period, hoverIdx = -1) {
   const barW = Math.max(3, Math.min(16, (cw / candles.length) * 0.7));
   const gap = cw / candles.length;
 
-  // Background grid
-  ctx.strokeStyle = '#131f35'; ctx.lineWidth = 1;
-  ctx.fillStyle = '#2a4060'; ctx.font = '10px Exo 2'; ctx.textAlign = 'right';
-  for (let i = 0; i <= 4; i++) {
-    const y = pad.t + (ch / 4) * i;
+  // Y-axis: smart formatting like "6.47T" matching the reference
+  function fmtY(v) {
+    if (v >= 1e12) return (v / 1e12).toFixed(2) + 'T';
+    if (v >= 1e9)  return (v / 1e9).toFixed(2) + 'B';
+    if (v >= 1e6)  return (v / 1e6).toFixed(1) + 'M';
+    return v.toFixed(0);
+  }
+
+  // Background grid lines + Y labels
+  const gridLines = 6;
+  ctx.font = '10px Exo 2'; ctx.textAlign = 'right';
+  for (let i = 0; i <= gridLines; i++) {
+    const y = pad.t + (ch / gridLines) * i;
+    const v = vMax - range * (i / gridLines);
+    // Grid line
+    ctx.strokeStyle = 'rgba(42,64,96,0.6)'; ctx.lineWidth = 1; ctx.setLineDash([]);
     ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + cw, y); ctx.stroke();
-    const v = vMax - range * (i / 4);
-    ctx.fillText(fmtS(v), pad.l - 4, y + 4);
+    // Y label
+    ctx.fillStyle = '#3a5578';
+    ctx.fillText(fmtY(v), pad.l - 6, y + 3);
   }
 
   // Draw candles
@@ -3317,24 +3330,46 @@ function drawCandleChart(candles, period, hoverIdx = -1) {
     ctx.setLineDash([]);
   }
 
-  // X-axis labels
-  ctx.fillStyle = '#3a5070'; ctx.font = '10px Exo 2'; ctx.textAlign = 'center';
-  const labelCount = Math.min(6, candles.length);
-  const step = Math.floor((candles.length - 1) / (labelCount - 1));
+  // X-axis labels — format matches reference style
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  for (let i = 0; i < labelCount; i++) {
-    const idx = Math.min(i * step, candles.length - 1);
-    const d = new Date(candles[idx].t);
-    let label;
-    if (period === '1h' || period === '4h') {
-      label = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
-    } else if (period === 'D' || period === 'W') {
-      label = d.getHours().toString().padStart(2,'0') + ':00';
+  function fmtXLabel(ts, period) {
+    const d = new Date(ts);
+    const hh = d.getHours().toString().padStart(2,'0');
+    const mm = d.getMinutes().toString().padStart(2,'0');
+    const day = d.getDate().toString().padStart(2,'0');
+    const mon = MONTHS[d.getMonth()];
+    if (period === '1h') {
+      // Show "09 Mar, 22:00" for date changes, just "22:00" for same-day times
+      return `${hh}:${mm}`;
+    } else if (period === '4h') {
+      return `${day} ${mon}, ${hh}:00`;
+    } else if (period === 'D') {
+      return `${day} ${mon}, ${hh}:00`;
+    } else if (period === 'W') {
+      return `${day} ${mon}`;
     } else {
-      label = MONTHS[d.getMonth()] + ' ' + d.getDate();
+      return `${day} ${mon}`;
     }
-    ctx.fillText(label, pad.l + idx * gap + gap / 2, h - 6);
   }
+
+  // Smart label placement: show date change labels + evenly spaced time labels
+  ctx.fillStyle = '#3a5578'; ctx.font = '10px Exo 2'; ctx.textAlign = 'center';
+  const maxLabels = Math.min(7, candles.length);
+  const labelStep = Math.max(1, Math.floor((candles.length - 1) / (maxLabels - 1)));
+  const drawnPositions = [];
+  for (let i = 0; i < candles.length; i += labelStep) {
+    const idx = Math.min(i, candles.length - 1);
+    const x = pad.l + idx * gap + gap / 2;
+    // avoid overlapping
+    if (drawnPositions.some(px => Math.abs(px - x) < 55)) continue;
+    drawnPositions.push(x);
+    const label = fmtXLabel(candles[idx].t, period);
+    ctx.fillText(label, x, h - 6);
+  }
+
+  // X-axis label subtitle "UTC Time Buckets"
+  ctx.fillStyle = 'rgba(58,85,120,0.5)'; ctx.font = '9px Exo 2'; ctx.textAlign = 'center';
+  ctx.fillText('UTC Time Buckets', pad.l + cw / 2, h);
 
   // Current price line
   const lastY = toY(candles[candles.length - 1].close);
@@ -3367,18 +3402,21 @@ function setupCandleHover(candles, period) {
     if (idx >= 0 && idx < candles.length) {
       const c = candles[idx];
       const d = new Date(c.t);
-      const timeStr = `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}  ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+      const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const timeStr = `${MON[d.getMonth()]} ${d.getDate().toString().padStart(2,'0')}, ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
       const change = c.close - c.open;
       const changeColor = change < 0 ? '#ff6b6b' : '#4dffaa';
+      // Full number format like reference: 6,466,128,338,549
+      const fmt = v => Math.round(v).toLocaleString('en-US');
       const tooltip = document.getElementById('supply-tooltip');
       if (tooltip) {
         tooltip.innerHTML = `
           <span style="color:var(--accent);font-weight:700;font-size:11px;">${timeStr}</span><br>
-          <span style="color:var(--muted)">Open</span> <b>${fmtSupply(c.open)}</b> &nbsp;
-          <span style="color:var(--muted)">High</span> <b>${fmtSupply(c.high)}</b> &nbsp;
-          <span style="color:var(--muted)">Low</span> <b>${fmtSupply(c.low)}</b> &nbsp;
-          <span style="color:var(--muted)">Close</span> <b>${fmtSupply(c.close)}</b> &nbsp;
-          <span style="color:var(--muted)">Change</span> <b style="color:${changeColor}">${change < 0 ? '' : '+'}${fmtS(Math.abs(change))}</b>`;
+          <span style="color:var(--muted);font-size:10px;">Open</span> <b style="font-size:11px;">${fmt(c.open)}</b> &nbsp;
+          <span style="color:var(--muted);font-size:10px;">High</span> <b style="font-size:11px;">${fmt(c.high)}</b> &nbsp;
+          <span style="color:var(--muted);font-size:10px;">Low</span> <b style="font-size:11px;">${fmt(c.low)}</b> &nbsp;
+          <span style="color:var(--muted);font-size:10px;">Close</span> <b style="font-size:11px;">${fmt(c.close)}</b> &nbsp;
+          <span style="color:var(--muted);font-size:10px;">Change</span> <b style="color:${changeColor};font-size:11px;">${change < 0 ? '-' : '+'}${fmt(Math.abs(change))}</b>`;
       }
       drawCandleChart(candles, period, idx);
     }
