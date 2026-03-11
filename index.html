@@ -399,7 +399,7 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo">
+  <div class="nav-logo" onclick="showPage('home')" style="cursor:pointer;" title="Go to Home">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600">
       <path fill="#0e3ca5" d="M251.2,410.28c12.19,45.11,55.94,79.54,78,78.12.77,0,83.8-15.53,129.25-91.47,35.37-59.1,23.33-116.16-24.78-117.4C416.4,280.79,228,324.33,251.2,410.28"/>
       <path fill="#0e3ca5" d="M429.23,120.51l-.05,0,.07,0A211.16,211.16,0,0,0,206.72,88.32a125.88,125.88,0,0,0-13.38,6.55c-3,1.58-5.93,3.15-8.8,4.86l.7.22A96.38,96.38,0,0,0,163,121c-60.6,80.07,142.52,138.26,251.11,138.45C464,295.35,478.05,158.52,429.23,120.51Z"/>
@@ -408,7 +408,10 @@
       <path fill="#5493f7" d="M504.86,287.33a221.94,221.94,0,0,1-15.49,81.74c-26.2,28.17-202.93-41.18-204.66-41.94-24.18-10.59-97.75-42.82-104.38-93.45-9.55-72.83,138.21-123.58,203.15-125.51,7.78.09,31.48.37,45.29,11.59a222,222,0,0,1,76.09,167.57"/>
       <path fill="#5493f7" d="M385.23,484.71c-19.26,9-40.47,2.44-35-16.32,10.58-36,103-73,123.36-75,2.51-.24,3.58,1.47,2.47,3.43a224.86,224.86,0,0,1-90.87,87.86"/>
     </svg>
-    <span class="nav-logo-text">Terra Oracle <span class="nav-logo-badge">LUNC</span></span>
+    <div>
+      <div class="nav-logo-text">Terra Oracle <span class="nav-logo-badge">CLASSIC</span></div>
+      <div style="font-size:8px;color:var(--gold);letter-spacing:0.15em;margin-top:1px;opacity:0.8;">TCO · LUNC ECOSYSTEM</div>
+    </div>
   </div>
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('board')">Board</button>
@@ -487,6 +490,132 @@
 <!-- ═══════════════════════════════════════════════
      PAGE: BOARD
 ════════════════════════════════════════════════ -->
+<div class="page" id="page-home">
+
+  <!-- HERO -->
+  <div style="text-align:center;padding:48px 20px 56px;position:relative;">
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(84,147,247,0.06),transparent 70%);pointer-events:none;"></div>
+    <div style="font-size:10px;letter-spacing:0.25em;color:var(--gold);margin-bottom:16px;text-transform:uppercase;">Terra Classic Ecosystem</div>
+    <h1 style="font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(36px,7vw,64px);line-height:1.1;margin:0 0 16px;">
+      Terra Oracle<br><span style="color:var(--accent);">Classic</span>
+    </h1>
+    <div style="font-size:13px;color:var(--muted);max-width:480px;margin:0 auto 12px;line-height:1.7;">
+      A decentralized Q&A, governance and lottery protocol<br>built on Terra Classic — powered by LUNC.
+    </div>
+    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(245,197,24,0.07);
+      border:1px solid rgba(245,197,24,0.2);border-radius:20px;padding:6px 16px;font-size:11px;color:var(--gold);">
+      🪙 Future token: <strong style="letter-spacing:0.1em;">TCO</strong> · Terra Classic Oracle
+    </div>
+  </div>
+
+  <!-- ECOSYSTEM CARDS -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:40px;">
+
+    <div onclick="showPage('board')" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;
+      padding:24px;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden;"
+      onmouseover="this.style.borderColor='rgba(84,147,247,0.4)';this.style.transform='translateY(-2px)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.transform='translateY(0)'">
+      <div style="font-size:28px;margin-bottom:12px;">🔮</div>
+      <div style="font-weight:700;font-size:14px;margin-bottom:6px;">Oracle Board</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6;">Ask questions about Terra Classic governance, validators and market. Get answers from the community.</div>
+      <div style="margin-top:14px;font-size:10px;color:var(--accent);letter-spacing:0.08em;">200,000 LUNC per question →</div>
+    </div>
+
+    <div onclick="showPage('chat')" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;
+      padding:24px;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden;"
+      onmouseover="this.style.borderColor='rgba(84,147,247,0.4)';this.style.transform='translateY(-2px)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.transform='translateY(0)'">
+      <div style="font-size:28px;margin-bottom:12px;">💬</div>
+      <div style="font-weight:700;font-size:14px;margin-bottom:6px;">DAO Chat</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6;">On-chain messages stored forever on Terra Classic blockchain. Every message costs 5,000 LUNC.</div>
+      <div style="margin-top:14px;font-size:10px;color:var(--accent);letter-spacing:0.08em;">5,000 LUNC per message →</div>
+    </div>
+
+    <div onclick="showPage('vote')" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;
+      padding:24px;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden;"
+      onmouseover="this.style.borderColor='rgba(84,147,247,0.4)';this.style.transform='translateY(-2px)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.transform='translateY(0)'">
+      <div style="font-size:28px;margin-bottom:12px;">🗳️</div>
+      <div style="font-weight:700;font-size:14px;margin-bottom:6px;">Governance Vote</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6;">Vote on weekly and monthly proposals. Liquidity pairs, development priorities, reward models.</div>
+      <div style="margin-top:14px;font-size:10px;color:var(--accent);letter-spacing:0.08em;">Monthly draw: 20–25th →</div>
+    </div>
+
+    <div onclick="window.open('https://baydashaaa.github.io/lottery-classic','_blank')" style="background:var(--surface);
+      border:1px solid rgba(255,102,0,0.2);border-radius:14px;padding:24px;cursor:pointer;transition:all 0.2s;"
+      onmouseover="this.style.borderColor='rgba(255,102,0,0.5)';this.style.transform='translateY(-2px)'"
+      onmouseout="this.style.borderColor='rgba(255,102,0,0.2)';this.style.transform='translateY(0)'">
+      <div style="font-size:28px;margin-bottom:12px;">🎰</div>
+      <div style="font-weight:700;font-size:14px;margin-bottom:6px;">Lottery Classic</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6;">Buy tickets, win the pool. 80% prize pool, 5% burned forever. On-chain verifiable draws.</div>
+      <div style="margin-top:14px;font-size:10px;color:#ff6600;letter-spacing:0.08em;">25,000 LUNC per ticket →</div>
+    </div>
+
+  </div>
+
+  <!-- TOKEN SECTION -->
+  <div style="background:var(--surface);border:1px solid rgba(245,197,24,0.2);border-radius:14px;padding:28px;margin-bottom:40px;
+    background:linear-gradient(135deg,rgba(245,197,24,0.04),rgba(84,147,247,0.04));">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <span style="font-size:24px;">🪙</span>
+      <div>
+        <div style="font-weight:700;font-size:15px;">TCO Token <span style="font-size:10px;background:rgba(245,197,24,0.1);color:var(--gold);border:1px solid rgba(245,197,24,0.2);border-radius:8px;padding:2px 8px;margin-left:6px;">COMING SOON</span></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">Terra Classic Oracle — native governance & reward token</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;">
+      <div style="text-align:center;padding:14px;background:rgba(245,197,24,0.04);border:1px solid rgba(245,197,24,0.1);border-radius:10px;">
+        <div style="font-size:18px;margin-bottom:4px;">🏛️</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Governance</div>
+        <div style="font-size:10px;color:var(--muted);">Vote weight by TCO stake</div>
+      </div>
+      <div style="text-align:center;padding:14px;background:rgba(245,197,24,0.04);border:1px solid rgba(245,197,24,0.1);border-radius:10px;">
+        <div style="font-size:18px;margin-bottom:4px;">💎</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Rewards</div>
+        <div style="font-size:10px;color:var(--muted);">Earned by Oracle participation</div>
+      </div>
+      <div style="text-align:center;padding:14px;background:rgba(245,197,24,0.04);border:1px solid rgba(245,197,24,0.1);border-radius:10px;">
+        <div style="font-size:18px;margin-bottom:4px;">🔥</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">Deflationary</div>
+        <div style="font-size:10px;color:var(--muted);">% burned on every activity</div>
+      </div>
+      <div style="text-align:center;padding:14px;background:rgba(245,197,24,0.04);border:1px solid rgba(245,197,24,0.1);border-radius:10px;">
+        <div style="font-size:18px;margin-bottom:4px;">⛓️</div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;">On-Chain</div>
+        <div style="font-size:10px;color:var(--muted);">Terra Classic · columbus-5</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOKENOMICS FLOW -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;">
+    <div style="font-size:11px;letter-spacing:0.15em;color:var(--muted);margin-bottom:20px;text-transform:uppercase;">Protocol Flow</div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;font-size:12px;">
+      <div style="background:rgba(84,147,247,0.08);border:1px solid rgba(84,147,247,0.2);border-radius:8px;padding:10px 16px;text-align:center;">
+        <div style="font-size:16px;">👤</div><div style="margin-top:4px;color:var(--text);">User Activity</div>
+      </div>
+      <div style="color:var(--muted);font-size:18px;">→</div>
+      <div style="background:rgba(84,147,247,0.08);border:1px solid rgba(84,147,247,0.2);border-radius:8px;padding:10px 16px;text-align:center;">
+        <div style="font-size:16px;">🔮</div><div style="margin-top:4px;color:var(--text);">Oracle Pool</div>
+        <div style="font-size:9px;color:var(--muted);">terra1549...kagt</div>
+      </div>
+      <div style="color:var(--muted);font-size:18px;">→</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="background:rgba(102,255,170,0.06);border:1px solid rgba(102,255,170,0.15);border-radius:8px;padding:8px 14px;font-size:11px;">
+          🏆 50% → Reward Pool
+        </div>
+        <div style="background:rgba(255,48,48,0.06);border:1px solid rgba(255,48,48,0.15);border-radius:8px;padding:8px 14px;font-size:11px;">
+          🔥 30% → Burn
+        </div>
+        <div style="background:rgba(245,197,24,0.06);border:1px solid rgba(245,197,24,0.15);border-radius:8px;padding:8px 14px;font-size:11px;">
+          ⚙️ 20% → Dev + Marketing
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
 <div class="page active" id="page-board">
 
   <div class="board-header">
@@ -1064,11 +1193,12 @@ if (document.readyState === 'loading') {
 }
 
 // ─── NAVIGATION ───────────────────────────────────────────────
-function showPage(name) {
+function showPage(name, e) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
-  event.target.classList.add('active');
+  if (e && e.target) e.target.classList.add('active');
+  else if (event && event.target) event.target.classList.add('active');
   if (name === 'board') renderBoard();
   if (name === 'vote') { applyStoredVotes(); applyVoteStates(); renderVotes(); }
   if (name === 'chat') renderChatPage();
