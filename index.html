@@ -1190,31 +1190,36 @@
     <div class="stat-card"><div class="stat-label">Active Validators</div><div class="stat-value" id="sc-vals">—</div><div class="stat-note muted">bonded set</div></div>
   </div>
 
-  <div class="section-title" style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:10px;">🔴 LUNC Supply History <span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
+  <div class="section-title" style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:10px;">🔥 LUNC Burned <span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
   <div class="card" style="margin-bottom:18px;">
-    <div class="chart-header">
+    <!-- Header row: supply + burn summary -->
+    <div class="chart-header" style="margin-bottom:16px;">
       <div>
         <div class="stat-label">Total LUNC Supply</div>
         <div class="chart-main-val" id="lunc-big">—</div>
         <div class="chart-sub-val" style="color:#ff6b6b;">↓ Decreasing via 1.2% burn tax</div>
       </div>
       <div style="text-align:right;">
-        <div class="stat-label">Total USTC Supply</div>
-        <div style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:var(--accent);" id="ustc-big">—</div>
-        <div class="chart-sub-val" style="color:#ff6b6b;">↓ Decreasing via arbitrage burn</div>
+        <div class="stat-label">Burned This Period 🔥</div>
+        <div style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:#ff6b6b;" id="burn-period-total">—</div>
+        <div class="chart-sub-val" style="color:var(--muted);" id="burn-period-label">Select period</div>
       </div>
     </div>
     <!-- Period selector -->
-    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;">
+    <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
       <button class="period-btn active-period" onclick="setSupplyPeriod('1')" id="sp-1d">1D</button>
       <button class="period-btn" onclick="setSupplyPeriod('7')" id="sp-7d">1W</button>
       <button class="period-btn" onclick="setSupplyPeriod('30')" id="sp-1m">1M</button>
       <button class="period-btn" onclick="setSupplyPeriod('365')" id="sp-1y">1Y</button>
       <button class="period-btn" onclick="setSupplyPeriod('max')" id="sp-max">All Time ⚡</button>
     </div>
-    <div id="supply-chart-loading" style="display:none;text-align:center;padding:20px;color:var(--muted);font-size:12px;">Loading data...</div>
-    <div class="chart-wrap"><canvas id="supplyChart" height="180"></canvas></div>
-    <div style="font-size:10px;color:rgba(122,158,196,0.5);margin-top:8px;text-align:right;">Source: CryptoCompare · burn-adjusted supply model</div>
+    <div id="supply-chart-loading" style="text-align:center;padding:30px;color:var(--muted);font-size:12px;display:none;">
+      <div class="loading-dots">Loading<span>.</span><span>.</span><span>.</span></div>
+    </div>
+    <div class="chart-wrap" id="burn-chart-wrap"><canvas id="supplyChart" height="200"></canvas></div>
+    <div style="font-size:10px;color:rgba(122,158,196,0.4);margin-top:8px;text-align:right;">
+      🔥 Burn rate: ~16.5M LUNC/day · Source: CryptoCompare volume model
+    </div>
   </div>
 
   <div class="card" style="margin-bottom:18px;">
@@ -3100,14 +3105,20 @@ function drawLineS(ctx, data, pad, cw, ch, min, max, color, lineW=2) {
   ctx.shadowColor = color; ctx.shadowBlur = 8;
   ctx.stroke(); ctx.shadowBlur = 0;
 }
-// ─── SUPPLY CHART WITH REAL HISTORY ─────────────────────────
+// ─── BURN BAR CHART ──────────────────────────────────────────
 let currentSupplyPeriod = '1';
 let supplyChartCache = {};
 
+// Burn rates per period bucket (LUNC)
+const BURN_RATES = {
+  hourly: 687_500,    // ~16.5M / 24
+  daily:  16_500_000,
+};
+
 function setSupplyPeriod(period) {
   currentSupplyPeriod = period;
-  ['1','7','30','365','max'].forEach(p => {
-    const idMap = {'1':'sp-1d','7':'sp-7d','30':'sp-1m','365':'sp-1y','max':'sp-max'};
+  const idMap = {'1':'sp-1d','7':'sp-7d','30':'sp-1m','365':'sp-1y','max':'sp-max'};
+  Object.keys(idMap).forEach(p => {
     const el = document.getElementById(idMap[p]);
     if (el) el.classList.toggle('active-period', p === period);
   });
@@ -3117,120 +3128,164 @@ function setSupplyPeriod(period) {
 async function loadSupplyChart(period) {
   const cached = supplyChartCache[period];
   if (cached && Date.now() - cached.ts < 300000) {
-    drawSupplyChartFromData(cached.data, period);
-    return;
+    renderBurnBarChart(cached.data, period); return;
   }
   const loadEl = document.getElementById('supply-chart-loading');
+  const wrapEl = document.getElementById('burn-chart-wrap');
   if (loadEl) loadEl.style.display = 'block';
+  if (wrapEl) wrapEl.style.display = 'none';
 
-  // Map period to CryptoCompare params (supports CORS, free, no key needed)
   const periodConfig = {
-    '1':   { endpoint: 'histohour', limit: 24,  label: '1D' },
-    '7':   { endpoint: 'histoday',  limit: 7,   label: '1W' },
-    '30':  { endpoint: 'histoday',  limit: 30,  label: '1M' },
-    '365': { endpoint: 'histoday',  limit: 365, label: '1Y' },
-    'max': { endpoint: 'histoday',  limit: 1000, label: 'All Time' },
+    '1':   { endpoint: 'histohour', limit: 24,   isHourly: true  },
+    '7':   { endpoint: 'histoday',  limit: 7,    isHourly: false },
+    '30':  { endpoint: 'histoday',  limit: 30,   isHourly: false },
+    '365': { endpoint: 'histoday',  limit: 365,  isHourly: false },
+    'max': { endpoint: 'histoday',  limit: 1000, isHourly: false },
   };
   const cfg = periodConfig[period] || periodConfig['30'];
 
   try {
-    // CryptoCompare — free, CORS-friendly
     const url = `https://min-api.cryptocompare.com/data/v2/${cfg.endpoint}?fsym=LUNC&tsym=USD&limit=${cfg.limit}&extraParams=TerraOracle`;
     const res = await fetch(url);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const json = await res.json();
     if (json.Response === 'Error') throw new Error(json.Message);
-    const raw = json.Data?.Data || [];
+    const raw = (json.Data?.Data || []).filter(d => d.volumefrom > 0 || d.close > 0);
 
-    // Use volumefrom as supply proxy? No — use circulating supply from LCD + price decay model
-    // Better: use price * known_supply / price_at_t ≈ relative supply curve
-    // Since LUNC supply decreases ~0.045B/day from burn tax
-    // We'll show price history as a proxy labeled as "Supply trend"
-    // Real supply = current - (burn_rate * days_ago)
-    const CURRENT_SUPPLY = 6.466e12;
-    const DAILY_BURN = 16_500_000; // ~16.5M LUNC burned per day
-    const HOURLY_BURN = DAILY_BURN / 24;
-    const now = Date.now() / 1000;
-
-    const data = raw.filter(d => d.close > 0).map(d => {
-      const secsAgo = now - d.time;
-      const burnBack = cfg.endpoint === 'histohour'
-        ? (secsAgo / 3600) * HOURLY_BURN
-        : (secsAgo / 86400) * DAILY_BURN;
-      return { t: d.time * 1000, supply: CURRENT_SUPPLY + burnBack };
-    });
+    // Burn per bucket = volume * 0.012 (1.2% burn tax on every trade)
+    // volumefrom = LUNC traded in that period
+    const burnRate = cfg.isHourly ? BURN_RATES.hourly : BURN_RATES.daily;
+    const data = raw.map(d => ({
+      t: d.time * 1000,
+      burned: d.volumefrom > 1000
+        ? d.volumefrom * 0.012          // volume-based: 1.2% of traded volume
+        : burnRate,                      // fallback: fixed burn rate
+      volume: d.volumefrom,
+    }));
 
     supplyChartCache[period] = { data, ts: Date.now() };
-    drawSupplyChartFromData(data, period);
+    renderBurnBarChart(data, period);
   } catch(e) {
-    console.warn('Supply chart error:', e);
-    drawSupplyChartFallback();
+    console.warn('Burn chart error:', e);
+    drawBurnChartFallback();
   } finally {
     if (loadEl) loadEl.style.display = 'none';
+    if (wrapEl) wrapEl.style.display = 'block';
   }
 }
 
-function drawSupplyChartFromData(data, period) {
-  const C = resolveCanvasS('supplyChart', 180); if (!C) return;
+function renderBurnBarChart(data, period) {
+  // Aggregate if too many bars (max 60)
+  let bars = data;
+  if (data.length > 60) {
+    const chunk = Math.ceil(data.length / 60);
+    bars = [];
+    for (let i = 0; i < data.length; i += chunk) {
+      const slice = data.slice(i, i + chunk);
+      bars.push({
+        t: slice[0].t,
+        burned: slice.reduce((s, d) => s + d.burned, 0),
+        volume: slice.reduce((s, d) => s + (d.volume || 0), 0),
+      });
+    }
+  }
+
+  // Update summary stats
+  const totalBurned = data.reduce((s, d) => s + d.burned, 0);
+  const periodLabels = {'1':'Last 24h','7':'Last 7 days','30':'Last 30 days','365':'Last year','max':'All time (since May 2022)'};
+  const el = document.getElementById('burn-period-total');
+  const lbl = document.getElementById('burn-period-label');
+  if (el) el.textContent = fmtS(totalBurned) + ' LUNC';
+  if (lbl) lbl.textContent = '🔥 Burned · ' + (periodLabels[period] || '');
+
+  drawBurnBars(bars, period);
+}
+
+function drawBurnBars(bars, period) {
+  const C = resolveCanvasS('supplyChart', 200); if (!C) return;
   const { ctx, w, h } = C;
-  const pad = { l:62, r:16, t:20, b:28 };
+  const pad = { l:62, r:16, t:24, b:32 };
   const cw = w - pad.l - pad.r, ch = h - pad.t - pad.b;
-  if (!data.length) return;
-  const values = data.map(d => d.supply);
-  const vMin = Math.min(...values) * 0.9998;
-  const vMax = Math.max(...values) * 1.0002;
+  if (!bars.length) return;
+
+  const values = bars.map(b => b.burned);
+  const vMax = Math.max(...values) * 1.1;
+  const barW = Math.max(2, (cw / bars.length) - 2);
+  const gap = cw / bars.length;
+
   // Grid lines
   ctx.strokeStyle = '#1e3358'; ctx.lineWidth = 1;
   ctx.fillStyle = '#3a5070'; ctx.font = '10px Exo 2'; ctx.textAlign = 'right';
   for (let i = 0; i <= 3; i++) {
     const y = pad.t + (ch / 3) * i;
     ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + cw, y); ctx.stroke();
-    const v = vMax - (vMax - vMin) * (i / 3);
+    const v = vMax * (1 - i / 3);
     ctx.fillText(fmtS(v), pad.l - 4, y + 4);
   }
-  // Gradient fill under line
-  const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + ch);
-  grad.addColorStop(0, 'rgba(255,107,107,0.18)');
-  grad.addColorStop(1, 'rgba(255,107,107,0.01)');
-  ctx.beginPath();
-  data.forEach((d, i) => {
-    const x = pad.l + (i / (data.length - 1)) * cw;
-    const y = pad.t + (1 - (d.supply - vMin) / (vMax - vMin + 0.0001)) * ch;
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+
+  // Draw bars
+  bars.forEach((b, i) => {
+    const barH = (b.burned / vMax) * ch;
+    const x = pad.l + i * gap + (gap - barW) / 2;
+    const y = pad.t + ch - barH;
+
+    // Gradient fill per bar
+    const grad = ctx.createLinearGradient(0, y, 0, y + barH);
+    grad.addColorStop(0, 'rgba(255,100,60,0.95)');
+    grad.addColorStop(1, 'rgba(180,30,0,0.6)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(x, y, barW, barH, 2) : ctx.rect(x, y, barW, barH);
+    ctx.fill();
+
+    // Glow on hover area (top highlight)
+    ctx.fillStyle = 'rgba(255,160,100,0.4)';
+    ctx.fillRect(x, y, barW, 2);
   });
-  const lastX = pad.l + cw, firstX = pad.l;
-  ctx.lineTo(lastX, pad.t + ch); ctx.lineTo(firstX, pad.t + ch);
-  ctx.closePath(); ctx.fillStyle = grad; ctx.fill();
-  // Main line
-  drawLineS(ctx, values, pad, cw, ch, vMin, vMax, '#ff6b6b', 2);
+
   // X-axis labels
   ctx.fillStyle = '#3a5070'; ctx.font = '10px Exo 2'; ctx.textAlign = 'center';
-  const labelMap = {
-    '1':   ['12h ago', '6h ago', 'Now'],
-    '7':   ['7d ago', '4d ago', '1d ago', 'Today'],
-    '30':  ['30d ago', '20d ago', '10d ago', 'Today'],
-    '365': ['1y ago', '9mo ago', '3mo ago', 'Today'],
-    'max': ['May 2022', '2023', '2024', 'Today']
-  };
-  const labels = labelMap[period] || ['Start', 'Mid', 'Today'];
-  labels.forEach((l, i) => ctx.fillText(l, pad.l + (i / (labels.length - 1)) * cw, h - 4));
+  const now = Date.now();
+  const labelCount = Math.min(5, bars.length);
+  const step = Math.floor((bars.length - 1) / (labelCount - 1));
+  for (let i = 0; i < labelCount; i++) {
+    const idx = i * step;
+    if (idx >= bars.length) continue;
+    const bar = bars[idx];
+    const x = pad.l + idx * gap + gap / 2;
+    const d = new Date(bar.t);
+    let label;
+    if (period === '1') {
+      label = d.getHours().toString().padStart(2,'0') + ':00';
+    } else if (period === 'max') {
+      label = d.getFullYear().toString();
+    } else {
+      label = (d.getMonth()+1) + '/' + d.getDate();
+    }
+    ctx.fillText(label, x, h - 6);
+  }
+
   // Legend
-  ctx.fillStyle = '#ff6b6b'; ctx.fillRect(pad.l, 6, 14, 3);
-  ctx.fillStyle = '#b0d0b0'; ctx.font = '10px Exo 2'; ctx.textAlign = 'left';
-  ctx.fillText('LUNC Supply (burn-adjusted)', pad.l + 18, 12);
+  const grad2 = ctx.createLinearGradient(0, 0, 0, 10);
+  grad2.addColorStop(0, 'rgba(255,100,60,0.95)');
+  grad2.addColorStop(1, 'rgba(180,30,0,0.6)');
+  ctx.fillStyle = grad2;
+  ctx.beginPath();
+  ctx.roundRect ? ctx.roundRect(pad.l, 6, 14, 10, 2) : ctx.fillRect(pad.l, 6, 14, 10);
+  ctx.fill();
+  ctx.fillStyle = '#cce0ff'; ctx.font = '10px Exo 2'; ctx.textAlign = 'left';
+  ctx.fillText('LUNC Burned (1.2% tax model)', pad.l + 18, 14);
 }
 
-function drawSupplyChartFallback(lunc) {
-  const C = resolveCanvasS('supplyChart', 180); if (!C) return;
+function drawBurnChartFallback() {
+  const C = resolveCanvasS('supplyChart', 200); if (!C) return;
   const { ctx, w, h } = C;
-  const pad = { l:62, r:16, t:20, b:28 };
-  const cw = w - pad.l - pad.r, ch = h - pad.t - pad.b;
   ctx.fillStyle = 'rgba(122,158,196,0.4)'; ctx.font = '12px Exo 2';
-  ctx.textAlign = 'center'; ctx.fillText('Historical data unavailable — try again later', pad.l + cw/2, pad.t + ch/2);
+  ctx.textAlign = 'center';
+  ctx.fillText('Could not load data — check connection', w/2, h/2);
 }
 
 function drawSupplyChartS(lunc, ustc) {
-  // On first load, trigger real data fetch for current period
   loadSupplyChart(currentSupplyPeriod);
 }
 function drawStakedChartS(bonded, ratio) {
