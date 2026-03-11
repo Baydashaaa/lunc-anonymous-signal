@@ -3174,10 +3174,29 @@ async function loadSupplyChart(period) {
   }
 }
 
+function aggregateByMonth(data) {
+  const map = {};
+  data.forEach(d => {
+    const date = new Date(d.t);
+    const key = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+    if (!map[key]) map[key] = { t: d.t, burned: 0, volume: 0, key };
+    map[key].burned += d.burned;
+    map[key].volume += d.volume || 0;
+  });
+  return Object.values(map).sort((a, b) => a.t - b.t);
+}
+
 function renderBurnBarChart(data, period) {
-  // Aggregate if too many bars (max 60)
   let bars = data;
-  if (data.length > 60) {
+
+  if (period === '365') {
+    // 1Y → group by month (12 bars)
+    bars = aggregateByMonth(data);
+  } else if (period === 'max') {
+    // All Time → group by month too
+    bars = aggregateByMonth(data);
+  } else if (data.length > 60) {
+    // Fallback generic chunking
     const chunk = Math.ceil(data.length / 60);
     bars = [];
     for (let i = 0; i < data.length; i += chunk) {
@@ -3190,7 +3209,6 @@ function renderBurnBarChart(data, period) {
     }
   }
 
-  // Update summary stats
   const totalBurned = data.reduce((s, d) => s + d.burned, 0);
   const periodLabels = {'1':'Last 24h','7':'Last 7 days','30':'Last 30 days','365':'Last year','max':'All time (since May 2022)'};
   const el = document.getElementById('burn-period-total');
@@ -3255,10 +3273,13 @@ function drawBurnBars(bars, period) {
     const x = pad.l + idx * gap + gap / 2;
     const d = new Date(bar.t);
     let label;
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     if (period === '1') {
       label = d.getHours().toString().padStart(2,'0') + ':00';
+    } else if (period === '365') {
+      label = MONTHS[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2);
     } else if (period === 'max') {
-      label = d.getFullYear().toString();
+      label = MONTHS[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2);
     } else {
       label = (d.getMonth()+1) + '/' + d.getDate();
     }
