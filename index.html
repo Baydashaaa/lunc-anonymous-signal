@@ -1677,6 +1677,97 @@ window.setWalletConnected = function(address) {
 }
 
 // ─── VOTE PAGE ────────────────────────────────────────────────
+// ─── MONTHLY LIQUIDITY VOTE GENERATOR ────────────────────────
+const LIQUIDITY_PAIRS = [
+  'LUNC/USDT', 'LUNC/USTC', 'LUNC/ATOM', 'LUNC/BTC',
+  'LUNC/ETH', 'LUNC/BNB', 'LUNC/OSMO', 'LUNC/JUNO'
+];
+
+const MONTH_NAMES = ['January','February','March','April','May','June',
+  'July','August','September','October','November','December'];
+
+function generateMonthlyLiquidityVote() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const day = now.getDate();
+
+  // Vote opens on 20th, closes on 25th
+  const openDate  = new Date(year, month, 20, 0, 0, 0);
+  const closeDate = new Date(year, month, 25, 23, 59, 59);
+
+  let status, timerStr, displayMonth, displayYear;
+
+  if (day < 20) {
+    // Before voting period — show upcoming
+    const msUntilOpen = openDate - now;
+    const daysUntil = Math.floor(msUntilOpen / 86400000);
+    const hoursUntil = Math.floor((msUntilOpen % 86400000) / 3600000);
+    status = 'upcoming';
+    timerStr = `Opens in ${daysUntil}d ${hoursUntil}h`;
+    displayMonth = MONTH_NAMES[month];
+    displayYear = year;
+  } else if (day <= 25) {
+    // Active voting window
+    const msLeft = closeDate - now;
+    const daysLeft = Math.floor(msLeft / 86400000);
+    const hoursLeft = Math.floor((msLeft % 86400000) / 3600000);
+    const minsLeft = Math.floor((msLeft % 3600000) / 60000);
+    status = 'active';
+    timerStr = daysLeft > 0 ? `${daysLeft}d ${hoursLeft}h remaining` : `${hoursLeft}h ${minsLeft}m remaining`;
+    displayMonth = MONTH_NAMES[month];
+    displayYear = year;
+  } else {
+    // After 25th — show next month's upcoming
+    const nextMonth = month === 11 ? 0 : month + 1;
+    const nextYear = month === 11 ? year + 1 : year;
+    const nextOpen = new Date(nextYear, nextMonth, 20, 0, 0, 0);
+    const msUntil = nextOpen - now;
+    const daysUntil = Math.floor(msUntil / 86400000);
+    const hoursUntil = Math.floor((msUntil % 86400000) / 3600000);
+    status = 'upcoming';
+    timerStr = `Opens in ${daysUntil}d ${hoursUntil}h`;
+    displayMonth = MONTH_NAMES[nextMonth];
+    displayYear = nextYear;
+  }
+
+  // Deterministic pair selection per month (rotate every month)
+  const seed = year * 12 + month;
+  const pairs = [...LIQUIDITY_PAIRS];
+  // Fisher-Yates with seed
+  for (let i = pairs.length - 1; i > 0; i--) {
+    const j = (seed * 1103515245 + i * 12345) % (i + 1);
+    [pairs[i], pairs[j]] = [pairs[j], pairs[i]];
+  }
+  const votePairs = pairs.slice(0, 4);
+
+  // Load saved votes from localStorage for this month
+  const voteKey = `monthly_liquidity_${year}_${month}`;
+  let savedVotes = null;
+  try { savedVotes = JSON.parse(localStorage.getItem(voteKey) || 'null'); } catch(e) {}
+
+  return {
+    id: 'monthly-liquidity',
+    type: 'monthly',
+    status,
+    voteKey,
+    title: `Liquidity Pool Pairs — ${displayMonth} ${displayYear}`,
+    desc: status === 'active'
+      ? `Which LUNC trading pair should receive liquidity incentives for ${displayMonth}? Voting is open 20–25 of each month. The winning pair receives protocol liquidity support.`
+      : `Monthly liquidity vote for ${displayMonth} ${displayYear}. Voting opens on the 20th and closes on the 25th. The winning pair receives protocol liquidity support.`,
+    source: '🗓 Runs every month · 20th → 25th · Auto-generated',
+    timer: timerStr,
+    totalVotes: savedVotes ? savedVotes.totalVotes : 0,
+    quorum: 200,
+    options: votePairs.map((pair, i) => ({
+      label: pair,
+      votes: savedVotes ? (savedVotes.options[i] || 0) : 0
+    })),
+    userVoted: null,
+    isMonthlyLiquidity: true
+  };
+}
+
 const VOTES_DATA = [
   {
     id: 'v1', type: 'weekly', status: 'active',
@@ -1694,20 +1785,7 @@ const VOTES_DATA = [
     userVoted: null
   },
   {
-    id: 'v2', type: 'monthly', status: 'active',
-    title: 'Liquidity Pool Pairs — March 2026',
-    desc: 'Which trading pairs should receive liquidity incentives this month? Community votes determine allocation.',
-    source: 'Monthly liquidity governance',
-    timer: '18d 6h remaining',
-    totalVotes: 891,
-    quorum: 500,
-    options: [
-      { label: 'LUNC/USDT', votes: 412 },
-      { label: 'LUNC/USTC', votes: 287 },
-      { label: 'LUNC/ATOM', votes: 192 },
-    ],
-    userVoted: null
-  },
+    ...generateMonthlyLiquidityVote(),
   {
     id: 'v3', type: 'special', status: 'active',
     title: 'Terra Oracle — Reward Distribution Model',
@@ -1782,11 +1860,13 @@ function renderVotes() {
       </div>
 
       <div class="vote-btn-row">
-        ${v.userVoted === null
-          ? `<button class="btn btn-primary" onclick="castVote('${v.id}', -1)" style="padding:10px 24px;font-size:11px;" ${!globalWalletAddress ? 'disabled title="Connect Keplr to vote"' : ''}>
-              ${globalWalletAddress ? 'Cast Vote' : '🔑 Connect to Vote'}
-            </button>`
-          : `<span style="font-size:12px;color:var(--green);">✅ You voted</span>`
+        ${v.userVoted !== null
+          ? `<span style="font-size:12px;color:var(--green);">✅ You voted</span>`
+          : v.status === 'upcoming'
+            ? `<span style="font-size:12px;color:var(--gold);">🗓 Voting opens on the 20th</span>`
+            : `<button class="btn btn-primary" onclick="castVote('${v.id}', -1)" style="padding:10px 24px;font-size:11px;" ${!globalWalletAddress ? 'disabled title="Connect Keplr to vote"' : ''}>
+                ${globalWalletAddress ? 'Cast Vote' : '🔑 Connect to Vote'}
+               </button>`
         }
         <span style="font-size:11px;color:var(--muted);">${v.totalVotes} votes total</span>
       </div>
@@ -1831,10 +1911,22 @@ function castVote(voteId, optionIdx) {
   if (optionIdx === -1) return;
   const vote = VOTES_DATA.find(v => v.id === voteId);
   if (!vote || vote.userVoted !== null) return;
+  if (vote.status === 'upcoming') { alert('Voting is not open yet! Check back on the 20th.'); return; }
+
   vote.options[optionIdx].votes++;
   vote.totalVotes++;
   vote.userVoted = optionIdx;
   saveVoteToStorage(voteId, optionIdx);
+
+  // Persist monthly liquidity votes globally (shared across users via localStorage key)
+  if (vote.isMonthlyLiquidity && vote.voteKey) {
+    try {
+      localStorage.setItem(vote.voteKey, JSON.stringify({
+        totalVotes: vote.totalVotes,
+        options: vote.options.map(o => o.votes)
+      }));
+    } catch(e) {}
+  }
   renderVotes();
 }
 
