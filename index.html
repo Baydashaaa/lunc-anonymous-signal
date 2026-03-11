@@ -593,19 +593,10 @@
           <span id="chat-page-count" style="font-size:11px;color:var(--muted);min-width:28px;text-align:right;">256</span>
         </div>
         <div class="chat-send-row">
-          <div class="chat-send-info">Cost: <strong>5,000 LUNC</strong> · Send TX then post</div>
+          <div class="chat-send-info">Cost: <strong>5,000 LUNC</strong> · Keplr will ask to confirm</div>
           <button class="btn btn-primary" onclick="sendChatMessage()" id="chat-page-send-btn">Send Message →</button>
         </div>
-        <div id="chat-page-tx-wrap" style="display:none;margin-top:12px;">
-          <div class="form-group">
-            <label>TX Hash (5,000 LUNC payment proof)</label>
-            <div style="display:flex;gap:8px;">
-              <input type="text" id="chat-page-tx" placeholder="Paste TX hash after sending 5,000 LUNC..." style="flex:1;">
-              <button class="btn btn-primary" onclick="verifyChatTX()" id="chat-verify-btn" style="white-space:nowrap;padding:12px 14px;">Verify & Post</button>
-            </div>
-          </div>
-          <div id="chat-tx-status" style="display:none;border-radius:8px;padding:10px 14px;font-size:12px;"></div>
-        </div>
+        <div id="chat-tx-status" style="display:none;border-radius:8px;padding:10px 14px;font-size:12px;margin-top:10px;"></div>
       </div>
     </div>
 
@@ -1141,80 +1132,75 @@ document.getElementById('chat-page-input').addEventListener('input', function() 
   counter.textContent = remaining;
 });
 
-window.sendChatMessage = function() {
+window.sendChatMessage = async function() {
   const text = document.getElementById('chat-page-input').value.trim();
-  if (!text) return;
-  document.getElementById('chat-page-tx-wrap').style.display = 'block';
-  document.getElementById('chat-page-send-btn').style.display = 'none';
-}
-
-window.verifyChatTX = async function() {
-  const txHash = document.getElementById('chat-page-tx').value.trim();
   const statusEl = document.getElementById('chat-tx-status');
-  const btn = document.getElementById('chat-verify-btn');
-  if (!txHash) { alert('Please enter TX hash'); return; }
+  const btn = document.getElementById('chat-page-send-btn');
 
-  btn.textContent = 'Verifying...'; btn.disabled = true;
+  if (!text) { alert('Write a message first!'); return; }
+  if (!globalWalletAddress) { alert('Connect Keplr first!'); return; }
+  if (!window.keplr) { alert('Keplr not found!'); return; }
+
+  const PROTOCOL_WALLET_CHAT = 'terra15jt5a9ycsey4hd6nlqgqxccl9aprkmg2mxmfc6';
+
+  btn.textContent = '⏳ Waiting for Keplr...';
+  btn.disabled = true;
   statusEl.style.display = 'none';
 
-  const CHAT_FEE = 5000000000; // 5,000 LUNC in uLUNC
-  const FCD = ['https://fcd.terra-classic.io', 'https://fcd.terraclassic.community'];
-  let txData = null;
-
-  for (const node of FCD) {
-    try {
-      const res = await fetch(`${node}/v1/tx/${txHash}`);
-      if (res.ok) { txData = await res.json(); break; }
-    } catch(e) { continue; }
-  }
-
-  btn.textContent = 'Verify & Post'; btn.disabled = false;
-
-  if (!txData || txData.error) {
-    statusEl.style.display = 'block'; statusEl.style.background = 'rgba(255,60,60,0.06)'; statusEl.style.border = '1px solid rgba(255,60,60,0.25)'; statusEl.style.color = '#ff6060';
-    statusEl.textContent = '❌ TX not found. Check hash and try again.'; return;
-  }
-
-  const msgs = txData.tx?.value?.msg || txData.tx?.body?.messages || [];
-  let valid = false;
-  for (const msg of msgs) {
-    const type = msg.type || msg['@type'] || '';
-    const val = msg.value || msg;
-    if (type.includes('MsgSend')) {
-      const coins = val.amount || [];
-      const lunc = Array.isArray(coins) ? coins.find(c => c.denom === 'uluna') : null;
-      if (val.to_address === 'terra15jt5a9ycsey4hd6nlqgqxccl9aprkmg2mxmfc6' && lunc && parseInt(lunc.amount) >= CHAT_FEE) { valid = true; break; }
-    }
-  }
-
-  if (!valid) {
-    statusEl.style.display = 'block'; statusEl.style.background = 'rgba(255,60,60,0.06)'; statusEl.style.border = '1px solid rgba(255,60,60,0.25)'; statusEl.style.color = '#ff6060';
-    statusEl.textContent = '❌ Invalid payment. Need 5,000 LUNC to protocol wallet.'; return;
-  }
-
-  // Post message
-  const text = document.getElementById('chat-page-input').value.trim();
-  const addr = globalWalletAddress || 'Anonymous';
-  const short = addr !== 'Anonymous' ? addr.slice(0,8)+'...'+addr.slice(-4) : 'Anonymous';
-
   try {
-    const msgs = JSON.parse(localStorage.getItem('dao_chat') || '[]');
-    msgs.push({ text, author: short, fullAddr: addr, txHash, isVerified: true, timestamp: Date.now() });
-    if (msgs.length > 100) msgs.splice(0, msgs.length - 100);
-    localStorage.setItem('dao_chat', JSON.stringify(msgs));
+    await window.keplr.enable('columbus-5');
+    const offlineSigner = window.keplr.getOfflineSigner('columbus-5');
+    const accounts = await offlineSigner.getAccounts();
+    const sender = accounts[0].address;
+
+    // Use CosmJS SigningStargateClient via CDN
+    const { SigningStargateClient } = await import('https://esm.sh/@cosmjs/stargate@0.32.4');
+    const RPC_NODES = [
+      'https://rpc.terra-classic.io',
+      'https://terra-classic-rpc.publicnode.com',
+    ];
+
+    let client = null;
+    for (const rpc of RPC_NODES) {
+      try { client = await SigningStargateClient.connectWithSigner(rpc, offlineSigner); break; }
+      catch(e) { continue; }
+    }
+    if (!client) throw new Error('Could not connect to Terra Classic RPC');
+
+    const result = await client.sendTokens(
+      sender,
+      PROTOCOL_WALLET_CHAT,
+      [{ denom: 'uluna', amount: '5000000000' }],
+      { amount: [{ denom: 'uluna', amount: '100000' }], gas: '200000' },
+      text.slice(0, 256)
+    );
+
+    if (result.code !== 0) throw new Error('TX failed: ' + result.rawLog);
+
+    // Save to localStorage with TX hash as proof
+    const stored = JSON.parse(localStorage.getItem('dao_chat') || '[]');
+    const short = sender.slice(0,8)+'...'+sender.slice(-4);
+    stored.push({ text, author: short, fullAddr: sender, txHash: result.transactionHash, isVerified: true, timestamp: Date.now() });
+    if (stored.length > 100) stored.splice(0, stored.length - 100);
+    localStorage.setItem('dao_chat', JSON.stringify(stored));
+
     document.getElementById('chat-page-input').value = '';
-    document.getElementById('chat-page-tx').value = '';
-    document.getElementById('chat-page-tx-wrap').style.display = 'none';
-    document.getElementById('chat-page-send-btn').style.display = 'block';
     document.getElementById('chat-page-count').textContent = '256';
     document.getElementById('chat-ring').style.strokeDashoffset = '87.96';
     document.getElementById('chat-ring').style.stroke = 'var(--accent)';
-    statusEl.style.display = 'block'; statusEl.style.background = 'rgba(102,255,170,0.06)'; statusEl.style.border = '1px solid rgba(102,255,170,0.25)'; statusEl.style.color = 'var(--green)';
-    statusEl.textContent = '✅ Message posted!';
+    btn.textContent = 'Send Message →'; btn.disabled = false;
+    statusEl.style.cssText = 'display:block;border-radius:8px;padding:10px 14px;font-size:12px;background:rgba(102,255,170,0.06);border:1px solid rgba(102,255,170,0.25);color:var(--green);margin-top:10px;';
+    statusEl.textContent = '✅ Sent! TX: ' + result.transactionHash.slice(0,16) + '...';
     renderChatPage();
-    setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
-  } catch(e) { alert('Error posting: ' + e.message); }
+    setTimeout(() => { statusEl.style.display = 'none'; }, 5000);
+
+  } catch(e) {
+    btn.textContent = 'Send Message →'; btn.disabled = false;
+    statusEl.style.cssText = 'display:block;border-radius:8px;padding:10px 14px;font-size:12px;background:rgba(255,60,60,0.06);border:1px solid rgba(255,60,60,0.25);color:#ff6060;margin-top:10px;';
+    statusEl.textContent = '❌ ' + (e.message || 'Transaction cancelled or failed.');
+  }
 }
+
 
 // Load chat page messages from Firebase
 function renderChatPage() {
