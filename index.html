@@ -3171,8 +3171,18 @@ async function loadSupplyChart(period) {
     if (json.Response === 'Error') throw new Error(json.Message);
     let raw = (json.Data?.Data || []).filter(d => d.volumefrom > 0);
 
-    // Group candles (e.g. 4h = 4×1h, W = 7×1d)
-    if (cfg.groupBy) {
+    // Group candles
+    if (period === 'M') {
+      // Group by calendar month — Binance burns always on 1st of month
+      const monthMap = {};
+      raw.forEach(d => {
+        const dt = new Date(d.time * 1000);
+        const key = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
+        if (!monthMap[key]) monthMap[key] = { time: new Date(dt.getFullYear(), dt.getMonth(), 1).getTime()/1000, volumefrom: 0 };
+        monthMap[key].volumefrom += d.volumefrom || 0;
+      });
+      raw = Object.values(monthMap).sort((a, b) => a.time - b.time);
+    } else if (cfg.groupBy) {
       const grouped = [];
       for (let i = 0; i < raw.length; i += cfg.groupBy) {
         const slice = raw.slice(i, i + cfg.groupBy);
@@ -3217,7 +3227,15 @@ async function loadSupplyChart(period) {
     ].map(b => ({ ts: new Date(b.date).getTime() / 1000, amount: b.amount }));
 
     // Helper: get Binance burn for a candle's time window
-    function getBinanceBurn(candleStartTs, candleEndTs) {
+    function getBinanceBurn(candleStartTs, candleEndTs, isPeriodM) {
+      if (isPeriodM) {
+        // Match by calendar month: burn date's month == candle's month
+        const cDate = new Date(candleStartTs * 1000);
+        const cY = cDate.getFullYear(), cM = cDate.getMonth();
+        return BINANCE_BURNS
+          .filter(b => { const d = new Date(b.ts*1000); return d.getFullYear()===cY && d.getMonth()===cM; })
+          .reduce((s, b) => s + b.amount, 0);
+      }
       return BINANCE_BURNS
         .filter(b => b.ts >= candleStartTs && b.ts < candleEndTs)
         .reduce((s, b) => s + b.amount, 0);
@@ -3225,7 +3243,8 @@ async function loadSupplyChart(period) {
 
     // 3. Build candles: tax burn (volume-based) + Binance event burns
     const burnPerSec = DAILY_BURN / 86400;
-    const avgBurnPerCandle = burnPerSec * cfg.secPerCandle;
+    const candleSec = period === 'M' ? 30.44 * 86400 : cfg.secPerCandle;
+    const avgBurnPerCandle = burnPerSec * candleSec;
     const totalVol = raw.reduce((s, d) => s + d.volumefrom, 0);
     const avgVol = totalVol / raw.length;
 
@@ -3235,14 +3254,16 @@ async function loadSupplyChart(period) {
 
     const candles = raw.map((d, i) => {
       const open = runningSupply;
-      const candleEnd = d.time + cfg.secPerCandle;
+      // For M (calendar months), candle width varies (28-31 days)
+      const actualSec = period === 'M' ? (30.44 * 86400) : cfg.secPerCandle;
+      const candleEnd = d.time + actualSec;
 
       // Tax burn (volume-proportional)
       const volRatio = avgVol > 0 ? d.volumefrom / avgVol : 1;
       const taxBurn = avgBurnPerCandle * Math.max(0.3, Math.min(3.0, volRatio));
 
       // Binance event burn (if this candle covers a burn date)
-      const binanceBurn = getBinanceBurn(d.time, candleEnd);
+      const binanceBurn = getBinanceBurn(d.time, candleEnd, period === 'M');
       const burned = taxBurn + binanceBurn;
 
       const close = open - burned;
@@ -3405,10 +3426,14 @@ function drawCandleChart(candles, period, hoverIdx = -1) {
       // 30 days: label every ~5 days
       if (i === 0 || i % 5 === 0) label = `${day} ${mon}`;
     } else if (period === 'W') {
-      // 52 weeks: label each new month as "Apr '25", new year as "2026"
       if (i === 0) label = `${mon} '${yr2}`;
       else if (isNewYear) label = String(d.getFullYear());
       else if (isNewMonth) label = `${mon} '${yr2}`;
+    } else if (period === 'M') {
+      // Monthly candles: label every 3 months, year changes as "2025"
+      if (i === 0) label = String(d.getFullYear());
+      else if (isNewYear) label = String(d.getFullYear());
+      else if (d.getMonth() % 3 === 0) label = `${mon} '${yr2}`;
     } else {
       if (i === 0 || isNewYear) label = String(d.getFullYear());
       else if (isNewMonth) label = `${mon} '${yr2}`;
