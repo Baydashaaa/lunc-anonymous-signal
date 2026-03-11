@@ -2952,8 +2952,8 @@ function showPage_stats(e) {
 }
 
 const LCD_S  = 'https://terra-classic-lcd.publicnode.com';
-const LCD_S2 = 'https://lcd.terraclassic.community';
-const LCD_S3 = 'https://terra-classic-lcd.allthatnode.com';
+const LCD_S2 = 'https://rest.cosmos.directory/terraclassic';
+const LCD_S3 = 'https://terra-classic-lcd.rebus.money:443';
 const ORACLE_POOL_ADDR = 'terra1jgp27m8fykex4e4jtt0l7ze8q528ux2lh4zh0f';
 
 let allValidators = [];
@@ -3308,7 +3308,7 @@ async function fetchBinanceBurnsFromChain() {
   try {
     const LCD_NODES = [
       'https://terra-classic-lcd.publicnode.com',
-      'https://lcd.terraclassic.community',
+      'https://rest.cosmos.directory/terraclassic',
     ];
 
     // Query LCD for incoming transfers to burn wallet
