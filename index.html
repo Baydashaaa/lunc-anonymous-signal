@@ -3118,11 +3118,11 @@ let currentSupplyPeriod = '1h';
 let supplyChartCache = {};
 
 const TF_CONFIG = {
-  '1h': { endpoint: 'histominute', limit: 60,  secPerCandle: 60,    label: '1h' },
-  '4h': { endpoint: 'histominute', limit: 240, secPerCandle: 60,    label: '4h', groupBy: 4  },
-  'D':  { endpoint: 'histohour',   limit: 24,  secPerCandle: 3600,  label: 'D'  },
-  'W':  { endpoint: 'histohour',   limit: 168, secPerCandle: 3600,  label: 'W'  },
-  'M':  { endpoint: 'histoday',    limit: 30,  secPerCandle: 86400, label: 'M'  },
+  '1h': { endpoint: 'histohour',   limit: 48,  secPerCandle: 3600,  label: '1h' },  // 48h of 1h candles
+  '4h': { endpoint: 'histohour',   limit: 96,  secPerCandle: 3600,  label: '4h', groupBy: 4 }, // 16 days × 4h candles
+  'D':  { endpoint: 'histoday',    limit: 30,  secPerCandle: 86400, label: 'D'  },
+  'W':  { endpoint: 'histoday',    limit: 90,  secPerCandle: 86400, label: 'W',  groupBy: 7 },
+  'M':  { endpoint: 'histoday',    limit: 365, secPerCandle: 86400, label: 'M',  groupBy: 30 },
 };
 
 // Average daily burn ~16.5M LUNC
@@ -3171,14 +3171,15 @@ async function loadSupplyChart(period) {
     if (json.Response === 'Error') throw new Error(json.Message);
     let raw = (json.Data?.Data || []).filter(d => d.volumefrom > 0);
 
-    // Group for 4h (combine 4 minute candles)
+    // Group candles (e.g. 4h = 4×1h, W = 7×1d)
     if (cfg.groupBy) {
       const grouped = [];
       for (let i = 0; i < raw.length; i += cfg.groupBy) {
         const slice = raw.slice(i, i + cfg.groupBy);
+        if (!slice.length) continue;
         grouped.push({
           time: slice[0].time,
-          volumefrom: slice.reduce((s, x) => s + x.volumefrom, 0),
+          volumefrom: slice.reduce((s, x) => s + (x.volumefrom || 0), 0),
         });
       }
       raw = grouped;
@@ -3258,8 +3259,8 @@ function drawCandleChart(candles, period, hoverIdx = -1) {
   const dataMin = Math.min(...vals);
   const dataMax = Math.max(...vals);
   const dataRange = dataMax - dataMin;
-  // Tight zoom: pad only 20% of the actual data range
-  const dataPad = dataRange > 0 ? dataRange * 0.2 : dataMax * 0.000005;
+  // Ultra-tight zoom: just 10% padding — shows actual supply variation clearly
+  const dataPad = dataRange > 0 ? dataRange * 0.1 : dataMax * 0.000002;
   const vMin = dataMin - dataPad;
   const vMax = dataMax + dataPad;
   const range = vMax - vMin || 1;
@@ -3277,7 +3278,7 @@ function drawCandleChart(candles, period, hoverIdx = -1) {
   }
 
   // Background grid lines + Y labels
-  const gridLines = 6;
+  const gridLines = 7;
   ctx.font = '10px Exo 2'; ctx.textAlign = 'right';
   for (let i = 0; i <= gridLines; i++) {
     const y = pad.t + (ch / gridLines) * i;
@@ -3332,44 +3333,44 @@ function drawCandleChart(candles, period, hoverIdx = -1) {
 
   // X-axis labels — format matches reference style
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  function fmtXLabel(ts, period) {
-    const d = new Date(ts);
+  // X-axis smart labels
+  ctx.font = '10px Exo 2'; ctx.textAlign = 'center';
+  const drawnPositions = [];
+  const minSpacing = 58; // min px between labels
+
+  candles.forEach((c, i) => {
+    const x = pad.l + i * gap + gap / 2;
+    const d = new Date(c.t);
     const hh = d.getHours().toString().padStart(2,'0');
-    const mm = d.getMinutes().toString().padStart(2,'0');
     const day = d.getDate().toString().padStart(2,'0');
     const mon = MONTHS[d.getMonth()];
+    const prevD = i > 0 ? new Date(candles[i-1].t) : null;
+    const isNewDay = !prevD || prevD.getDate() !== d.getDate();
+
+    let label = null;
+    // For 1h (48h view): label every new day as "09 Mar" + first candle as "09 Mar, 16:00"
     if (period === '1h') {
-      // Show "09 Mar, 22:00" for date changes, just "22:00" for same-day times
-      return `${hh}:${mm}`;
+      if (i === 0) label = `${day} ${mon}, ${hh}:00`;
+      else if (isNewDay) label = `${day} ${mon}`;
     } else if (period === '4h') {
-      return `${day} ${mon}, ${hh}:00`;
+      if (i === 0) label = `${day} ${mon}, ${hh}:00`;
+      else if (isNewDay) label = `${day} ${mon}`;
     } else if (period === 'D') {
-      return `${day} ${mon}, ${hh}:00`;
-    } else if (period === 'W') {
-      return `${day} ${mon}`;
+      if (i === 0 || i % 5 === 0) label = `${day} ${mon}`;
     } else {
-      return `${day} ${mon}`;
+      if (i === 0 || i % Math.floor(candles.length/5) === 0) label = `${day} ${mon}`;
     }
-  }
 
-  // Smart label placement: show date change labels + evenly spaced time labels
-  ctx.fillStyle = '#3a5578'; ctx.font = '10px Exo 2'; ctx.textAlign = 'center';
-  const maxLabels = Math.min(7, candles.length);
-  const labelStep = Math.max(1, Math.floor((candles.length - 1) / (maxLabels - 1)));
-  const drawnPositions = [];
-  for (let i = 0; i < candles.length; i += labelStep) {
-    const idx = Math.min(i, candles.length - 1);
-    const x = pad.l + idx * gap + gap / 2;
-    // avoid overlapping
-    if (drawnPositions.some(px => Math.abs(px - x) < 55)) continue;
-    drawnPositions.push(x);
-    const label = fmtXLabel(candles[idx].t, period);
-    ctx.fillText(label, x, h - 6);
-  }
+    if (label && !drawnPositions.some(px => Math.abs(px - x) < minSpacing)) {
+      drawnPositions.push(x);
+      ctx.fillStyle = '#3a5578';
+      ctx.fillText(label, x, h - 14);
+    }
+  });
 
-  // X-axis label subtitle "UTC Time Buckets"
-  ctx.fillStyle = 'rgba(58,85,120,0.5)'; ctx.font = '9px Exo 2'; ctx.textAlign = 'center';
-  ctx.fillText('UTC Time Buckets', pad.l + cw / 2, h);
+  // "UTC Time Buckets" subtitle
+  ctx.fillStyle = 'rgba(58,85,120,0.45)'; ctx.font = '9px Exo 2'; ctx.textAlign = 'center';
+  ctx.fillText('UTC Time Buckets', pad.l + cw / 2, h - 2);
 
   // Current price line
   const lastY = toY(candles[candles.length - 1].close);
