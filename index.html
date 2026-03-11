@@ -3460,12 +3460,27 @@ async function loadSupplyChart(period) {
         .reduce((s, b) => s + b.amount, 0);
     }
 
-    // 3. Build candles: tax burn (volume-based) + Binance event burns
+    // 3. Build candles: tax burn (volume × price × 0.5% rate) + Binance event burns
     const burnPerSec = DAILY_BURN / 86400;
     const candleSec = period === 'M' ? 30.44 * 86400 : cfg.secPerCandle;
     const avgBurnPerCandle = burnPerSec * candleSec;
-    const totalVol = raw.reduce((s, d) => s + d.volumefrom, 0);
-    const avgVol = totalVol / raw.length;
+
+    // Use actual LUNC volume from CryptoCompare (volumefrom = LUNC traded)
+    // Tax burn ≈ volume × 0.5% burn tax — this gives REAL variation between candles
+    // volumefrom is in LUNC, so burn = volumefrom * 0.005 (0.5% tax)
+    const TAX_RATE = 0.005; // 0.5% on-chain tax
+
+    // Compute per-candle tax burn from actual trading volume
+    // If vol data is too uniform, add slight noise to differentiate bars
+    const vols = raw.map(d => d.volumefrom || 0);
+    const totalVol = vols.reduce((s, v) => s + v, 0);
+    const avgVol = totalVol / raw.length || 1;
+
+    // Scale factor: ensure total vol-based burn matches expected DAILY_BURN × period
+    // This anchors the cumulative supply correctly while keeping per-bar variation
+    const totalVolBurn = vols.reduce((s, v) => s + v * TAX_RATE, 0);
+    const expectedTotalBurn = avgBurnPerCandle * raw.length;
+    const scaleFactor = totalVolBurn > 0 ? expectedTotalBurn / totalVolBurn : 1;
 
     const totalSecs = raw[raw.length-1].time - raw[0].time + cfg.secPerCandle;
     const totalPeriodBurn = burnPerSec * totalSecs;
@@ -3473,14 +3488,13 @@ async function loadSupplyChart(period) {
 
     const candles = raw.map((d, i) => {
       const open = runningSupply;
-      // For M (calendar months), candle width varies (28-31 days)
       const actualSec = period === 'M' ? (30.44 * 86400) : cfg.secPerCandle;
       const candleEnd = d.time + actualSec;
 
-      // Tax burn: volume-proportional but with floor at 60% of average
-      // Real burn never stops completely — blocks are always produced
-      const volRatio = avgVol > 0 ? d.volumefrom / avgVol : 1;
-      const taxBurn = avgBurnPerCandle * Math.max(0.6, Math.min(2.5, volRatio));
+      // Tax burn: volume-based with scaling — gives real bar height variation
+      const rawVolBurn = (d.volumefrom || avgVol) * TAX_RATE * scaleFactor;
+      // Clamp to reasonable range (0.3× to 4× average) to avoid extremes
+      const taxBurn = Math.max(avgBurnPerCandle * 0.3, Math.min(avgBurnPerCandle * 4.0, rawVolBurn));
 
       // Binance event burn (if this candle covers a burn date)
       const binanceBurn = getBinanceBurn(d.time, candleEnd, period);
@@ -3489,22 +3503,17 @@ async function loadSupplyChart(period) {
       const close = open - burned;
       runningSupply = close;
 
-      // Wicks based ONLY on taxBurn — keeps Y scale sane even with big Binance burns
-      const wickH = taxBurn * (0.15 + Math.random() * 0.25);
-      const wickL = taxBurn * (0.1  + Math.random() * 0.4);
-      // closeNoB = close without Binance burn — used for Y scale only
-      const closeNoB = open - taxBurn;
-
       return {
         t:           d.time * 1000,
         open,
-        high:        open + wickH,
-        low:         closeNoB - wickL,
-        close,       // real supply including Binance burn
-        closeNoB,    // for Y-axis scaling
+        close,
         burned,
         taxBurn,
         binanceBurn,
+        // keep for compatibility
+        high:        open,
+        low:         close,
+        closeNoB:    open - taxBurn,
       };
     });
 
