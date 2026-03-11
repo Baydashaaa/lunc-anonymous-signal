@@ -3227,15 +3227,30 @@ async function loadSupplyChart(period) {
     ].map(b => ({ ts: new Date(b.date).getTime() / 1000, amount: b.amount }));
 
     // Helper: get Binance burn for a candle's time window
-    function getBinanceBurn(candleStartTs, candleEndTs, isPeriodM) {
-      if (isPeriodM) {
-        // Match by calendar month: burn date's month == candle's month
+    function getBinanceBurn(candleStartTs, candleEndTs, period) {
+      if (period === 'M') {
+        // Match by calendar month
         const cDate = new Date(candleStartTs * 1000);
         const cY = cDate.getFullYear(), cM = cDate.getMonth();
         return BINANCE_BURNS
           .filter(b => { const d = new Date(b.ts*1000); return d.getFullYear()===cY && d.getMonth()===cM; })
           .reduce((s, b) => s + b.amount, 0);
       }
+      if (period === 'W') {
+        // Weekly: assign each burn to the NEAREST weekly candle (no double-counting)
+        // candleStartTs is start of this week, candleMidTs is midpoint
+        const candleMidTs = (candleStartTs + candleEndTs) / 2;
+        return BINANCE_BURNS
+          .filter(b => {
+            // This burn belongs to this candle if midpoint of this candle is closer than any other
+            const distHere = Math.abs(b.ts - candleMidTs);
+            const weekSec = 7 * 86400;
+            // Only claim burns within 3.5 days of this candle's midpoint
+            return distHere <= weekSec / 2;
+          })
+          .reduce((s, b) => s + b.amount, 0);
+      }
+      // Default: exact window
       return BINANCE_BURNS
         .filter(b => b.ts >= candleStartTs && b.ts < candleEndTs)
         .reduce((s, b) => s + b.amount, 0);
@@ -3263,7 +3278,7 @@ async function loadSupplyChart(period) {
       const taxBurn = avgBurnPerCandle * Math.max(0.3, Math.min(3.0, volRatio));
 
       // Binance event burn (if this candle covers a burn date)
-      const binanceBurn = getBinanceBurn(d.time, candleEnd, period === 'M');
+      const binanceBurn = getBinanceBurn(d.time, candleEnd, period);
       const burned = taxBurn + binanceBurn;
 
       const close = open - burned;
