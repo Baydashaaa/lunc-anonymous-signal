@@ -3119,7 +3119,7 @@ let supplyChartCache = {};
 
 const TF_CONFIG = {
   '1h': { endpoint: 'histohour',   limit: 48,  secPerCandle: 3600,       label: '1h' },
-  '4h': { endpoint: 'histohour',   limit: 120, secPerCandle: 3600,       label: '4h', groupBy: 4 },
+  '4h': { endpoint: 'histohour',   limit: 336, secPerCandle: 3600,       label: '4h', groupBy: 4 }, // 14 days × 24h / 4 = 84 candles
   'D':  { endpoint: 'histoday',    limit: 30,  secPerCandle: 86400,      label: 'D'  },
   'W':  { endpoint: 'histoday',    limit: 364, secPerCandle: 86400,      label: 'W',  groupBy: 7 }, // ~52 weeks
   'M':  { endpoint: 'histoday',    limit: 730, secPerCandle: 86400,      label: 'M',  groupBy: 30 },
