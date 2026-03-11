@@ -740,7 +740,24 @@ function showPage(name) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   event.target.classList.add('active');
-  if (name === 'board') renderBoard();
+  if (name === 'board') // Auto-restore wallet session on page load
+(async function restoreWalletSession() {
+  const saved = loadWalletSession();
+  if (!saved) return;
+  if (!window.keplr) return;
+  try {
+    await window.keplr.enable('columbus-5');
+    const signer = window.keplr.getOfflineSigner('columbus-5');
+    const accounts = await signer.getAccounts();
+    if (accounts[0].address === saved) {
+      setWalletConnected(saved);
+    } else {
+      clearWalletSession();
+    }
+  } catch(e) { clearWalletSession(); }
+})();
+
+renderBoard();
 }
 
 // ─── RENDER BOARD ────────────────────────────────────────────
@@ -1042,6 +1059,26 @@ function showTxStatus(type, msg) {
 // ─── WALLET CONNECT ───────────────────────────────────────────
 let globalWalletAddress = null;
 
+// ─── WALLET SESSION (24h) ─────────────────────────────────────
+function saveWalletSession(address) {
+  localStorage.setItem('wallet_session', JSON.stringify({
+    address, expires: Date.now() + 24 * 60 * 60 * 1000
+  }));
+}
+
+function loadWalletSession() {
+  try {
+    const s = JSON.parse(localStorage.getItem('wallet_session') || 'null');
+    if (s && s.address && s.expires > Date.now()) return s.address;
+    localStorage.removeItem('wallet_session');
+  } catch(e) {}
+  return null;
+}
+
+function clearWalletSession() {
+  localStorage.removeItem('wallet_session');
+}
+
 window.toggleWalletDropdown = function() {
   document.getElementById('wallet-dropdown').classList.toggle('open');
 }
@@ -1078,6 +1115,7 @@ window.connectWallet = async function(type) {
 
 function setWalletConnected(address) {
   globalWalletAddress = address;
+  saveWalletSession(address);
   const short = address.slice(0,8) + '...' + address.slice(-4);
   document.getElementById('wallet-btn-label').textContent = short;
   document.getElementById('wallet-main-btn').classList.add('connected');
@@ -1099,6 +1137,7 @@ function setWalletConnected(address) {
 
 window.disconnectWallet = function() {
   globalWalletAddress = null;
+  clearWalletSession();
   document.getElementById('wallet-btn-label').textContent = 'Connect';
   document.getElementById('wallet-main-btn').classList.remove('connected');
   document.getElementById('wallet-not-connected').style.display = 'block';
@@ -1327,6 +1366,9 @@ window.setWalletConnected = function(address) {
   document.getElementById('chat-page-form').style.display = 'block';
   document.getElementById('chat-page-addr').textContent = address.slice(0,10)+'...'+address.slice(-4);
   document.getElementById('vote-wallet-status').innerHTML = '<span style="font-size:11px;color:var(--green);">✓ ' + address.slice(0,8)+'...'+address.slice(-4) + '</span>';
+  // Restore previous votes for this wallet
+  applyStoredVotes();
+  renderVotes();
 }
 
 // ─── VOTE PAGE ────────────────────────────────────────────────
@@ -1449,6 +1491,36 @@ function renderVotes() {
   }).join('');
 }
 
+// ─── VOTE PERSISTENCE ────────────────────────────────────────
+function getVoteStorageKey() {
+  return globalWalletAddress ? 'votes_' + globalWalletAddress : null;
+}
+
+function loadVotesFromStorage() {
+  const key = getVoteStorageKey();
+  if (!key) return {};
+  try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch(e) { return {}; }
+}
+
+function saveVoteToStorage(voteId, optionIdx) {
+  const key = getVoteStorageKey();
+  if (!key) return;
+  const votes = loadVotesFromStorage();
+  votes[voteId] = optionIdx;
+  localStorage.setItem(key, JSON.stringify(votes));
+}
+
+function applyStoredVotes() {
+  const votes = loadVotesFromStorage();
+  for (const vote of VOTES_DATA) {
+    if (votes[vote.id] !== undefined) {
+      vote.userVoted = votes[vote.id];
+    } else {
+      vote.userVoted = null;
+    }
+  }
+}
+
 function castVote(voteId, optionIdx) {
   if (!globalWalletAddress) { alert('Connect Keplr wallet to vote!'); return; }
   if (optionIdx === -1) return;
@@ -1457,6 +1529,7 @@ function castVote(voteId, optionIdx) {
   vote.options[optionIdx].votes++;
   vote.totalVotes++;
   vote.userVoted = optionIdx;
+  saveVoteToStorage(voteId, optionIdx);
   renderVotes();
 }
 
