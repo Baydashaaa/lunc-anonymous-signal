@@ -741,10 +741,18 @@ function showPage(name) {
   document.getElementById('page-' + name).classList.add('active');
   event.target.classList.add('active');
   if (name === 'board') // Auto-restore wallet session on page load
-(async function restoreWalletSession() {
+async function restoreWalletSession() {
   const saved = loadWalletSession();
   if (!saved) return;
+
+  // Wait for Keplr extension to inject into window (up to 3s)
+  let attempts = 0;
+  while (!window.keplr && attempts < 30) {
+    await new Promise(r => setTimeout(r, 100));
+    attempts++;
+  }
   if (!window.keplr) return;
+
   try {
     await window.keplr.enable('columbus-5');
     const signer = window.keplr.getOfflineSigner('columbus-5');
@@ -755,7 +763,14 @@ function showPage(name) {
       clearWalletSession();
     }
   } catch(e) { clearWalletSession(); }
-})();
+}
+
+// Run after DOM fully loaded
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', restoreWalletSession);
+} else {
+  restoreWalletSession();
+}
 
 renderBoard();
 }
