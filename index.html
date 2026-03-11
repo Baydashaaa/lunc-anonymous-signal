@@ -3911,53 +3911,131 @@ function setupCandleHover(candles, period) {
   if (!canvas) return;
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
+  // Overlay tooltip drawn ON canvas (like luncmetrics)
+  let _hoverTooltipEl = null;
+
+  function getOrCreateOverlayTooltip() {
+    if (_hoverTooltipEl) return _hoverTooltipEl;
+    const wrap = canvas.parentElement;
+    wrap.style.position = 'relative';
+    const el = document.createElement('div');
+    el.id = 'canvas-hover-tooltip';
+    el.style.cssText = `
+      position:absolute;pointer-events:none;display:none;z-index:10;
+      background:rgba(8,18,36,0.93);border:1px solid rgba(84,147,247,0.25);
+      border-radius:8px;padding:10px 14px;font-family:'Exo 2',sans-serif;
+      font-size:12px;line-height:1.85;color:#c8ddf0;
+      box-shadow:0 4px 24px rgba(0,0,0,0.5);min-width:220px;white-space:nowrap;
+    `;
+    wrap.appendChild(el);
+    _hoverTooltipEl = el;
+    return el;
+  }
+
+  function fmtDate(d, period) {
+    const dd = d.getUTCDate().toString().padStart(2,'0');
+    const mm = (d.getUTCMonth()+1).toString().padStart(2,'0');
+    const yyyy = d.getUTCFullYear();
+    const hh = d.getUTCHours().toString().padStart(2,'0');
+    const min = d.getUTCMinutes().toString().padStart(2,'0');
+    const ss = d.getUTCSeconds().toString().padStart(2,'0');
+    if (period === 'D' || period === 'W' || period === 'M') {
+      return `${dd}.${mm}.${yyyy}, 00:00:00 UTC`;
+    }
+    return `${dd}.${mm}.${yyyy}, ${hh}:${min}:${ss} UTC`;
+  }
+
+  function fmtBig(v) {
+    // Format like "441,311 млрд" style but in English: "441.311B" or full with commas
+    const n = Math.round(Math.abs(v));
+    if (n >= 1e12) return (n / 1e12).toFixed(3) + 'T';
+    if (n >= 1e9)  return (n / 1e9).toFixed(3) + 'B';
+    if (n >= 1e6)  return (n / 1e6).toFixed(3) + 'M';
+    return n.toLocaleString('en-US');
+  }
+
+  function fmtPeriodLabel(period) {
+    if (period === '1h') return 'Hourly burned';
+    if (period === '4h') return '4h burned';
+    if (period === 'D')  return 'Daily burned';
+    if (period === 'W')  return 'Weekly burned';
+    if (period === 'M')  return 'Monthly burned';
+    return 'Period burned';
+  }
+
   canvas.onmousemove = (e) => {
     const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const pad = { l:68, r:16 };
-    const cw = rect.width - pad.l - pad.r;
+    const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const my = (e.clientY - rect.top)  * (canvas.height / rect.height);
+    const padL = 68, padR = 16;
+    const cw = canvas.width - padL - padR;
     const gap = cw / candles.length;
-    const idx = Math.floor((mx - pad.l) / gap);
+    const idx = Math.floor((mx - padL) / gap);
+    const tip = getOrCreateOverlayTooltip();
+
     if (idx >= 0 && idx < candles.length) {
       const c = candles[idx];
       const d = new Date(c.t);
-      const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      const timeStr = `${MON[d.getMonth()]} ${d.getDate().toString().padStart(2,'0')}, ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
-      const change = c.close - c.open;
-      const changeColor = change < 0 ? '#ff6b6b' : '#4dffaa';
-      // Full number format like reference: 6,466,128,338,549
-      const fmt = v => Math.round(v).toLocaleString('en-US');
-      const tooltip = document.getElementById('supply-tooltip');
-      if (tooltip) {
-        tooltip.innerHTML = `
-          <span style="color:var(--accent);font-weight:700;font-size:11px;">${timeStr}</span><br>
-          <span style="color:var(--muted);font-size:10px;">Open</span> <b style="font-size:11px;">${fmt(c.open)}</b> &nbsp;
-          <span style="color:var(--muted);font-size:10px;">High</span> <b style="font-size:11px;">${fmt(c.high)}</b> &nbsp;
-          <span style="color:var(--muted);font-size:10px;">Low</span> <b style="font-size:11px;">${fmt(c.low)}</b> &nbsp;
-          <span style="color:var(--muted);font-size:10px;">Close</span> <b style="font-size:11px;">${fmt(c.close)}</b> &nbsp;
-          <span style="color:var(--muted);font-size:10px;">Change</span> <b style="color:${changeColor};font-size:11px;">${change < 0 ? '-' : '+'}${fmt(Math.abs(change))}</b>${c.binanceBurn > 0 ? ` &nbsp;<span style="background:rgba(255,100,50,0.15);border:1px solid rgba(255,100,50,0.4);border-radius:4px;padding:1px 6px;font-size:9px;color:#ff7744;letter-spacing:0.05em;">🔥 BINANCE BURN</span>` : ''}`;
-      }
-      if (currentChartMode === 'burned') {
-        drawBurnedChart(candles, period, idx);
-      } else {
-        drawCandleChart(candles, period, idx);
-      }
+      const dateStr = fmtDate(d, period);
 
-      // Tooltip for burned mode
-      if (currentChartMode === 'burned' && tooltip) {
+      // Position tooltip: follow mouse, flip if near right edge
+      const canvasRect = canvas.getBoundingClientRect();
+      const wrapRect = canvas.parentElement.getBoundingClientRect();
+      let tipLeft = e.clientX - wrapRect.left + 14;
+      let tipTop  = e.clientY - wrapRect.top  - 20;
+      tip.style.display = 'block';
+      // Temporarily show to measure width
+      const tipW = tip.offsetWidth || 240;
+      if (tipLeft + tipW > wrapRect.width - 10) tipLeft = e.clientX - wrapRect.left - tipW - 14;
+      if (tipTop < 4) tipTop = 4;
+      tip.style.left = tipLeft + 'px';
+      tip.style.top  = tipTop  + 'px';
+
+      if (currentChartMode === 'burned') {
+        // Cumulative burned up to this candle
         const ORIGINAL_SUPPLY = 6_900_000_000_000;
         let cumB = ORIGINAL_SUPPLY - candles[0].open;
         for (let j = 0; j <= idx; j++) cumB += candles[j].burned;
-        tooltip.innerHTML = `
-          <span style="color:var(--accent);font-weight:700;font-size:11px;">${timeStr}</span><br>
-          <span style="color:var(--muted);font-size:10px;">Total Burned</span> <b style="color:#1ec864;font-size:11px;">${fmt(Math.round(cumB))}</b> &nbsp;
-          <span style="color:var(--muted);font-size:10px;">This period</span> <b style="font-size:11px;">${fmt(Math.round(c.burned))}</b>${c.binanceBurn > 0 ? ` &nbsp;<span style="background:rgba(255,100,50,0.15);border:1px solid rgba(255,100,50,0.4);border-radius:4px;padding:1px 6px;font-size:9px;color:#ff7744;letter-spacing:0.05em;">🔥 BINANCE BURN +${fmt(Math.round(c.binanceBurn))}</span>` : ''}`;
+        const periodLbl = fmtPeriodLabel(period);
+        tip.innerHTML =
+          `<div style="color:#7abed0;font-size:10px;letter-spacing:0.08em;margin-bottom:3px;">TOTAL LUNC BURNED</div>` +
+          `<div><span style="color:#aac4d8;">Total burned:</span> <b style="color:#1ec864;">${fmtBig(cumB)} LUNC</b></div>` +
+          `<div><span style="color:#aac4d8;">${periodLbl}:</span> <b style="color:#4dffaa;">${fmtBig(c.burned)} LUNC</b></div>` +
+          (c.binanceBurn > 0
+            ? `<div><span style="color:#ff9944;">🔥 Binance burn:</span> <b style="color:#ffbb55;">${fmtBig(c.binanceBurn)} LUNC</b></div>`
+            : '') +
+          `<div><span style="color:#aac4d8;">Date:</span> <b>${dateStr}</b></div>`;
+        drawBurnedChart(candles, period, idx);
+      } else {
+        // Supply mode
+        const change = c.close - c.open;
+        const changeColor = change < 0 ? '#ff6b6b' : '#4dffaa';
+        const chSign = change < 0 ? '−' : '+';
+        tip.innerHTML =
+          `<div style="color:#7abed0;font-size:10px;letter-spacing:0.08em;margin-bottom:3px;">TOTAL LUNC SUPPLY</div>` +
+          `<div><span style="color:#aac4d8;">Supply:</span> <b style="color:#c8ddf0;">${fmtBig(c.close)} LUNC</b></div>` +
+          `<div><span style="color:#aac4d8;">Burned (period):</span> <b style="color:#ff6b6b;">${fmtBig(c.burned)} LUNC</b></div>` +
+          (c.binanceBurn > 0
+            ? `<div><span style="color:#ff9944;">🔥 Binance burn:</span> <b style="color:#ffbb55;">${fmtBig(c.binanceBurn)} LUNC</b></div>`
+            : '') +
+          `<div><span style="color:#aac4d8;">Change:</span> <b style="color:${changeColor};">${chSign}${fmtBig(Math.abs(change))} LUNC</b></div>` +
+          `<div><span style="color:#aac4d8;">Date:</span> <b>${dateStr}</b></div>`;
+        drawCandleChart(candles, period, idx);
       }
+
+      // Also update inline tooltip area (legacy, clear it)
+      const inlineTip = document.getElementById('supply-tooltip');
+      if (inlineTip) inlineTip.innerHTML = '';
+    } else {
+      tip.style.display = 'none';
     }
   };
+
   canvas.onmouseleave = () => {
-    const tooltip = document.getElementById('supply-tooltip');
-    if (tooltip) tooltip.innerHTML = '';
+    const tip = getOrCreateOverlayTooltip();
+    if (tip) tip.style.display = 'none';
+    const inlineTip = document.getElementById('supply-tooltip');
+    if (inlineTip) inlineTip.innerHTML = '';
     if (currentChartMode === 'burned') drawBurnedChart(candles, period, -1);
     else drawCandleChart(candles, period, -1);
   };
