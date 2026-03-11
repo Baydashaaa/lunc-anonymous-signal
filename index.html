@@ -3057,16 +3057,22 @@ async function loadOraclePoolS() {
 
 async function loadValidatorsS() {
   try {
-    // Fetch ALL validators with pagination (LCD default limit is often 100)
-    let all = [], nextKey = null;
-    do {
-      const qs = nextKey
-        ? `/cosmos/staking/v1beta1/validators?pagination.limit=200&pagination.key=${encodeURIComponent(nextKey)}`
-        : `/cosmos/staking/v1beta1/validators?pagination.limit=200`;
-      const data = await lcdS(qs);
-      all = all.concat(data.validators || []);
-      nextKey = data.pagination?.next_key || null;
-    } while (nextKey);
+    // Try both LCD nodes with limit=500 — enough for Terra Classic (~200 validators)
+    const endpoints = [LCD_S, LCD_S2];
+    let all = [];
+    for (const base of endpoints) {
+      try {
+        const r = await Promise.race([
+          fetch(`${base}/cosmos/staking/v1beta1/validators?pagination.limit=500`),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))
+        ]);
+        if (r.ok) {
+          const d = await r.json();
+          if ((d.validators || []).length > 0) { all = d.validators; break; }
+        }
+      } catch {}
+    }
+    if (!all.length) throw new Error('empty');
 
     allValidators = all.sort((a, b) => Number(b.tokens) - Number(a.tokens));
     const active = allValidators.filter(v => v.status === 'BOND_STATUS_BONDED').length;
