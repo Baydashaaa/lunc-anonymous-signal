@@ -172,6 +172,60 @@
   @keyframes blink { 0%,80%,100%{opacity:0} 40%{opacity:1} }
 
   /* FOOTER */
+  /* CHAT PAGE */
+  .chat-page-wrap { max-width: 680px; margin: 0 auto; }
+  .chat-page-messages { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; height: 440px; overflow-y: auto; margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  .chat-page-msg { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; }
+  .chat-page-msg.verified-msg { border-color: rgba(102,255,170,0.25); background: rgba(102,255,170,0.03); }
+  .chat-page-msg-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+  .chat-page-msg-author { font-size: 11px; font-weight: 700; color: var(--text); }
+  .chat-page-msg-text { font-size: 13px; line-height: 1.6; color: var(--text); }
+  .chat-page-msg-time { font-size: 10px; color: var(--muted); margin-left: auto; }
+  .chat-page-input-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+  .chat-page-textarea { width: 100%; background: rgba(84,147,247,0.04); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'Space Mono', monospace; font-size: 13px; padding: 12px 14px; outline: none; resize: none; min-height: 80px; transition: border-color 0.2s; }
+  .chat-page-textarea:focus { border-color: var(--accent); }
+  .chat-send-row { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; flex-wrap: wrap; gap: 10px; }
+  .chat-send-info { font-size: 11px; color: var(--muted); }
+  .chat-send-info strong { color: var(--accent); }
+
+  /* VOTE PAGE */
+  .vote-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+  .vote-tabs { display: flex; gap: 6px; }
+  .vote-tab { background: transparent; border: 1px solid var(--border); color: var(--muted); font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; padding: 7px 14px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+  .vote-tab.active { color: var(--accent); border-color: rgba(84,147,247,0.3); background: rgba(84,147,247,0.06); }
+  .vote-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 28px; margin-bottom: 16px; position: relative; overflow: hidden; }
+  .vote-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent); opacity: 0.3; }
+  .vote-card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; gap: 12px; }
+  .vote-card-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; color: #fff; }
+  .vote-card-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .vote-type-badge { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; padding: 3px 10px; border-radius: 10px; }
+  .vote-type-weekly { background: rgba(84,147,247,0.1); color: var(--accent); border: 1px solid rgba(84,147,247,0.2); }
+  .vote-type-monthly { background: rgba(245,197,24,0.1); color: var(--gold); border: 1px solid rgba(245,197,24,0.2); }
+  .vote-type-special { background: rgba(255,100,100,0.1); color: #ff6464; border: 1px solid rgba(255,100,100,0.2); }
+  .vote-timer { font-size: 10px; color: #ff8c00; }
+  .vote-desc { font-size: 13px; color: var(--muted); line-height: 1.7; margin-bottom: 20px; }
+  .vote-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .vote-option { display: flex; align-items: center; gap: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
+  .vote-option:hover { border-color: rgba(84,147,247,0.3); }
+  .vote-option.selected { border-color: var(--accent); background: rgba(84,147,247,0.06); }
+  .vote-option.winner { border-color: var(--green); background: rgba(102,255,170,0.05); }
+  .vote-option-bar { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(84,147,247,0.08); border-radius: 8px; transition: width 0.6s; z-index: 0; }
+  .vote-option-bar.winner-bar { background: rgba(102,255,170,0.08); }
+  .vote-option-content { position: relative; z-index: 1; display: flex; align-items: center; gap: 12px; width: 100%; }
+  .vote-option-radio { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--muted); flex-shrink: 0; transition: all 0.2s; }
+  .vote-option.selected .vote-option-radio { border-color: var(--accent); background: var(--accent); }
+  .vote-option.winner .vote-option-radio { border-color: var(--green); background: var(--green); }
+  .vote-option-label { font-size: 13px; color: var(--text); flex: 1; }
+  .vote-option-pct { font-size: 12px; color: var(--muted); font-weight: 700; }
+  .vote-option-count { font-size: 10px; color: var(--muted); }
+  .vote-btn-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .vote-progress-wrap { margin-bottom: 12px; }
+  .vote-progress-bar-bg { background: var(--border); border-radius: 4px; height: 4px; margin-bottom: 6px; }
+  .vote-progress-bar-fill { height: 4px; border-radius: 4px; background: linear-gradient(90deg, var(--accent-dark), var(--accent)); transition: width 0.6s; }
+  .vote-progress-info { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); }
+  .vote-source { font-size: 11px; color: var(--muted); padding: 10px 14px; background: rgba(84,147,247,0.04); border: 1px solid rgba(84,147,247,0.1); border-radius: 8px; margin-top: 16px; }
+  .vote-source a { color: var(--accent); text-decoration: none; }
+
   .site-footer { text-align: center; margin-top: 60px; padding-top: 24px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); line-height: 1.9; position: relative; z-index: 1; }
   .site-footer a { color: var(--accent); text-decoration: none; opacity: 0.65; transition: opacity 0.2s; }
   .site-footer a:hover { opacity: 1; }
@@ -293,6 +347,8 @@
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="showPage('board')">Board</button>
     <button class="nav-tab" onclick="showPage('ask')">Ask</button>
+    <button class="nav-tab" onclick="showPage('chat')">Chat</button>
+    <button class="nav-tab" onclick="showPage('vote')">Vote</button>
     <button class="nav-tab" onclick="showPage('about')">About</button>
     <div class="wallet-btn-wrap" id="wallet-wrap">
       <button class="wallet-btn" id="wallet-main-btn" onclick="toggleWalletDropdown()">
@@ -492,6 +548,95 @@
     Send <strong style="color:var(--accent)">200,000 LUNC</strong> to the protocol wallet before submitting.<br>
     <span style="font-size:10px;font-family:monospace;color:var(--accent);word-break:break-all;">terra15jt5a9ycsey4hd6nlqgqxccl9aprkmg2mxmfc6</span>
   </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     PAGE: CHAT
+════════════════════════════════════════════════ -->
+<div class="page" id="page-chat">
+
+  <div class="page-header">
+    <div class="tag">Community Chat</div>
+    <h1>DAO <span>Chat</span></h1>
+    <p class="subtitle">Pay 5,000 LUNC · Speak to validators & developers · Shape governance</p>
+  </div>
+
+  <div class="chat-page-wrap">
+
+    <div class="note" style="margin-bottom:20px;">
+      💡 Messages that inspire governance proposals earn a <strong style="color:var(--gold)">🏆 Reward</strong> — voted by the community.
+    </div>
+
+    <div class="chat-page-messages" id="chat-page-messages">
+      <div style="text-align:center;color:var(--muted);font-size:12px;padding:20px;">Loading messages...</div>
+    </div>
+
+    <div class="chat-page-input-wrap">
+      <div id="chat-page-connect-prompt" style="text-align:center;padding:8px 0 16px;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">Connect wallet to send messages · 5,000 LUNC per message</div>
+        <button class="btn btn-primary" onclick="connectWallet('keplr-ext')" style="width:100%;">🔑 Connect Keplr to Chat</button>
+      </div>
+      <div id="chat-page-form" style="display:none;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:10px;color:var(--green);">✓ Connected:</span>
+          <span style="font-size:10px;font-family:monospace;color:var(--muted);" id="chat-page-addr"></span>
+        </div>
+        <textarea class="chat-page-textarea" id="chat-page-input" placeholder="Share your thoughts with validators and developers..." maxlength="256"></textarea>
+        <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:8px;">
+          <svg width="36" height="36" viewBox="0 0 36 36" style="transform:rotate(-90deg);flex-shrink:0;">
+            <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="3"/>
+            <circle id="chat-ring" cx="18" cy="18" r="14" fill="none" stroke="var(--accent)" stroke-width="3"
+              stroke-dasharray="87.96" stroke-dashoffset="87.96"
+              stroke-linecap="round" style="transition:stroke-dashoffset 0.2s,stroke 0.2s;"/>
+          </svg>
+          <span id="chat-page-count" style="font-size:11px;color:var(--muted);min-width:28px;text-align:right;">256</span>
+        </div>
+        <div class="chat-send-row">
+          <div class="chat-send-info">Cost: <strong>5,000 LUNC</strong> · Send TX then post</div>
+          <button class="btn btn-primary" onclick="sendChatMessage()" id="chat-page-send-btn">Send Message →</button>
+        </div>
+        <div id="chat-page-tx-wrap" style="display:none;margin-top:12px;">
+          <div class="form-group">
+            <label>TX Hash (5,000 LUNC payment proof)</label>
+            <div style="display:flex;gap:8px;">
+              <input type="text" id="chat-page-tx" placeholder="Paste TX hash after sending 5,000 LUNC..." style="flex:1;">
+              <button class="btn btn-primary" onclick="verifyChatTX()" id="chat-verify-btn" style="white-space:nowrap;padding:12px 14px;">Verify & Post</button>
+            </div>
+          </div>
+          <div id="chat-tx-status" style="display:none;border-radius:8px;padding:10px 14px;font-size:12px;"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     PAGE: VOTE
+════════════════════════════════════════════════ -->
+<div class="page" id="page-vote">
+
+  <div class="page-header">
+    <div class="tag">Governance</div>
+    <h1>Community <span>Vote</span></h1>
+    <p class="subtitle">Connect Keplr · Vote on proposals · Shape Terra Classic's future</p>
+  </div>
+
+  <div class="vote-header">
+    <div class="vote-tabs">
+      <button class="vote-tab active" onclick="filterVotes('all')">All</button>
+      <button class="vote-tab" onclick="filterVotes('weekly')">📅 Weekly</button>
+      <button class="vote-tab" onclick="filterVotes('monthly')">🗓 Monthly</button>
+      <button class="vote-tab" onclick="filterVotes('special')">⚡ Special</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);" id="vote-wallet-status">
+      <button class="btn btn-primary" style="padding:8px 16px;font-size:10px;" onclick="connectWallet('keplr-ext')">🔑 Connect to Vote</button>
+    </div>
+  </div>
+
+  <div id="votes-list"></div>
 
 </div>
 
@@ -971,338 +1116,271 @@ window.disconnectWallet = function() {
   disconnectChatKeplr();
 }
 
+// ─── CHAT PAGE ────────────────────────────────────────────────
+document.getElementById('chat-page-input').addEventListener('input', function() {
+  const max = 256;
+  const len = this.value.length;
+  const remaining = max - len;
+  const pct = len / max;
+  const circumference = 87.96;
+  const offset = circumference - (pct * circumference);
+  const ring = document.getElementById('chat-ring');
+  const counter = document.getElementById('chat-page-count');
+  ring.style.strokeDashoffset = offset;
+  // Color: blue → yellow → red
+  if (remaining <= 20) {
+    ring.style.stroke = '#ff4444';
+    counter.style.color = '#ff4444';
+  } else if (remaining <= 50) {
+    ring.style.stroke = '#f5c518';
+    counter.style.color = '#f5c518';
+  } else {
+    ring.style.stroke = 'var(--accent)';
+    counter.style.color = 'var(--muted)';
+  }
+  counter.textContent = remaining;
+});
+
+window.sendChatMessage = function() {
+  const text = document.getElementById('chat-page-input').value.trim();
+  if (!text) return;
+  document.getElementById('chat-page-tx-wrap').style.display = 'block';
+  document.getElementById('chat-page-send-btn').style.display = 'none';
+}
+
+window.verifyChatTX = async function() {
+  const txHash = document.getElementById('chat-page-tx').value.trim();
+  const statusEl = document.getElementById('chat-tx-status');
+  const btn = document.getElementById('chat-verify-btn');
+  if (!txHash) { alert('Please enter TX hash'); return; }
+
+  btn.textContent = 'Verifying...'; btn.disabled = true;
+  statusEl.style.display = 'none';
+
+  const CHAT_FEE = 5000000000; // 5,000 LUNC in uLUNC
+  const FCD = ['https://fcd.terra-classic.io', 'https://fcd.terraclassic.community'];
+  let txData = null;
+
+  for (const node of FCD) {
+    try {
+      const res = await fetch(`${node}/v1/tx/${txHash}`);
+      if (res.ok) { txData = await res.json(); break; }
+    } catch(e) { continue; }
+  }
+
+  btn.textContent = 'Verify & Post'; btn.disabled = false;
+
+  if (!txData || txData.error) {
+    statusEl.style.display = 'block'; statusEl.style.background = 'rgba(255,60,60,0.06)'; statusEl.style.border = '1px solid rgba(255,60,60,0.25)'; statusEl.style.color = '#ff6060';
+    statusEl.textContent = '❌ TX not found. Check hash and try again.'; return;
+  }
+
+  const msgs = txData.tx?.value?.msg || txData.tx?.body?.messages || [];
+  let valid = false;
+  for (const msg of msgs) {
+    const type = msg.type || msg['@type'] || '';
+    const val = msg.value || msg;
+    if (type.includes('MsgSend')) {
+      const coins = val.amount || [];
+      const lunc = Array.isArray(coins) ? coins.find(c => c.denom === 'uluna') : null;
+      if (val.to_address === 'terra15jt5a9ycsey4hd6nlqgqxccl9aprkmg2mxmfc6' && lunc && parseInt(lunc.amount) >= CHAT_FEE) { valid = true; break; }
+    }
+  }
+
+  if (!valid) {
+    statusEl.style.display = 'block'; statusEl.style.background = 'rgba(255,60,60,0.06)'; statusEl.style.border = '1px solid rgba(255,60,60,0.25)'; statusEl.style.color = '#ff6060';
+    statusEl.textContent = '❌ Invalid payment. Need 5,000 LUNC to protocol wallet.'; return;
+  }
+
+  // Post message
+  const text = document.getElementById('chat-page-input').value.trim();
+  const addr = globalWalletAddress || 'Anonymous';
+  const short = addr !== 'Anonymous' ? addr.slice(0,8)+'...'+addr.slice(-4) : 'Anonymous';
+
+  try {
+    const msgs = JSON.parse(localStorage.getItem('dao_chat') || '[]');
+    msgs.push({ text, author: short, fullAddr: addr, txHash, isVerified: true, timestamp: Date.now() });
+    if (msgs.length > 100) msgs.splice(0, msgs.length - 100);
+    localStorage.setItem('dao_chat', JSON.stringify(msgs));
+    document.getElementById('chat-page-input').value = '';
+    document.getElementById('chat-page-tx').value = '';
+    document.getElementById('chat-page-tx-wrap').style.display = 'none';
+    document.getElementById('chat-page-send-btn').style.display = 'block';
+    document.getElementById('chat-page-count').textContent = '256';
+    document.getElementById('chat-ring').style.strokeDashoffset = '87.96';
+    document.getElementById('chat-ring').style.stroke = 'var(--accent)';
+    statusEl.style.display = 'block'; statusEl.style.background = 'rgba(102,255,170,0.06)'; statusEl.style.border = '1px solid rgba(102,255,170,0.25)'; statusEl.style.color = 'var(--green)';
+    statusEl.textContent = '✅ Message posted!';
+    renderChatPage();
+    setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+  } catch(e) { alert('Error posting: ' + e.message); }
+}
+
+// Load chat page messages from Firebase
+function renderChatPage() {
+  const container = document.getElementById('chat-page-messages');
+  const msgs = JSON.parse(localStorage.getItem('dao_chat') || '[]').slice(-50);
+  if (msgs.length === 0) {
+    container.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:20px;">No messages yet — be the first to speak!</div>';
+    return;
+  }
+  container.innerHTML = msgs.map(m => `
+    <div class="chat-page-msg ${m.isVerified ? 'verified-msg' : ''}">
+      <div class="chat-page-msg-header">
+        <span class="chat-page-msg-author">${m.author}</span>
+        ${m.isVerified ? '<span style="font-size:8px;background:rgba(102,255,170,0.15);color:var(--green);padding:1px 6px;border-radius:4px;letter-spacing:0.08em;">✓ VERIFIED</span>' : ''}
+        <span class="chat-page-msg-time">${m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : ''}</span>
+      </div>
+      <div class="chat-page-msg-text">${m.text}</div>
+    </div>
+  `).join('');
+  container.scrollTop = container.scrollHeight;
+}
+renderChatPage();
+
+// Update chat page when wallet connects
+const _origSetWallet = window.setWalletConnected;
+window.setWalletConnected = function(address) {
+  _origSetWallet(address);
+  document.getElementById('chat-page-connect-prompt').style.display = 'none';
+  document.getElementById('chat-page-form').style.display = 'block';
+  document.getElementById('chat-page-addr').textContent = address.slice(0,10)+'...'+address.slice(-4);
+  document.getElementById('vote-wallet-status').innerHTML = '<span style="font-size:11px;color:var(--green);">✓ ' + address.slice(0,8)+'...'+address.slice(-4) + '</span>';
+}
+
+// ─── VOTE PAGE ────────────────────────────────────────────────
+const VOTES_DATA = [
+  {
+    id: 'v1', type: 'weekly', status: 'active',
+    title: 'Protocol Development Priority — Week 11',
+    desc: 'What should the development team focus on this week? Based on community discussions in the DAO Chat.',
+    source: 'Based on community chat discussions',
+    timer: '3d 14h remaining',
+    totalVotes: 234,
+    quorum: 100,
+    options: [
+      { label: 'SDK 0.53 upgrade testing & QA', votes: 112 },
+      { label: 'MM 2.0 activation preparation', votes: 78 },
+      { label: 'USTC re-peg research', votes: 44 },
+    ],
+    userVoted: null
+  },
+  {
+    id: 'v2', type: 'monthly', status: 'active',
+    title: 'Liquidity Pool Pairs — March 2026',
+    desc: 'Which trading pairs should receive liquidity incentives this month? Community votes determine allocation.',
+    source: 'Monthly liquidity governance',
+    timer: '18d 6h remaining',
+    totalVotes: 891,
+    quorum: 500,
+    options: [
+      { label: 'LUNC/USDT', votes: 412 },
+      { label: 'LUNC/USTC', votes: 287 },
+      { label: 'LUNC/ATOM', votes: 192 },
+    ],
+    userVoted: null
+  },
+  {
+    id: 'v3', type: 'special', status: 'active',
+    title: 'Terra Oracle — Reward Distribution Model',
+    desc: 'Should we switch from "winner takes all" to top-3 distribution for Q&A rewards?',
+    source: 'Proposal by community member · Terra Oracle governance',
+    timer: '6d 2h remaining',
+    totalVotes: 156,
+    quorum: 100,
+    options: [
+      { label: '70% winner + 30% voters', votes: 89 },
+      { label: 'Top-3 split (60/25/15)', votes: 41 },
+      { label: 'Keep current model', votes: 26 },
+    ],
+    userVoted: null
+  }
+];
+
+let currentVoteFilter = 'all';
+
+function filterVotes(type) {
+  currentVoteFilter = type;
+  document.querySelectorAll('.vote-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  renderVotes();
+}
+
+function renderVotes() {
+  const list = document.getElementById('votes-list');
+  const filtered = currentVoteFilter === 'all' ? VOTES_DATA : VOTES_DATA.filter(v => v.type === currentVoteFilter);
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px;font-size:12px;">No votes in this category yet.</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(v => {
+    const maxVotes = Math.max(...v.options.map(o => o.votes));
+    const pct = o => v.totalVotes > 0 ? Math.round((o.votes / v.totalVotes) * 100) : 0;
+    const quorumPct = Math.min(100, Math.round((v.totalVotes / v.quorum) * 100));
+    const typeClass = { weekly: 'vote-type-weekly', monthly: 'vote-type-monthly', special: 'vote-type-special' }[v.type];
+    const typeLabel = { weekly: '📅 Weekly', monthly: '🗓 Monthly', special: '⚡ Special' }[v.type];
+
+    return `
+    <div class="vote-card" id="vcard-${v.id}">
+      <div class="vote-card-meta">
+        <span class="vote-type-badge ${typeClass}">${typeLabel}</span>
+        <span class="vote-timer">⏱ ${v.timer}</span>
+      </div>
+      <div class="vote-card-title">${v.title}</div>
+      <div class="vote-desc" style="margin-top:8px;">${v.desc}</div>
+
+      <div class="vote-progress-wrap">
+        <div class="vote-progress-bar-bg"><div class="vote-progress-bar-fill" style="width:${quorumPct}%"></div></div>
+        <div class="vote-progress-info"><span>Quorum: ${v.totalVotes} / ${v.quorum} votes</span><span>${quorumPct}%</span></div>
+      </div>
+
+      <div class="vote-options">
+        ${v.options.map((o, oi) => {
+          const p = pct(o);
+          const isWinner = o.votes === maxVotes && v.totalVotes > 0;
+          const isSelected = v.userVoted === oi;
+          return `
+          <div class="vote-option ${isSelected ? 'selected' : ''} ${isWinner && v.userVoted !== null ? 'winner' : ''}" onclick="castVote('${v.id}', ${oi})">
+            <div class="vote-option-bar ${isWinner && v.userVoted !== null ? 'winner-bar' : ''}" style="width:${v.userVoted !== null ? p : 0}%"></div>
+            <div class="vote-option-content">
+              <div class="vote-option-radio"></div>
+              <div class="vote-option-label">${o.label}</div>
+              ${v.userVoted !== null ? `<div class="vote-option-pct">${p}%</div>` : ''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+
+      <div class="vote-btn-row">
+        ${v.userVoted === null
+          ? `<button class="btn btn-primary" onclick="castVote('${v.id}', -1)" style="padding:10px 24px;font-size:11px;" ${!globalWalletAddress ? 'disabled title="Connect Keplr to vote"' : ''}>
+              ${globalWalletAddress ? 'Cast Vote' : '🔑 Connect to Vote'}
+            </button>`
+          : `<span style="font-size:12px;color:var(--green);">✅ You voted</span>`
+        }
+        <span style="font-size:11px;color:var(--muted);">${v.totalVotes} votes total</span>
+      </div>
+
+      <div class="vote-source">💬 ${v.source}</div>
+    </div>`;
+  }).join('');
+}
+
+function castVote(voteId, optionIdx) {
+  if (!globalWalletAddress) { alert('Connect Keplr wallet to vote!'); return; }
+  if (optionIdx === -1) return;
+  const vote = VOTES_DATA.find(v => v.id === voteId);
+  if (!vote || vote.userVoted !== null) return;
+  vote.options[optionIdx].votes++;
+  vote.totalVotes++;
+  vote.userVoted = optionIdx;
+  renderVotes();
+}
+
 // ─── INIT ─────────────────────────────────────────────────────
 renderBoard();
 </script>
-
-<!-- ═══════════════════════════════════════════════
-     COMMUNITY CHAT WIDGET
-════════════════════════════════════════════════ -->
-<style>
-  .chat-widget {
-    position: fixed; bottom: 24px; left: 24px; z-index: 999;
-    display: flex; flex-direction: column; align-items: flex-start;
-  }
-
-  .chat-toggle {
-    width: 52px; height: 52px; border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent-dark), var(--accent));
-    border: none; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 20px rgba(84,147,247,0.4);
-    transition: all 0.3s; font-size: 20px;
-    position: relative;
-  }
-
-  .chat-toggle:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(84,147,247,0.5); }
-
-  .chat-badge {
-    position: absolute; top: -4px; right: -4px;
-    background: var(--green); color: #000; font-size: 9px; font-weight: 700;
-    width: 18px; height: 18px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    display: none;
-  }
-
-  .chat-box {
-    width: 320px; height: 420px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 14px; margin-bottom: 12px;
-    display: none; flex-direction: column;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
-    overflow: hidden;
-    animation: slideUp 0.25s ease;
-  }
-
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(16px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .chat-box.open { display: flex; }
-
-  .chat-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 16px; border-bottom: 1px solid var(--border);
-    background: rgba(84,147,247,0.06);
-  }
-
-  .chat-header-left { display: flex; align-items: center; gap: 8px; }
-  .chat-header-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse-dot 2s infinite; }
-  @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.4} }
-  .chat-header-title { font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: 0.05em; }
-  .chat-header-sub { font-size: 10px; color: var(--muted); }
-  .chat-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; transition: color 0.2s; }
-  .chat-close:hover { color: var(--text); }
-
-  .chat-messages {
-    flex: 1; overflow-y: auto; padding: 12px;
-    display: flex; flex-direction: column; gap: 8px;
-    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
-  }
-
-  .chat-msg {
-    max-width: 85%; padding: 8px 12px; border-radius: 10px;
-    font-size: 12px; line-height: 1.5; word-break: break-word;
-    animation: fadeMsg 0.2s ease;
-  }
-
-  @keyframes fadeMsg { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
-
-  .chat-msg.anon {
-    background: var(--surface2); border: 1px solid var(--border);
-    color: var(--text); align-self: flex-start;
-  }
-
-  .chat-msg.anon .msg-author {
-    font-size: 9px; letter-spacing: 0.1em; color: var(--muted);
-    margin-bottom: 3px; text-transform: uppercase;
-  }
-
-  .chat-msg.anon .msg-author .anon-badge {
-    background: rgba(84,147,247,0.15); color: var(--accent);
-    padding: 1px 5px; border-radius: 4px; font-size: 8px; margin-left: 4px;
-  }
-
-  .chat-msg-time { font-size: 9px; color: var(--muted); margin-top: 3px; }
-
-  .chat-system {
-    text-align: center; font-size: 10px; color: var(--muted);
-    padding: 4px 0; letter-spacing: 0.05em;
-  }
-
-  .chat-footer {
-    padding: 10px 12px; border-top: 1px solid var(--border);
-    background: rgba(0,0,0,0.2);
-  }
-
-  .chat-mode-switch {
-    display: flex; gap: 6px; margin-bottom: 8px;
-  }
-
-  .mode-btn {
-    flex: 1; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border);
-    background: transparent; color: var(--muted); font-family: 'Space Mono', monospace;
-    font-size: 10px; cursor: pointer; transition: all 0.2s; letter-spacing: 0.05em;
-  }
-
-  .mode-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(84,147,247,0.08); }
-
-  .chat-input-row { display: flex; gap: 6px; }
-
-  .chat-input {
-    flex: 1; background: rgba(84,147,247,0.04); border: 1px solid var(--border);
-    border-radius: 8px; color: var(--text); font-family: 'Space Mono', monospace;
-    font-size: 11px; padding: 8px 10px; outline: none; resize: none;
-    transition: border-color 0.2s;
-  }
-
-  .chat-input:focus { border-color: var(--accent); }
-  .chat-input::placeholder { color: var(--muted); }
-
-  .chat-send {
-    background: var(--accent); border: none; border-radius: 8px;
-    color: white; padding: 8px 12px; cursor: pointer; font-size: 14px;
-    transition: all 0.2s; flex-shrink: 0;
-  }
-
-  .chat-send:hover { background: #6aa0ff; }
-  .chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
-</style>
-
-<div class="chat-widget">
-  <div class="chat-box" id="chat-box">
-    <div class="chat-header">
-      <div class="chat-header-left">
-        <div class="chat-header-dot"></div>
-        <div>
-          <div class="chat-header-title">Community Chat</div>
-          <div class="chat-header-sub">Terra Oracle · Public</div>
-        </div>
-      </div>
-      <button class="chat-close" onclick="toggleChat()">✕</button>
-    </div>
-
-    <div class="chat-messages" id="chat-messages">
-      <div class="chat-system">Welcome to Terra Oracle Community Chat 🌍</div>
-    </div>
-
-    <div class="chat-footer">
-      <div class="chat-mode-switch">
-        <button class="mode-btn active" id="mode-anon" onclick="setMode('anon')">👤 Anon</button>
-        <button class="mode-btn" id="mode-keplr" onclick="connectChatKeplr()">🔑 Keplr</button>
-      </div>
-      <div id="keplr-verified-bar" style="display:none;margin-bottom:8px;background:rgba(102,255,170,0.05);border:1px solid rgba(102,255,170,0.2);border-radius:6px;padding:6px 10px;font-size:10px;color:var(--green);align-items:center;gap:6px;">
-        <span>✓ VERIFIED</span>
-        <span id="keplr-chat-addr" style="font-family:monospace;font-size:10px;color:var(--muted);"></span>
-        <button onclick="disconnectChatKeplr()" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;">✕</button>
-      </div>
-      <div class="chat-input-row">
-        <textarea class="chat-input" id="chat-input" placeholder="Type a message..." rows="1" maxlength="300" onkeydown="handleKey(event)"></textarea>
-        <button class="chat-send" id="chat-send-btn" onclick="sendMessage()">➤</button>
-      </div>
-    </div>
-  </div>
-
-  <button class="chat-toggle" onclick="toggleChat()">
-    💬
-    <span class="chat-badge" id="chat-badge">0</span>
-  </button>
-</div>
-
-<!-- FIREBASE -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getDatabase, ref, push, onValue, serverTimestamp, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyALxKpR-Z2tXkN29cjmhCxb9z-YMLoJog8",
-    authDomain: "terra-oracle-chat.firebaseapp.com",
-    databaseURL: "https://terra-oracle-chat-default-rtdb.firebaseio.com",
-    projectId: "terra-oracle-chat",
-    storageBucket: "terra-oracle-chat.firebasestorage.app",
-    messagingSenderId: "481889685290",
-    appId: "1:481889685290:web:78eaf59877dfd393705853"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  const messagesRef = ref(db, 'chat/messages');
-
-  let chatMode = 'anon';
-  let keplrChatAddress = null;
-  let unreadCount = 0;
-  let chatOpen = false;
-  let lastMsgCount = 0;
-
-  window.toggleChat = function() {
-    chatOpen = !chatOpen;
-    const box = document.getElementById('chat-box');
-    box.classList.toggle('open', chatOpen);
-    if (chatOpen) {
-      unreadCount = 0;
-      const badge = document.getElementById('chat-badge');
-      badge.style.display = 'none';
-      setTimeout(() => {
-        const msgs = document.getElementById('chat-messages');
-        msgs.scrollTop = msgs.scrollHeight;
-        document.getElementById('chat-input').focus();
-      }, 100);
-    }
-  }
-
-  window.setMode = function(mode) {
-    chatMode = mode;
-    document.getElementById('mode-anon').classList.toggle('active', mode === 'anon');
-    document.getElementById('mode-keplr').classList.toggle('active', mode === 'keplr');
-  }
-
-  window.connectChatKeplr = async function() {
-    if (!window.keplr) {
-      if (confirm('Keplr not found. Open keplr.app to install?')) window.open('https://www.keplr.app/', '_blank');
-      return;
-    }
-    try {
-      document.getElementById('mode-keplr').textContent = '⏳ Connecting...';
-      await window.keplr.enable('columbus-5');
-      const signer = window.keplr.getOfflineSigner('columbus-5');
-      const accounts = await signer.getAccounts();
-      keplrChatAddress = accounts[0].address;
-      const short = keplrChatAddress.slice(0,8) + '...' + keplrChatAddress.slice(-4);
-      document.getElementById('keplr-chat-addr').textContent = short;
-      document.getElementById('keplr-verified-bar').style.display = 'flex';
-      document.getElementById('mode-keplr').textContent = '🔑 ' + short;
-      setMode('keplr');
-    } catch(e) {
-      document.getElementById('mode-keplr').textContent = '🔑 Keplr';
-      alert('Connection failed: ' + (e.message || e));
-    }
-  }
-
-  window.disconnectChatKeplr = function() {
-    keplrChatAddress = null;
-    document.getElementById('keplr-verified-bar').style.display = 'none';
-    document.getElementById('mode-keplr').textContent = '🔑 Keplr';
-    setMode('anon');
-  }
-
-  window.handleKey = function(e) {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.sendMessage(); }
-  }
-
-  window.sendMessage = async function() {
-    const input = document.getElementById('chat-input');
-    const text = input.value.trim();
-    if (!text) return;
-
-    const btn = document.getElementById('chat-send-btn');
-    btn.disabled = true;
-
-    let author;
-    if (chatMode === 'keplr' && keplrChatAddress) {
-      const short = keplrChatAddress.slice(0,8) + '...' + keplrChatAddress.slice(-4);
-      author = { name: short, fullAddr: keplrChatAddress, isAnon: false, isVerified: true };
-    } else {
-      author = { name: 'Anonymous#' + Math.floor(1000 + Math.random() * 9000), isAnon: true, isVerified: false };
-    }
-
-    try {
-      await push(messagesRef, {
-        text, author: author.name, isAnon: author.isAnon,
-        isVerified: author.isVerified || false,
-        timestamp: serverTimestamp()
-      });
-      input.value = '';
-    } catch(e) {
-      console.error('Send error:', e);
-    }
-
-    btn.disabled = false;
-    input.focus();
-  }
-
-  function formatTime(ts) {
-    if (!ts) return '';
-    const d = new Date(ts);
-    return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
-  }
-
-  // Listen for messages
-  const recentMessages = query(messagesRef, limitToLast(50));
-  onValue(recentMessages, (snapshot) => {
-    const container = document.getElementById('chat-messages');
-    const msgs = [];
-    snapshot.forEach(child => msgs.push({ id: child.key, ...child.val() }));
-
-    // Count new messages
-    if (msgs.length > lastMsgCount && lastMsgCount > 0 && !chatOpen) {
-      unreadCount += msgs.length - lastMsgCount;
-      const badge = document.getElementById('chat-badge');
-      badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
-      badge.style.display = 'flex';
-    }
-    lastMsgCount = msgs.length;
-
-    const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 40;
-
-    container.innerHTML = '<div class="chat-system">Welcome to Terra Oracle Community Chat 🌍</div>';
-    msgs.forEach(msg => {
-      const el = document.createElement('div');
-      el.className = 'chat-msg anon';
-      el.innerHTML = `
-        <div class="msg-author">
-          ${msg.author}
-          ${msg.isAnon ? '<span class="anon-badge">ANON</span>' : ''}
-        </div>
-        <div>${msg.text}</div>
-        <div class="chat-msg-time">${formatTime(msg.timestamp)}</div>
-      `;
-      container.appendChild(el);
-    });
-
-    if (wasAtBottom || chatOpen) container.scrollTop = container.scrollHeight;
-  });
-</script>
-
 </body>
 </html>
