@@ -1225,9 +1225,12 @@
     <div style="position:relative;" id="burn-chart-wrap">
       <canvas id="supplyChart" height="220" style="cursor:crosshair;"></canvas>
     </div>
-    <div style="font-size:10px;color:rgba(122,158,196,0.35);margin-top:6px;text-align:right;">
-      Source: CryptoCompare · Terra Classic LCD
+    <div style="font-size:10px;color:rgba(122,158,196,0.35);margin-top:6px;display:flex;justify-content:space-between;align-items:center;">
+      <button onclick="runSupplyAudit()" style="background:rgba(84,147,247,0.08);border:1px solid rgba(84,147,247,0.2);color:rgba(84,147,247,0.7);font-size:9px;padding:2px 8px;border-radius:4px;cursor:pointer;font-family:'Exo 2',sans-serif;letter-spacing:0.05em;">🔍 Verify Data</button>
+      <span>Source: CryptoCompare · Terra Classic LCD</span>
     </div>
+    <!-- Audit panel -->
+    <div id="supply-audit" style="display:none;margin-top:10px;background:rgba(10,20,40,0.8);border:1px solid rgba(84,147,247,0.2);border-radius:8px;padding:12px;font-size:11px;font-family:monospace;line-height:1.8;"></div>
   </div>
 
   <div class="card" style="margin-bottom:18px;">
@@ -3529,6 +3532,84 @@ function drawSupplyFallback() {
   ctx.fillStyle = 'rgba(122,158,196,0.4)'; ctx.font = '12px Exo 2';
   ctx.textAlign = 'center';
   ctx.fillText('Could not load data — check connection', w/2, h/2);
+}
+
+async function runSupplyAudit() {
+  const panel = document.getElementById('supply-audit');
+  panel.style.display = 'block';
+  panel.innerHTML = '<span style="color:#5497f7">Running audit...</span>';
+
+  const fmt = v => Math.round(v).toLocaleString('en-US');
+  const lines = [];
+
+  // 1. Real supply from LCD
+  try {
+    const r = await Promise.race([
+      fetch('https://terra-classic-lcd.publicnode.com/cosmos/bank/v1beta1/supply/uluna'),
+      new Promise((_,rej) => setTimeout(rej, 5000))
+    ]);
+    const j = await r.json();
+    const lcdSupply = Number(j?.amount?.amount) / 1e6;
+    const displayedSupply = parseFloat(document.getElementById('lunc-big')?.textContent?.replace(/,/g,'')) || 0;
+    const diff = Math.abs(lcdSupply - displayedSupply);
+    const match = diff < 1_000_000;
+    lines.push(`<span style="color:#8ab0d8">① LCD Supply (real-time):</span>  <b>${fmt(lcdSupply)}</b> LUNC`);
+    lines.push(`<span style="color:#8ab0d8">   Displayed Supply:</span>       <b>${fmt(displayedSupply)}</b> LUNC`);
+    lines.push(`<span style="color:${match?'#4dffaa':'#ff6b6b'}">   Difference: ${fmt(diff)} LUNC ${match ? '✅ MATCH' : '⚠️ MISMATCH'}</span>`);
+  } catch(e) {
+    lines.push(`<span style="color:#ff6b6b">① LCD Supply: fetch failed — ${e.message}</span>`);
+  }
+
+  lines.push('');
+
+  // 2. Chart candle consistency check
+  const cached = supplyChartCache[currentSupplyPeriod];
+  if (cached?.data?.length) {
+    const candles = cached.data;
+    const first = candles[0], last = candles[candles.length-1];
+    const totalBurned = candles.reduce((s,c) => s + c.burned, 0);
+    const supplyDrop = first.open - last.close;
+    const drift = Math.abs(totalBurned - supplyDrop);
+    lines.push(`<span style="color:#8ab0d8">② Chart period: ${currentSupplyPeriod} — ${candles.length} candles</span>`);
+    lines.push(`   Start supply:  <b>${fmt(first.open)}</b>`);
+    lines.push(`   End supply:    <b>${fmt(last.close)}</b>`);
+    lines.push(`   Supply drop:   <b style="color:#ff6b6b">-${fmt(supplyDrop)}</b>`);
+    lines.push(`   Sum of burns:  <b style="color:#ff9944">-${fmt(totalBurned)}</b>`);
+    lines.push(`<span style="color:${drift < 1000 ? '#4dffaa' : '#ffaa44'}">   Drift: ${fmt(drift)} ${drift < 1000 ? '✅ consistent' : '⚠️ check rounding'}</span>`);
+
+    // Binance burn candles
+    const binanceCandies = candles.filter(c => c.binanceBurn > 0);
+    lines.push('');
+    lines.push(`<span style="color:#8ab0d8">③ Binance burn events in view: ${binanceCandies.length}</span>`);
+    binanceCandies.forEach(c => {
+      const d = new Date(c.t);
+      const label = `${d.getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]} ${d.getFullYear()}`;
+      lines.push(`   🔥 ${label}: <b style="color:#ff7744">${fmt(c.binanceBurn)}</b> LUNC (Binance) + <b>${fmt(c.burned - c.binanceBurn)}</b> (tax)`);
+    });
+  } else {
+    lines.push(`<span style="color:#ffaa44">② No cached chart data — open STATS page first</span>`);
+  }
+
+  lines.push('');
+
+  // 3. Daily burn rate check
+  const EXPECTED_DAILY = 16_500_000;
+  const cached2 = supplyChartCache['D'] || supplyChartCache['1h'];
+  if (cached2?.data?.length) {
+    const candles = cached2.data;
+    const cfg = TF_CONFIG[currentSupplyPeriod] || TF_CONFIG['D'];
+    const candleSec = currentSupplyPeriod === 'M' ? 30.44*86400 : cfg.secPerCandle || 3600;
+    const avgBurnPerCandle = candles.reduce((s,c) => s + (c.burned - (c.binanceBurn||0)), 0) / candles.length;
+    const burnPerDay = avgBurnPerCandle * (86400 / candleSec);
+    const burnOK = burnPerDay > 5_000_000 && burnPerDay < 50_000_000;
+    lines.push(`<span style="color:#8ab0d8">④ Avg tax burn rate (excl. Binance):</span>`);
+    lines.push(`   Per candle:  <b>${fmt(avgBurnPerCandle)}</b>`);
+    lines.push(`   Per day:     <b>${fmt(burnPerDay)}</b> LUNC`);
+    lines.push(`   Expected:    ~${fmt(EXPECTED_DAILY)} LUNC/day`);
+    lines.push(`<span style="color:${burnOK?'#4dffaa':'#ffaa44'}">   ${burnOK ? '✅ Burn rate looks realistic' : '⚠️ Rate seems off'}</span>`);
+  }
+
+  panel.innerHTML = lines.join('<br>');
 }
 
 function drawSupplyChartS(lunc, ustc) {
