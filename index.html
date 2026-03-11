@@ -764,21 +764,7 @@
       <!-- OTHER VOTES QUICK CONTROLS -->
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:18px;">
         <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;">⚡ Other Votes</div>
-        <div id="admin-other-votes">
-          ${VOTES_DATA.filter(v => v.id !== 'monthly-liquidity').map(v => `
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
-              <span style="font-size:12px;color:var(--muted);">${v.title}</span>
-              <div style="display:flex;gap:6px;">
-                <button onclick="adminToggleVote('${v.id}', 'active')"
-                  style="font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid rgba(102,255,170,0.3);
-                         background:rgba(102,255,170,0.08);color:var(--green);cursor:pointer;font-family:'Space Mono',monospace;">▶</button>
-                <button onclick="adminToggleVote('${v.id}', 'stopped')"
-                  style="font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid rgba(255,60,60,0.25);
-                         background:rgba(255,60,60,0.06);color:#ff6464;cursor:pointer;font-family:'Space Mono',monospace;">■</button>
-              </div>
-            </div>
-          `).join('')}
-        </div>
+        <div id="admin-other-votes"></div>
       </div>
 
     </div>
@@ -2052,12 +2038,42 @@ function updateAdminPanel() {
   const panel = document.getElementById('admin-panel');
   if (!panel || panel.style.display === 'none') return;
 
+  // Update monthly status
   const monthly = VOTES_DATA.find(v => v.id === 'monthly-liquidity');
   const statusEl = document.getElementById('admin-monthly-status');
   if (statusEl && monthly) {
     const started = monthly.startedAt ? new Date(monthly.startedAt).toLocaleDateString() : '—';
     const icons = { active: '🟢', stopped: '🔴', upcoming: '🟡', closed: '⚫' };
     statusEl.textContent = `Status: ${icons[monthly.status] || '⚪'} ${monthly.status.toUpperCase()} · Started: ${started} · Timer: ${monthly.timer}`;
+  }
+
+  // Render other votes list
+  const otherEl = document.getElementById('admin-other-votes');
+  if (otherEl) {
+    const states = getVoteStates();
+    const others = VOTES_DATA.filter(v => v.id !== 'monthly-liquidity');
+    if (others.length === 0) {
+      otherEl.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:8px 0;">No other votes configured.</div>';
+    } else {
+      otherEl.innerHTML = others.map(v => {
+        const s = states[v.id]?.status || v.status;
+        const icons = { active: '🟢', stopped: '🔴', upcoming: '🟡', closed: '⚫' };
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+          <div>
+            <span style="font-size:12px;color:var(--text);">${v.title}</span>
+            <span style="font-size:10px;color:var(--muted);margin-left:8px;">${icons[s] || '⚪'} ${(s||'unknown').toUpperCase()}</span>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button onclick="adminToggleVote('${v.id}', 'active')"
+              style="font-size:10px;padding:5px 12px;border-radius:6px;border:1px solid rgba(102,255,170,0.3);
+                     background:rgba(102,255,170,0.08);color:var(--green);cursor:pointer;font-family:'Space Mono',monospace;font-weight:700;">▶</button>
+            <button onclick="adminToggleVote('${v.id}', 'stopped')"
+              style="font-size:10px;padding:5px 12px;border-radius:6px;border:1px solid rgba(255,60,60,0.25);
+                     background:rgba(255,60,60,0.06);color:#ff6464;cursor:pointer;font-family:'Space Mono',monospace;font-weight:700;">■</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
   }
 }
 
