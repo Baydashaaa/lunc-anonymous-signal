@@ -895,11 +895,19 @@ const DEMO_QUESTIONS = [
 function loadQuestions() {
   try {
     const stored = JSON.parse(localStorage.getItem('oracle_questions') || 'null');
-    if (stored && stored.length > 0) return stored;
+    // Validate structure
+    if (Array.isArray(stored) && stored.length > 0 && stored[0].id && stored[0].text) {
+      // Ensure all required fields exist
+      return stored.map(q => ({
+        answers: [], votes: 0, voted: false, open: false, formOpen: false,
+        tags: [], createdAt: Date.now(), ...q
+      }));
+    }
   } catch(e) {}
-  // First time: seed with demo questions
-  saveQuestions(DEMO_QUESTIONS);
-  return [...DEMO_QUESTIONS];
+  // First time or corrupted: seed with demo questions
+  const demo = [...DEMO_QUESTIONS];
+  saveQuestions(demo);
+  return demo;
 }
 
 function saveQuestions(qs) {
@@ -944,9 +952,8 @@ function showPage(name) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   event.target.classList.add('active');
-  if (name === 'board') applyVoteStates();
-renderBoard();
-  if (name === 'vote') { applyStoredVotes(); renderVotes(); }
+  if (name === 'board') renderBoard();
+  if (name === 'vote') { applyStoredVotes(); applyVoteStates(); renderVotes(); }
   if (name === 'chat') renderChatPage();
 }
 
