@@ -1,6 +1,6 @@
 {
   "_schema": "1.0",
-  "_updated": "2026-03-12T00:00:00Z",
+  "_updated": "2026-03-12T18:32:54.639Z",
   "questions": [
     {
       "id": "LUNC-EXAMPLE1",
@@ -13,7 +13,7 @@
       "createdAt": 1741737600,
       "expiresAt": 1742342400,
       "chosenAnswerId": null,
-      "status": "open",
+      "status": "payout_failed_no_wallet",
       "rewardPaidTx": null,
       "rewardAmount": 100000,
       "votes": 5,
