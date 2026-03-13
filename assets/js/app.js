@@ -607,7 +607,7 @@ async function autoPayAndUnlock() {
   try {
     const { SigningStargateClient } = await import('https://esm.sh/@cosmjs/stargate@0.32.4');
     const offlineSigner = window.keplr.getOfflineSigner('columbus-5');
-    const RPC = ['https://rpc.terra-classic.io','https://terra-classic-rpc.publicnode.com'];
+    const RPC = ['https://terra-classic-rpc.publicnode.com','https://rpc.terraclassic.community'];
     let client = null;
     for (const rpc of RPC) {
       try { client = await SigningStargateClient.connectWithSigner(rpc, offlineSigner); break; } catch(e) {}
@@ -859,8 +859,8 @@ window.sendChatMessage = async function() {
     // Use CosmJS SigningStargateClient via CDN
     const { SigningStargateClient } = await import('https://esm.sh/@cosmjs/stargate@0.32.4');
     const RPC_NODES = [
-      'https://rpc.terra-classic.io',
       'https://terra-classic-rpc.publicnode.com',
+      'https://rpc.terraclassic.community',
     ];
 
     let client = null;
@@ -1943,8 +1943,8 @@ async function fetchBinanceBurnsFromChain() {
   try {
     const LCD_NODES = [
       'https://terra-classic-lcd.publicnode.com',
-      'https://api-terra-ia.cosmosia.notional.ventures',
-      'https://terraclassic-mainnet-lcd.autostake.com',
+      'https://terra-classic-lcd.publicnode.com',
+      'https://lcd.terraclassic.community',
     ];
 
     // Query LCD for incoming transfers to burn wallet
