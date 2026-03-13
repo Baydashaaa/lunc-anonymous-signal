@@ -194,7 +194,7 @@ async function loadRecentTxs() {
   const el = document.getElementById('t-recent-txs');
   if (!el) return;
   try {
-    const res = await fetch(`https://terra-classic-lcd.publicnode.com/cosmos/tx/v1beta1/txs?events=transfer.recipient%3D%27${TREASURY_WALLETS.oracle.addr}%27&pagination.limit=5&order_by=ORDER_BY_DESC`);
+    const res = await fetch(`https://rest.cosmos.directory/terraclassic/cosmos/tx/v1beta1/txs?events=transfer.recipient=%27${TREASURY_WALLETS.oracle.addr}%27&pagination.limit=5&order_by=2`);
     if (!res.ok) throw new Error();
     const data = await res.json();
     if (!data.txs || data.txs.length === 0) { el.textContent = 'No transactions yet'; return; }
@@ -605,7 +605,7 @@ async function autoPayAndUnlock() {
   btn.textContent = '⏳ Opening Keplr...'; btn.disabled = true;
 
   try {
-    const { SigningStargateClient } = await import('https://esm.sh/@cosmjs/stargate@0.32.4');
+    const { SigningStargateClient } = await import('https://esm.sh/@cosmjs/stargate@0.32.3');
     const offlineSigner = window.keplr.getOfflineSigner('columbus-5');
     const RPC = ['https://terra-classic-rpc.publicnode.com','https://rpc.terraclassic.community'];
     let client = null;
@@ -653,7 +653,7 @@ async function verifyTX() {
   let txData = null;
   for (const node of FCD_NODES) {
     try {
-      const res = await fetch(`https://terra-classic-lcd.publicnode.com/cosmos/tx/v1beta1/txs/${txHash}`);
+      const res = await fetch(`https://rest.cosmos.directory/terraclassic/cosmos/tx/v1beta1/txs/${txHash}`);
       if (res.ok) { txData = await res.json(); break; }
     } catch(e) { continue; }
   }
@@ -857,7 +857,7 @@ window.sendChatMessage = async function() {
     const sender = accounts[0].address;
 
     // Use CosmJS SigningStargateClient via CDN
-    const { SigningStargateClient } = await import('https://esm.sh/@cosmjs/stargate@0.32.4');
+    const { SigningStargateClient } = await import('https://esm.sh/@cosmjs/stargate@0.32.3');
     const RPC_NODES = [
       'https://terra-classic-rpc.publicnode.com',
       'https://rpc.terraclassic.community',
@@ -1005,7 +1005,7 @@ async function loadChatFromChain() {
   let txList = null;
   for (const node of FCD_NODES) {
     try {
-      const res = await fetch(`https://terra-classic-lcd.publicnode.com/cosmos/tx/v1beta1/txs?events=transfer.recipient%3D%27${CHAT_WALLET}%27&pagination.limit=50&order_by=ORDER_BY_DESC`);
+      const res = await fetch(`https://rest.cosmos.directory/terraclassic/cosmos/tx/v1beta1/txs?events=transfer.recipient=%27${CHAT_WALLET}%27&pagination.limit=50&order_by=2`);
       if (res.ok) { txList = await res.json(); break; }
     } catch(e) { continue; }
   }
@@ -1013,7 +1013,7 @@ async function loadChatFromChain() {
   if (!txList || !txList.txs) {
     // Fallback: try LCD
     try {
-      const res = await fetch(`https://lcd.terraclassic.community/cosmos/tx/v1beta1/txs?events=transfer.recipient%3D%27${CHAT_WALLET}%27&pagination.limit=50&order_by=ORDER_BY_DESC`);
+      const res = await fetch(`https://rest.cosmos.directory/terraclassic/cosmos/tx/v1beta1/txs?events=transfer.recipient='${CHAT_WALLET}'&pagination.limit=50&order_by=2`);
       if (res.ok) {
         const data = await res.json();
         txList = { txs: (data.txs || []).map((tx, i) => ({
