@@ -194,7 +194,7 @@ async function loadRecentTxs() {
   const el = document.getElementById('t-recent-txs');
   if (!el) return;
   try {
-    const res = await fetch(`https://fcd.terra-classic.io/v1/txs?account=${TREASURY_WALLETS.oracle.addr}&limit=5`);
+    const res = await fetch(`https://terra-classic-lcd.publicnode.com/v1/txs?account=${TREASURY_WALLETS.oracle.addr}&limit=5`);
     if (!res.ok) throw new Error();
     const data = await res.json();
     if (!data.txs || data.txs.length === 0) { el.textContent = 'No transactions yet'; return; }
@@ -646,8 +646,8 @@ async function verifyTX() {
   statusEl.style.display = 'none';
 
   const FCD_NODES = [
-    'https://fcd.terra-classic.io',
-    'https://fcd.terraclassic.community',
+    'https://terra-classic-lcd.publicnode.com',
+    'https://terra-classic-lcd.publicnode.com',
   ];
 
   let txData = null;
@@ -909,7 +909,7 @@ window.sendChatMessage = async function() {
 // ─── BLOCKCHAIN CHAT ──────────────────────────────────────────
 const CHAT_WALLET = ORACLE_WALLET; // Load chat TX from Oracle wallet
 const CHAT_MIN_ULUNA = 5000000000; // 5,000 LUNC
-const FCD_NODES = ['https://fcd.terra-classic.io', 'https://fcd.terraclassic.community'];
+const FCD_NODES = ['https://terra-classic-lcd.publicnode.com', 'https://terra-classic-lcd.publicnode.com'];
 
 // ─── CHAT REACTIONS ───────────────────────────────────────────
 const CHAT_REACTIONS = ['🔥','👍','🚀','💎','❤️'];
