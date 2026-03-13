@@ -605,7 +605,7 @@ async function autoPayAndUnlock() {
   btn.textContent = '⏳ Opening Keplr...'; btn.disabled = true;
 
   try {
-    const { SigningStargateClient } = await import('https://cdn.skypack.dev/@cosmjs/stargate@0.32.3');
+    const { SigningStargateClient } = await import('https://esm.sh/@cosmjs/stargate@0.32.3');
     const offlineSigner = window.keplr.getOfflineSigner('columbus-5');
     const RPC = ['https://terra-classic-rpc.publicnode.com','https://rpc.terraclassic.community'];
     let client = null;
@@ -857,7 +857,7 @@ window.sendChatMessage = async function() {
     const sender = accounts[0].address;
 
     // Use CosmJS SigningStargateClient via CDN
-    const { SigningStargateClient } = await import('https://cdn.skypack.dev/@cosmjs/stargate@0.32.3');
+    const { SigningStargateClient } = await import('https://esm.sh/@cosmjs/stargate@0.32.3');
     const RPC_NODES = [
       'https://terra-classic-rpc.publicnode.com',
       'https://rpc.terraclassic.community',
