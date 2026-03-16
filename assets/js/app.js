@@ -1115,7 +1115,7 @@ async function loadOraclePoolS() {
 
 async function loadValidatorsS() {
   try {
-    const BASE = 'https://terra-classic-lcd.publicnode.com';
+    const BASE = 'https://terra-lcd.quickapi.com';
     let all = [], nextKey = null, attempts = 0;
     do {
       let url = `${BASE}/cosmos/staking/v1beta1/validators?pagination.limit=100`;
