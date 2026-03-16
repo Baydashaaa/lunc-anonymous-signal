@@ -1,4 +1,11 @@
 if (history.scrollRestoration) history.scrollRestoration = 'manual';
+function runSupplyAudit() { console.log('Supply audit not implemented'); }
+function loadSupplyChart(period) { console.log('Supply chart not implemented'); }
+function setSupplyPeriod(period) { currentSupplyPeriod = period; loadSupplyChart(period); }
+function drawSupplyChartS() {}
+function drawStakedChartS() {}
+function drawOracleChartS() {}
+function renderSupplyChart() {}
 function startBinanceCountdown() { /* countdown placeholder */ }
 function loadAllStats() { loadStatsData(); loadOraclePoolS(); loadValidatorsS(); }
 function smoothScrollTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
