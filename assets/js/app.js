@@ -753,7 +753,7 @@ window.sendChatMessage = async function() {
 }
 
 // ─── BLOCKCHAIN CHAT ──────────────────────────────────────────
-const CHAT_WALLET = ORACLE_WALLET;
+const CHAT_WALLET = 'terra17g55uzkm6cr5fcl3vzcrmu73v8as4yvf2kktzr';
 const CHAT_MIN_ULUNA = 5000000000;
 // FIX 4: два разных FCD узла для настоящего fallback
 const FCD_NODES = [
