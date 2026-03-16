@@ -1,4 +1,5 @@
 if (history.scrollRestoration) history.scrollRestoration = 'manual';
+function smoothScrollTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
 // ─── ADMIN KEY ───────────────────────────────────────────────
 const ADMIN_KEY = 'TerraOracle#9X4K-2025';
@@ -191,7 +192,7 @@ async function loadRecentTxs() {
   const el = document.getElementById('t-recent-txs');
   if (!el) return;
   try {
-    const res = await fetch(`https://rest.cosmos.directory/terraclassic/cosmos/tx/v1beta1/txs?events=transfer.recipient=%27${TREASURY_WALLETS.oracle.addr}%27&pagination.limit=5&order_by=2`);
+    const res = await fetch(`https://terra-classic-lcd.publicnode.com/cosmos/tx/v1beta1/txs?events=transfer.recipient=%27${TREASURY_WALLETS.oracle.addr}%27&pagination.limit=5&order_by=2`);
     if (!res.ok) throw new Error();
     const data = await res.json();
     if (!data.txs || data.txs.length === 0) { el.textContent = 'No transactions yet'; return; }
@@ -568,7 +569,7 @@ async function verifyTX() {
   document.getElementById('tx-status').style.display = 'none';
   let txData = null;
   try {
-    const res = await fetch(`https://rest.cosmos.directory/terraclassic/cosmos/tx/v1beta1/txs/${txHash}`);
+    const res = await fetch(`https://terra-classic-lcd.publicnode.com/cosmos/tx/v1beta1/txs/${txHash}`);
     if (res.ok) { txData = await res.json(); }
   } catch(e) {}
   btn.textContent = 'Verify'; btn.disabled = false;
@@ -824,7 +825,7 @@ async function loadChatFromChain() {
   }
   let txList = null;
   try {
-    const res = await fetch(`https://rest.cosmos.directory/terraclassic/cosmos/tx/v1beta1/txs?events=transfer.recipient=%27${CHAT_HISTORY_WALLET}%27&pagination.limit=50&order_by=2`);
+    const res = await fetch(`https://terra-classic-lcd.publicnode.com/cosmos/tx/v1beta1/txs?events=transfer.recipient=%27${CHAT_HISTORY_WALLET}%27&pagination.limit=50&order_by=2`);
     if (res.ok) { txList = await res.json(); }
   } catch(e) {}
   if (!txList || !txList.txs) {
