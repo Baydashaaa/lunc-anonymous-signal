@@ -1,4 +1,5 @@
 if (history.scrollRestoration) history.scrollRestoration = 'manual';
+function startBinanceCountdown() { /* countdown placeholder */ }
 function loadAllStats() { loadStatsData(); loadOraclePoolS(); loadValidatorsS(); }
 function smoothScrollTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
@@ -116,7 +117,7 @@ const TREASURY_WALLETS = {
 };
 
 // FIX 4: два разных LCD узла для настоящего fallback
-const LCD_NODES = ['https://lcd.terraclassic.community', 'https://terra-classic-lcd.publicnode.com'];
+const LCD_NODES = ['https://terra-classic-lcd.publicnode.com', 'https://terra-classic-lcd.publicnode.com'];
 
 function fmtLunc(uluna) {
   const lunc = uluna / 1_000_000;
@@ -761,7 +762,7 @@ const CHAT_MIN_ULUNA = 5000000000;
 // FIX 4: два разных FCD узла для настоящего fallback
 const FCD_NODES = [
   'https://terra-classic-lcd.publicnode.com',
-  'https://lcd.terraclassic.community',
+  'https://terra-classic-lcd.publicnode.com',
 ];
 
 const CHAT_REACTIONS = ['🔥','👍','🚀','💎','❤️'];
@@ -1054,7 +1055,7 @@ function showPage_stats(e) {
 }
 
 const LCD_S  = 'https://terra-classic-lcd.publicnode.com';
-const LCD_S2 = 'https://lcd.terraclassic.community';
+const LCD_S2 = 'https://terra-classic-lcd.publicnode.com';
 // FIX 3: ORACLE_POOL_ADDR исправлен — теперь совпадает с ORACLE_WALLET
 const ORACLE_POOL_ADDR = 'terra1549z8zd9hkggzlwf0rcuszhc9rs9fxqfy2kagt';
 
