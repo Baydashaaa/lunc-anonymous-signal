@@ -1074,7 +1074,7 @@ function showPage_stats(e) {
 const LCD_S  = 'https://lcd.terra-classic.hexxagon.io';
 const LCD_S2 = 'https://terra-classic-lcd.publicnode.com';
 // FIX 3: ORACLE_POOL_ADDR исправлен — теперь совпадает с ORACLE_WALLET
-const ORACLE_POOL_ADDR = 'terra1549z8zd9hkggzlwf0rcuszhc9rs9fxqfy2kagt';
+const ORACLE_POOL_ADDR = 'terra1jgp27m8fykex4e4jtt0l7ze8q528ux2lh4zh0f';
 
 let allValidators = [], valFilter = 'active', valPage = 1;
 const VAL_PER_PAGE = 20;
