@@ -1124,23 +1124,18 @@ async function loadStatsData() {
 }
 
 async function loadOraclePoolS() {
-  const toNum = amt => amt ? Number(BigInt(amt)) / 1e6 : 0;
   try {
-    // Read from GitHub-hosted JSON (updated by GitHub Actions every 30min - no CORS issues)
     const res = await fetch(
       'https://raw.githubusercontent.com/Baydashaaa/lunc-anonymous-signal/main/assets/data/oracle-pool.json?t=' + Date.now()
     );
-    if (res.ok) {
-      const data = await res.json();
-      const luncVal = data.lunc || 0;
-      const ustcVal = data.ustc || 0;
-      setTxt('oracle-lunc', fmtFull(luncVal));
-      setTxt('oracle-ustc', fmtFull(ustcVal));
-      drawOracleChartS(luncVal, ustcVal);
-      return;
-    }
-  } catch {}
-  setTxt('oracle-lunc', '—'); setTxt('oracle-ustc', '—');
+    if (!res.ok) return; // silently fail - keep last displayed value
+    const data = await res.json();
+    const luncVal = data.lunc || 0;
+    const ustcVal = data.ustc || 0;
+    if (luncVal > 0) setTxt('oracle-lunc', fmtFull(luncVal));
+    if (ustcVal > 0) setTxt('oracle-ustc', fmtFull(ustcVal));
+    drawOracleChartS(luncVal, ustcVal);
+  } catch {} // silently fail - keep last displayed value
 }
 
 async function loadValidatorsS() {
