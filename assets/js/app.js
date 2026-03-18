@@ -2599,17 +2599,17 @@ function _renderOracleChart(lunc, ustc) {
   if (!canvas) return;
   const dpr = window.devicePixelRatio || 1;
   const size = Math.min(canvas.parentElement.clientWidth || 280, 280);
-  // Only resize if needed to preserve event listeners
   if (!canvas._sized || canvas._sizeW !== size) {
-    canvas.width = (size + 40) * dpr; canvas.height = (size + 40) * dpr;
-    canvas.style.width = (size + 40) + 'px'; canvas.style.height = (size + 40) + 'px';
+    canvas.width = (size + 60) * dpr; canvas.height = (size + 60) * dpr;
+    canvas.style.width = (size + 60) + 'px'; canvas.style.height = (size + 60) + 'px';
     canvas._sized = true; canvas._sizeW = size;
   }
   const ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, size + 40, size + 40);
+  ctx.clearRect(0, 0, size + 60, size + 60);
 
-  const cx = (size + 40) / 2, cy = (size + 40) / 2, r = size * 0.38, inner = size * 0.22;
+  const cx = (size + 60) / 2, cy = (size + 60) / 2;
+  const r = size * 0.38, inner = size * 0.22;
   const total = lunc + ustc;
   if (total <= 0) return;
 
@@ -2622,19 +2622,20 @@ function _renderOracleChart(lunc, ustc) {
   const ustcEnd = ustcStart + (Math.PI * 2 * ustcPct) - gap;
   const luncMid = luncStart + (luncEnd - luncStart) / 2;
   const ustcMid = ustcStart + (ustcEnd - ustcStart) / 2;
-  const EXPLODE = size * 0.04;
+  const EXPLODE = size * 0.06;
 
+  // Draw segment with offset center (true pie explode)
   function drawSegment(start, end, mid, explode, c1, c2, glow) {
     const ox = Math.cos(mid) * EXPLODE * explode;
     const oy = Math.sin(mid) * EXPLODE * explode;
-    // Move the origin point of the segment outward (not translate)
+    const scx = cx + ox, scy = cy + oy;
     ctx.shadowColor = glow;
-    ctx.shadowBlur = 18 + explode * 10;
+    ctx.shadowBlur = 16 + explode * 12;
     ctx.beginPath();
-    ctx.moveTo(cx + ox, cy + oy);
-    ctx.arc(cx + ox, cy + oy, r, start, end);
+    ctx.moveTo(scx, scy);
+    ctx.arc(scx, scy, r, start, end);
     ctx.closePath();
-    const grad = ctx.createRadialGradient(cx + ox, cy + oy, inner, cx + ox, cy + oy, r);
+    const grad = ctx.createRadialGradient(scx, scy, inner * 0.5, scx, scy, r);
     grad.addColorStop(0, c1); grad.addColorStop(1, c2);
     ctx.fillStyle = grad;
     ctx.fill();
@@ -2646,12 +2647,13 @@ function _renderOracleChart(lunc, ustc) {
   drawSegment(ustcStart, ustcEnd, ustcMid, _oracleExplode.ustc,
     'rgba(84,147,247,0.6)', 'rgba(84,147,247,0.95)', '#5493f7');
 
-  ctx.shadowBlur = 0;
+  // Donut hole — fixed at center
   ctx.beginPath(); ctx.arc(cx, cy, inner, 0, Math.PI * 2);
   ctx.fillStyle = '#0a1224'; ctx.fill();
   ctx.beginPath(); ctx.arc(cx, cy, inner, 0, Math.PI * 2);
   ctx.strokeStyle = 'rgba(84,147,247,0.15)'; ctx.lineWidth = 1; ctx.stroke();
 
+  // Center text
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold ' + Math.round(size * 0.072) + 'px Rajdhani, sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -2660,22 +2662,23 @@ function _renderOracleChart(lunc, ustc) {
   ctx.font = Math.round(size * 0.042) + 'px Exo 2, sans-serif';
   ctx.fillText('TOTAL', cx, cy + size * 0.06);
 
+  // External labels — always relative to canvas center, move with segment
   ctx.font = 'bold ' + Math.round(size * 0.048) + 'px Exo 2, sans-serif';
   ctx.textBaseline = 'middle';
 
   function drawLabel(midAngle, pct, color, explode) {
     const ox = Math.cos(midAngle) * EXPLODE * explode;
     const oy = Math.sin(midAngle) * EXPLODE * explode;
-    const scx = cx + ox, scy = cy + oy;
-    // Line from segment edge outward
-    const x1 = scx + Math.cos(midAngle) * r * 1.06;
-    const y1 = scy + Math.sin(midAngle) * r * 1.06;
-    const x2 = scx + Math.cos(midAngle) * r * 1.20;
-    const y2 = scy + Math.sin(midAngle) * r * 1.20;
-    // Label position - fixed relative to original center to avoid clipping
-    const labelR = r * 1.32;
-    const tx = cx + Math.cos(midAngle) * (labelR + EXPLODE * explode);
-    const ty = cy + Math.sin(midAngle) * (labelR + EXPLODE * explode);
+    // Line starts from segment outer edge
+    const lineStart = r * 1.04;
+    const lineEnd   = r * 1.18;
+    const labelDist = r * 1.28;
+    const x1 = cx + ox + Math.cos(midAngle) * lineStart;
+    const y1 = cy + oy + Math.sin(midAngle) * lineStart;
+    const x2 = cx + ox + Math.cos(midAngle) * lineEnd;
+    const y2 = cy + oy + Math.sin(midAngle) * lineEnd;
+    const tx = cx + ox + Math.cos(midAngle) * labelDist;
+    const ty = cy + oy + Math.sin(midAngle) * labelDist;
     ctx.shadowBlur = 0;
     ctx.beginPath();
     ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
