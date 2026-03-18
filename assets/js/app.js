@@ -1125,23 +1125,17 @@ async function loadStatsData() {
 
 async function loadOraclePoolS() {
   try {
-    const [poolRes, priceRes] = await Promise.allSettled([
-      fetch('https://raw.githubusercontent.com/Baydashaaa/lunc-anonymous-signal/main/assets/data/oracle-pool.json?t=' + Date.now()),
-      fetch('https://api.coingecko.com/api/v3/simple/price?ids=terra-luna-classic,terraclassicusd&vs_currencies=usd')
-    ]);
-    if (poolRes.status !== 'fulfilled' || !poolRes.value.ok) return;
-    const data = await poolRes.value.json();
+    const res = await fetch(
+      'https://raw.githubusercontent.com/Baydashaaa/lunc-anonymous-signal/main/assets/data/oracle-pool.json?t=' + Date.now()
+    );
+    if (!res.ok) return;
+    const data = await res.json();
     const luncVal = data.lunc || 0;
     const ustcVal = data.ustc || 0;
 
-    // Get USD prices with fallback
-    let luncPrice = 0.000042, ustcPrice = 0.005;
-    if (priceRes.status === 'fulfilled' && priceRes.value.ok) {
-      const prices = await priceRes.value.json();
-      luncPrice = prices['terra-luna-classic']?.usd || luncPrice;
-      ustcPrice = prices['terraclassicusd']?.usd || ustcPrice;
-    }
-
+    // Use prices from JSON (updated by GitHub Actions) or fallback
+    const luncPrice = data.lunc_price || 0.000042;
+    const ustcPrice = data.ustc_price || 0.005;
     const luncUSD = luncVal * luncPrice;
     const ustcUSD = ustcVal * ustcPrice;
 
@@ -2591,13 +2585,17 @@ function _renderOracleChart(lunc, ustc) {
   if (!canvas) return;
   const dpr = window.devicePixelRatio || 1;
   const size = Math.min(canvas.parentElement.clientWidth || 280, 280);
-  canvas.width = size * dpr; canvas.height = size * dpr;
-  canvas.style.width = size + 'px'; canvas.style.height = size + 'px';
+  // Only resize if needed to preserve event listeners
+  if (!canvas._sized || canvas._sizeW !== size) {
+    canvas.width = (size + 40) * dpr; canvas.height = (size + 40) * dpr;
+    canvas.style.width = (size + 40) + 'px'; canvas.style.height = (size + 40) + 'px';
+    canvas._sized = true; canvas._sizeW = size;
+  }
   const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, size, size);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, size + 40, size + 40);
 
-  const cx = size / 2, cy = size / 2, r = size * 0.38, inner = size * 0.22;
+  const cx = (size + 40) / 2, cy = (size + 40) / 2, r = size * 0.38, inner = size * 0.22;
   const total = lunc + ustc;
   if (total <= 0) return;
 
