@@ -759,7 +759,25 @@
  <div class="oracle-box"><div class="oracle-denom">LUNC Balance</div><div class="oracle-val" style="color:var(--green);" id="oracle-lunc">—</div></div>
  <div class="oracle-box"><div class="oracle-denom">USTC Balance</div><div class="oracle-val" style="color:var(--accent);" id="oracle-ustc">—</div></div>
  </div>
- <div class="chart-wrap"><canvas id="oracleChart" height="140"></canvas></div>
+ <div style="display:flex;align-items:center;justify-content:center;gap:32px;padding:20px 0;flex-wrap:wrap;">
+  <canvas id="oracleChart" style="display:block;"></canvas>
+  <div style="display:flex;flex-direction:column;gap:14px;min-width:180px;">
+   <div style="display:flex;align-items:center;gap:10px;">
+    <span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#66ffaa;flex-shrink:0;box-shadow:0 0 8px rgba(102,255,170,0.5);"></span>
+    <div><div style="font-size:10px;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;">LUNC Balance</div>
+    <div style="font-size:14px;font-weight:700;color:#66ffaa;" id="oracle-lunc-pie">—</div></div>
+   </div>
+   <div style="display:flex;align-items:center;gap:10px;">
+    <span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#5493f7;flex-shrink:0;box-shadow:0 0 8px rgba(84,147,247,0.5);"></span>
+    <div><div style="font-size:10px;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;">USTC Balance</div>
+    <div style="font-size:14px;font-weight:700;color:#5493f7;" id="oracle-ustc-pie">—</div></div>
+   </div>
+   <div style="margin-top:4px;padding-top:12px;border-top:1px solid var(--border);">
+    <div style="font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Total Pool</div>
+    <div style="font-size:13px;font-weight:700;color:var(--text);" id="oracle-total-pie">—</div>
+   </div>
+  </div>
+ </div>
  </div>
  <div class="section-title" style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:10px;">⚡ Validators <span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
  <div class="card">
