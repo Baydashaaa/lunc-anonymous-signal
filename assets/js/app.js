@@ -1125,10 +1125,12 @@ async function loadStatsData() {
 
 async function loadOraclePoolS() {
   const ENDPOINTS = [
-    'https://terra-classic-lcd.publicnode.com',
     'https://lcd.terra-classic.hexxagon.io',
-    'https://terraclassic-lcd.kingnodes.com',
+    'https://terra-classic-lcd.publicnode.com',
+    'https://api-lunc-lcd.binodes.com',
   ];
+  // Use BigInt to avoid JS precision loss on large amounts
+  const toNum = amt => amt ? Number(BigInt(amt)) / 1e6 : 0;
   for (const base of ENDPOINTS) {
     try {
       const res = await fetch(base + '/cosmos/bank/v1beta1/balances/' + ORACLE_POOL_ADDR);
@@ -1137,9 +1139,11 @@ async function loadOraclePoolS() {
       const bals = data.balances || [];
       const lunc = bals.find(b => b.denom === 'uluna');
       const ustc = bals.find(b => b.denom === 'uusd');
-      setTxt('oracle-lunc', fmtFull(lunc ? Number(lunc.amount)/1e6 : 0));
-      setTxt('oracle-ustc', fmtFull(ustc ? Number(ustc.amount)/1e6 : 0));
-      drawOracleChartS(lunc ? Number(lunc.amount)/1e6 : 0, ustc ? Number(ustc.amount)/1e6 : 0);
+      const luncVal = toNum(lunc?.amount);
+      const ustcVal = toNum(ustc?.amount);
+      setTxt('oracle-lunc', fmtFull(luncVal));
+      setTxt('oracle-ustc', fmtFull(ustcVal));
+      drawOracleChartS(luncVal, ustcVal);
       return;
     } catch { continue; }
   }
