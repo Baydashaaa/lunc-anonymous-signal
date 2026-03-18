@@ -242,6 +242,7 @@ function showPage_treasury(e) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('page-treasury').classList.add('active');
+  if (history.replaceState) history.replaceState(null, '', '#treasury');
   loadTreasuryData();
   smoothScrollTop();
 }
@@ -281,7 +282,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const hash = window.location.hash.replace('#', '');
   const validPages = ['home','board','ask','chat','vote','about','treasury','stats'];
   const startPage = validPages.includes(hash) ? hash : 'home';
-  showPage(startPage);
+  if (startPage === 'treasury') showPage_treasury();
+  else if (startPage === 'stats') showPage_stats();
+  else showPage(startPage);
   const input = document.getElementById('tag-raw-input');
   if (!input) return;
   input.addEventListener('keydown', function(e) {
@@ -1076,6 +1079,7 @@ function showPage_stats(e) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('page-stats').classList.add('active');
+  if (history.replaceState) history.replaceState(null, '', '#stats');
   smoothScrollTop(); loadValidatorsS(); loadAllStats(); startStatsAutoRefresh(); startBinanceCountdown();
 }
 
