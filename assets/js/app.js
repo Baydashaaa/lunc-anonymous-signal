@@ -1592,7 +1592,7 @@ async function loadSupplyChart(period) {
 
     // Group candles
     if (period === 'M') {
-      // Group by calendar month Ú¿‘ Binance burns always on 1st of month
+      // Group by calendar month - Binance burns always on 1st of month
       const monthMap = {};
       raw.forEach(d => {
         const dt = new Date(d.time * 1000);
@@ -1619,7 +1619,7 @@ async function loadSupplyChart(period) {
     // Fetch Binance burns: on-chain (last 12 months) + historical fallback
     const BINANCE_BURNS = await fetchBinanceBurnsFromChain();
 
-    // Actual seconds per candle Ú¿‘ CORRECT for grouped periods
+    // Actual seconds per candle - CORRECT for grouped periods
     const actualCandleSec = {
       '1h': 3600,
       '4h': 4 * 3600,      // 4h grouped from hourly
@@ -1667,11 +1667,11 @@ async function loadSupplyChart(period) {
     const candles = raw.map((d, i) => {
       const open = runningSupply;
 
-      // Tax burn: scaled volume-based Ú¿‘ real variation per candle
+      // Tax burn: scaled volume-based - real variation per candle
       const rawVolBurn = (d.volumefrom || avgVol) * TAX_RATE * scaleFactor;
       const taxBurn = Math.max(avgBurnPerCandle * 0.25, Math.min(avgBurnPerCandle * 5.0, rawVolBurn));
 
-      // Binance event burn Ú¿‘ uses correct window for this period
+      // Binance event burn - uses correct window for this period
       const binanceBurn = getBinanceBurn(d.time, period);
       const burned = taxBurn + binanceBurn;
 
@@ -1710,14 +1710,14 @@ function renderSupplyChart(candles, period) {
   if (deltaEl) {
     const fmtDelta = v => Math.round(v).toLocaleString('en-US');
     const totalBurned = candles.reduce((s, c) => s + c.burned, 0);
-    deltaEl.innerHTML = `<span style="font-size:14px;">®ﬂ‘Â</span> ${fmtDelta(Math.round(totalBurned))} burned in period &nbsp; <span style="color:#ff6b6b;">${delta < 0 ? 'Ú∆ÿ' : 'Ú∆◊'} ${delta < 0 ? '-' : '+'}${fmtDelta(Math.abs(delta))}</span>`;
+    deltaEl.innerHTML = `<span style="font-size:14px;">üî•</span> ${fmtDelta(Math.round(totalBurned))} burned in period &nbsp; <span style="color:#ff6b6b;">${delta < 0 ? '‚ñº' : '‚ñ≤'} ${delta < 0 ? '-' : '+'}${fmtDelta(Math.abs(delta))}</span>`;
     deltaEl.style.color = '#aac4d8';
   }
   drawCombinedChart(candles, period);
   setupCandleHover(candles, period);
 }
 
-// Ú‘¿Ú‘¿Ú‘¿ COMBINED CHART: Supply bars (top) + Burned bars (bottom) Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
+// - COMBINED CHART: Supply bars (top) + Burned bars (bottom) -
 function drawBurnedChart(candles, period, hoverIdx = -1) { drawCombinedChart(candles, period, hoverIdx); }
 function drawCandleChart(candles, period, hoverIdx = -1) { drawCombinedChart(candles, period, hoverIdx); }
 
@@ -1730,7 +1730,7 @@ function drawCombinedChart(candles, period, hoverIdx = -1) {
   const cw = w - pad.l - pad.r;
   const ch = h - pad.t - pad.b;
 
-  // Ú‘¿Ú‘¿ zones Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
+  // - zones -
   const DIVIDER_RATIO = 0.52;      // supply top 52%, burned bottom 48%
   const supplyH = Math.floor(ch * DIVIDER_RATIO);
   const burnH   = ch - supplyH - 2; // 2px gap for divider
@@ -1748,7 +1748,7 @@ function drawCombinedChart(candles, period, hoverIdx = -1) {
     return v.toFixed(0);
   }
 
-  // Ú‘¿Ú‘¿ SUPPLY Y-scale (top zone) Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
+  // - SUPPLY Y-scale (top zone) -
   // sMax = highest open, sMin = lowest tax-based close (ignoring Binance spikes)
   // This keeps the axis stable even when a Binance batch drops supply 5B in one candle
   const sMax = Math.max(...candles.map(c => c.open));
@@ -1759,12 +1759,12 @@ function drawCombinedChart(candles, period, hoverIdx = -1) {
   const sRange = sHi - sLo || 1;
   const toSupplyY = v => Math.max(supplyTop, Math.min(supplyTop + supplyH, supplyTop + (1 - (v - sLo) / sRange) * supplyH));
 
-  // Ú‘¿Ú‘¿ BURNED Y-scale (bottom zone) Ú¿‘ taxBurn ONLY, Binance shown separately Ú‘¿
+  // - BURNED Y-scale (bottom zone) - taxBurn ONLY, Binance shown separately -
   const taxBurnVals = candles.map(c => c.taxBurn).filter(v => v > 0);
   const bMax = (taxBurnVals.length ? Math.max(...taxBurnVals) : 1) * 1.3;
   const toBurnH = v => (Math.min(v, bMax) / bMax) * (burnH - 2);
 
-  // Ú‘¿Ú‘¿Ú‘¿ GRID: Supply (top) Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
+  // - GRID: Supply (top) -
   ctx.font = '10px Exo 2'; ctx.textAlign = 'right';
   const sGridLines = 5;
   for (let i = 0; i <= sGridLines; i++) {
@@ -1776,7 +1776,7 @@ function drawCombinedChart(candles, period, hoverIdx = -1) {
     ctx.fillText(fmtY(v), pad.l - 5, y + 3);
   }
 
-  // Ú‘¿Ú‘¿Ú‘¿ GRID: Burned (bottom) Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
+  // - GRID: Burned (bottom) -
   const bGridLines = 3;
   for (let i = 0; i <= bGridLines; i++) {
     const y = burnTop + (burnH / bGridLines) * (bGridLines - i);
@@ -1790,11 +1790,11 @@ function drawCombinedChart(candles, period, hoverIdx = -1) {
     }
   }
 
-  // Ú‘¿Ú‘¿Ú‘¿ DIVIDER LINE Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
+  // - DIVIDER LINE -
   ctx.strokeStyle = 'rgba(42,64,96,0.7)'; ctx.lineWidth = 1; ctx.setLineDash([]);
   ctx.beginPath(); ctx.moveTo(pad.l, dividerY); ctx.lineTo(pad.l + cw, dividerY); ctx.stroke();
 
-  // Ú‘¿Ú‘¿Ú‘¿ ZONE LABELS (right side) Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
+  // - ZONE LABELS (right side) -
   ctx.save();
   ctx.font = 'bold 9px Exo 2'; ctx.textAlign = 'right'; ctx.letterSpacing = '0.06em';
   ctx.fillStyle = 'rgba(255,100,100,0.5)';
@@ -1803,7 +1803,7 @@ function drawCombinedChart(candles, period, hoverIdx = -1) {
   ctx.fillText('BURNED', pad.l + cw, burnTop + 11);
   ctx.restore();
 
-  // Ú‘¿Ú‘¿Ú‘¿ SUPPLY BARS (top zone) Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
+  // - SUPPLY BARS (top zone) -
   candles.forEach((c, i) => {
     const x = pad.l + i * gap + gap / 2;
     const isHover = i === hoverIdx;
@@ -1811,7 +1811,7 @@ function drawCombinedChart(candles, period, hoverIdx = -1) {
 
     // Bar top = current open (supply at start of candle)
     // Bar bottom = fixed bottom of supply zone
-    // This makes bars visually show supply level Ú¿‘ taller = more supply remaining
+    // This makes bars visually show supply level - taller = more supply remaining
     const barTop  = toSupplyY(c.open);
     const barBot  = supplyTop + supplyH;
     const barHeight = Math.max(1, barBot - barTop);
@@ -1847,13 +1847,13 @@ function drawCombinedChart(candles, period, hoverIdx = -1) {
     }
   });
 
-  // Ú‘¿Ú‘¿Ú‘¿ BURNED BARS (bottom zone) Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
+  // - BURNED BARS (bottom zone) -
   candles.forEach((c, i) => {
     const x = pad.l + i * gap + gap / 2;
     const isHover = i === hoverIdx;
     const hasBinance = c.binanceBurn > 0;
 
-    // Tax burn bar Ú¿‘ normal scale, always visible
+    // Tax burn bar - normal scale, always visible
     const taxH = Math.max(1, toBurnH(c.taxBurn));
     const taxBt = burnTop + burnH - taxH;
     const grad = ctx.createLinearGradient(x, taxBt, x, burnTop + burnH);
@@ -1864,9 +1864,9 @@ function drawCombinedChart(candles, period, hoverIdx = -1) {
     ctx.fillRect(x - barW / 2, taxBt, barW, taxH);
     ctx.shadowBlur = 0;
 
-    // Binance burn Ú¿‘ separate orange bar on top of the green bar, capped at zone height
+    // Binance burn - separate orange bar on top of the green bar, capped at zone height
     if (hasBinance) {
-      // Show as a % of zone height Ú¿‘ max 85% so it's always visible but not overflowing
+      // Show as a % of zone height - max 85% so it's always visible but not overflowing
       const binanceH = Math.min(burnH * 0.85, Math.max(burnH * 0.25, toBurnH(c.binanceBurn * 0.15)));
       const binanceBt = burnTop + burnH - taxH - binanceH;
       const bGrad = ctx.createLinearGradient(x, binanceBt, x, burnTop + burnH - taxH);
@@ -1877,20 +1877,20 @@ function drawCombinedChart(candles, period, hoverIdx = -1) {
       // Fire emoji above
       ctx.save();
       ctx.font = '11px serif'; ctx.textAlign = 'center'; ctx.globalAlpha = 0.92;
-      ctx.fillText('®ﬂ‘Â', x, Math.max(burnTop + 12, binanceBt - 1));
+      ctx.fillText('üî•', x, Math.max(burnTop + 12, binanceBt - 1));
       ctx.globalAlpha = 1;
       ctx.restore();
     }
   });
 
-  // Ú‘¿Ú‘¿Ú‘¿ CURRENT SUPPLY LINE (dashed) Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
+  // - CURRENT SUPPLY LINE (dashed) -
   const lastY = toSupplyY(candles[candles.length - 1].close);
   ctx.strokeStyle = 'rgba(255,100,100,0.25)';
   ctx.lineWidth = 1; ctx.setLineDash([5, 4]);
   ctx.beginPath(); ctx.moveTo(pad.l, lastY); ctx.lineTo(pad.l + cw, lastY); ctx.stroke();
   ctx.setLineDash([]);
 
-  // Ú‘¿Ú‘¿Ú‘¿ HOVER CROSSHAIR Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
+  // - HOVER CROSSHAIR -
   if (hoverIdx >= 0 && hoverIdx < candles.length) {
     const x = pad.l + hoverIdx * gap + gap / 2;
     ctx.strokeStyle = 'rgba(84,147,247,0.35)';
@@ -1905,7 +1905,7 @@ function drawCombinedChart(candles, period, hoverIdx = -1) {
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
   }
 
-  // Ú‘¿Ú‘¿Ú‘¿ X-AXIS Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
+  // - X-AXIS -
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   ctx.font = '10px Exo 2'; ctx.textAlign = 'center';
   const drawnX = [];
@@ -1936,7 +1936,7 @@ function drawCombinedChart(candles, period, hoverIdx = -1) {
   ctx.fillStyle = 'rgba(58,85,120,0.35)'; ctx.font = '9px Exo 2'; ctx.textAlign = 'center';
   ctx.fillText('UTC Time Buckets', pad.l + cw / 2, h - 2);
 
-  // Ú‘¿Ú‘¿ Moving date pill on X axis Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
+  // - Moving date pill on X axis -
   if (hoverIdx >= 0 && hoverIdx < candles.length) {
     const hc = candles[hoverIdx];
     const cx = pad.l + hoverIdx * gap + gap / 2;
@@ -1968,7 +1968,7 @@ function drawCombinedChart(candles, period, hoverIdx = -1) {
   }
 }
 
-// Shared X-axis drawing Ú¿‘ used by both supply and burned charts
+// Shared X-axis drawing - used by both supply and burned charts
 function drawXAxisLabels(ctx, items, pad, cw, gap, period) {
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const h = ctx.canvas.height;
@@ -2063,7 +2063,7 @@ function setupCandleHover(candles, period) {
   }
 
   function fmtBig(v) {
-    // Format like "441,311 ¶-¶¨T¿¶+" style but in English: "441.311B" or full with commas
+    // Format like "441,311 ----T-+" style but in English: "441.311B" or full with commas
     const n = Math.round(Math.abs(v));
     if (n >= 1e12) return (n / 1e12).toFixed(3) + 'T';
     if (n >= 1e9)  return (n / 1e9).toFixed(3) + 'B';
@@ -2118,7 +2118,7 @@ function setupCandleHover(candles, period) {
       for (let j = 0; j <= idx; j++) cumB += candles[j].burned;
       const periodLbl = fmtPeriodLabel(period);
       const change = c.close - c.open;
-      const chSign = change < 0 ? 'Ú»“' : '+';
+      const chSign = change < 0 ? '-' : '+';
       const changeColor = change < 0 ? '#ff6b6b' : '#4dffaa';
       tip.innerHTML =
         `<div style="color:#7abed0;font-size:10px;letter-spacing:0.08em;margin-bottom:4px;border-bottom:1px solid rgba(84,147,247,0.15);padding-bottom:4px;">LUNC SUPPLY &amp; BURN</div>` +
@@ -2127,7 +2127,7 @@ function setupCandleHover(candles, period) {
         `<div style="margin-top:3px;padding-top:3px;border-top:1px solid rgba(84,147,247,0.1);">` +
         `<span style="color:#aac4d8;">${periodLbl}:</span> <b style="color:#1ec864;">${fmtBig(c.burned)} LUNC</b></div>` +
         (c.binanceBurn > 0
-          ? `<div><span style="color:#ff9944;">®ﬂ‘Â Binance:</span> <b style="color:#ffbb55;">${fmtBig(c.binanceBurn)} LUNC</b></div>`
+          ? `<div><span style="color:#ff9944;">üî• Binance:</span> <b style="color:#ffbb55;">${fmtBig(c.binanceBurn)} LUNC</b></div>`
           : '') +
         `<div style="margin-top:3px;padding-top:3px;border-top:1px solid rgba(84,147,247,0.1);"><span style="color:#aac4d8;">Total burned:</span> <b style="color:#4dffaa;">${fmtBig(cumB)} LUNC</b></div>` +
         `<div><span style="color:#aac4d8;">Date:</span> <b>${dateStr}</b></div>`;
@@ -2161,10 +2161,10 @@ function drawSupplyFallback() {
   const { ctx, w, h } = C;
   ctx.fillStyle = 'rgba(122,158,196,0.4)'; ctx.font = '12px Exo 2';
   ctx.textAlign = 'center';
-  ctx.fillText('Could not load data Ú¿‘ check connection', w/2, h/2);
+  ctx.fillText('Could not load data - check connection', w/2, h/2);
 }
 
-// Ú‘¿Ú‘¿Ú‘¿ BINANCE BURN COUNTDOWN Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
+// - BINANCE BURN COUNTDOWN -
 let _cdInterval = null;
 
 function startBinanceCountdown() {
@@ -2181,12 +2181,12 @@ function updateBinanceCountdown() {
   const now = new Date();
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-  // Binance burns "around the 1st" Ú¿‘ window: 29th prev month to 3rd of next month
+  // Binance burns "around the 1st" - window: 29th prev month to 3rd of next month
   // Find the nearest upcoming burn target
   const yr  = now.getUTCFullYear();
   const mon = now.getUTCMonth();
 
-  // Candidates: last day(s) of this month OR 1stÚ¿”3rd of next month
+  // Candidates: last day(s) of this month OR 1st-3rd of next month
   const nextMonthFirst = new Date(Date.UTC(
     mon === 11 ? yr + 1 : yr, mon === 11 ? 0 : mon + 1, 1
   ));
@@ -2197,7 +2197,7 @@ function updateBinanceCountdown() {
     mon === 11 ? yr + 1 : yr, mon === 11 ? 0 : mon + 1, 3, 23, 59, 59
   )); // up to 3rd of next month
 
-  // If we're IN the burn window Ú∆“ show "Burn expected soon!"
+  // If we're IN the burn window - show "Burn expected soon!"
   const inWindow = now >= burnWindowStart && now <= burnWindowEnd;
 
   // Target for countdown = 1st of next month (center of window)
@@ -2240,12 +2240,12 @@ function updateBinanceCountdown() {
   }
 
   if (inWindow) {
-    set('bnb-burn-date', `®ﬂ‘+ BURN EXPECTED T¨ ${burnMon} 1 T-2 days`);
+    set('bnb-burn-date', `üî•+ BURN EXPECTED T- ${burnMon} 1 T-2 days`);
     // Flash the digits
     const digits = document.getElementById('bnb-countdown-digits');
     if (digits) digits.style.opacity = (Math.floor(Date.now()/600) % 2 === 0) ? '1' : '0.4';
   } else {
-    set('bnb-burn-date', `${burnMon} 1, ${burnYr} T¨ T-2 days window`);
+    set('bnb-burn-date', `${burnMon} 1, ${burnYr} T- T-2 days window`);
     const digits = document.getElementById('bnb-countdown-digits');
     if (digits) digits.style.opacity = '1';
   }
@@ -2264,11 +2264,11 @@ function updateBinanceCountdown() {
   }
 
   // Estimated burn amount based on current month's trading volume proxy
-  // ~375MÚ¿”5.3B range; use pct elapsed +◊ average daily rate as proxy
+  // ~375M-5.3B range; use pct elapsed +- average daily rate as proxy
   const AVG_MONTHLY = 600_000_000; // conservative ~600M average
   const est = Math.round(AVG_MONTHLY * (0.7 + pct / 300)); // slight ramp as month progresses
   const fmtB = v => v >= 1e9 ? (v/1e9).toFixed(2)+'B' : (v/1e6).toFixed(0)+'M';
-  set('bnb-est-amount', `Est. next Binance burn: ~${fmtB(est)} LUNC T¨ Based on avg monthly volume`);
+  set('bnb-est-amount', `Est. next Binance burn: ~${fmtB(est)} LUNC T- Based on avg monthly volume`);
 }
 
 async function runSupplyAudit() {
@@ -2290,11 +2290,11 @@ async function runSupplyAudit() {
     const displayedSupply = parseFloat(document.getElementById('lunc-big')?.textContent?.replace(/,/g,'')) || 0;
     const diff = Math.abs(lcdSupply - displayedSupply);
     const match = diff < 1_000_000;
-    lines.push(`<span style="color:#8ab0d8">Ú—‡ LCD Supply (real-time):</span>  <b>${fmt(lcdSupply)}</b> LUNC`);
+    lines.push(`<span style="color:#8ab0d8">üì° LCD Supply (real-time):</span>  <b>${fmt(lcdSupply)}</b> LUNC`);
     lines.push(`<span style="color:#8ab0d8">   Displayed Supply:</span>       <b>${fmt(displayedSupply)}</b> LUNC`);
-    lines.push(`<span style="color:${match?'#4dffaa':'#ff6b6b'}">   Difference: ${fmt(diff)} LUNC ${match ? 'Ú‹≈ MATCH' : 'Ú⁄‡ˇ¨œ MISMATCH'}</span>`);
+    lines.push(`<span style="color:${match?'#4dffaa':'#ff6b6b'}">   Difference: ${fmt(diff)} LUNC ${match ? '- MATCH' : '- MISMATCH'}</span>`);
   } catch(e) {
-    lines.push(`<span style="color:#ff6b6b">Ú—‡ LCD Supply: fetch failed Ú¿‘ ${e.message}</span>`);
+    lines.push(`<span style="color:#ff6b6b">üì° LCD Supply: fetch failed - ${e.message}</span>`);
   }
 
   lines.push('');
@@ -2307,24 +2307,24 @@ async function runSupplyAudit() {
     const totalBurned = candles.reduce((s,c) => s + c.burned, 0);
     const supplyDrop = first.open - last.close;
     const drift = Math.abs(totalBurned - supplyDrop);
-    lines.push(`<span style="color:#8ab0d8">Ú—· Chart period: ${currentSupplyPeriod} Ú¿‘ ${candles.length} candles</span>`);
+    lines.push(`<span style="color:#8ab0d8">- Chart period: ${currentSupplyPeriod} - ${candles.length} candles</span>`);
     lines.push(`   Start supply:  <b>${fmt(first.open)}</b>`);
     lines.push(`   End supply:    <b>${fmt(last.close)}</b>`);
     lines.push(`   Supply drop:   <b style="color:#ff6b6b">-${fmt(supplyDrop)}</b>`);
     lines.push(`   Sum of burns:  <b style="color:#ff9944">-${fmt(totalBurned)}</b>`);
-    lines.push(`<span style="color:${drift < 1000 ? '#4dffaa' : '#ffaa44'}">   Drift: ${fmt(drift)} ${drift < 1000 ? 'Ú‹≈ consistent' : 'Ú⁄‡ˇ¨œ check rounding'}</span>`);
+    lines.push(`<span style="color:${drift < 1000 ? '#4dffaa' : '#ffaa44'}">   Drift: ${fmt(drift)} ${drift < 1000 ? '- consistent' : '- check rounding'}</span>`);
 
     // Binance burn candles
     const binanceCandies = candles.filter(c => c.binanceBurn > 0);
     lines.push('');
-    lines.push(`<span style="color:#8ab0d8">Ú—‚ Binance burn events in view: ${binanceCandies.length}</span>`);
+    lines.push(`<span style="color:#8ab0d8">- Binance burn events in view: ${binanceCandies.length}</span>`);
     binanceCandies.forEach(c => {
       const d = new Date(c.t);
       const label = `${d.getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]} ${d.getFullYear()}`;
-      lines.push(`   ®ﬂ‘Â ${label}: <b style="color:#ff7744">${fmt(c.binanceBurn)}</b> LUNC (Binance) + <b>${fmt(c.burned - c.binanceBurn)}</b> (tax)`);
+      lines.push(`   üî• ${label}: <b style="color:#ff7744">${fmt(c.binanceBurn)}</b> LUNC (Binance) + <b>${fmt(c.burned - c.binanceBurn)}</b> (tax)`);
     });
   } else {
-    lines.push(`<span style="color:#ffaa44">Ú—· No cached chart data Ú¿‘ open STATS page first</span>`);
+    lines.push(`<span style="color:#ffaa44">- No cached chart data - open STATS page first</span>`);
   }
 
   lines.push('');
@@ -2339,11 +2339,11 @@ async function runSupplyAudit() {
     const avgBurnPerCandle = candles.reduce((s,c) => s + (c.burned - (c.binanceBurn||0)), 0) / candles.length;
     const burnPerDay = avgBurnPerCandle * (86400 / candleSec);
     const burnOK = burnPerDay > 5_000_000 && burnPerDay < 50_000_000;
-    lines.push(`<span style="color:#8ab0d8">Ú—„ Avg tax burn rate (excl. Binance):</span>`);
+    lines.push(`<span style="color:#8ab0d8">- Avg tax burn rate (excl. Binance):</span>`);
     lines.push(`   Per candle:  <b>${fmt(avgBurnPerCandle)}</b>`);
     lines.push(`   Per day:     <b>${fmt(burnPerDay)}</b> LUNC`);
     lines.push(`   Expected:    ~${fmt(EXPECTED_DAILY)} LUNC/day`);
-    lines.push(`<span style="color:${burnOK?'#4dffaa':'#ffaa44'}">   ${burnOK ? 'Ú‹≈ Burn rate looks realistic' : 'Ú⁄‡ˇ¨œ Rate seems off'}</span>`);
+    lines.push(`<span style="color:${burnOK?'#4dffaa':'#ffaa44'}">   ${burnOK ? '- Burn rate looks realistic' : '- Rate seems off'}</span>`);
   }
 
   panel.innerHTML = lines.join('<br>');
@@ -2397,12 +2397,12 @@ async function loadAllStats() {
   const validatorsPromise = loadValidatorsS();
   await Promise.allSettled([loadStatsData(), loadOraclePoolS(), validatorsPromise]);
   const timeStr = 'Updated ' + new Date().toLocaleTimeString();
-  if (el) { el.dataset.lastUpdate = timeStr; el.textContent = timeStr + ' T¨ ®ﬂ‘ƒ 30s'; }
+  if (el) { el.dataset.lastUpdate = timeStr; el.textContent = timeStr + ' T- üî•- 30s'; }
   // Reset countdown
   statsNextRefresh = Date.now() + 30000;
 }
 
-// Ú‘¿Ú‘¿Ú‘¿ INIT Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
+// - INIT -
 renderBoard();
 
 // Scroll to top on every page load/refresh
