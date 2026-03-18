@@ -1128,14 +1128,21 @@ async function loadOraclePoolS() {
     const res = await fetch(
       'https://raw.githubusercontent.com/Baydashaaa/lunc-anonymous-signal/main/assets/data/oracle-pool.json?t=' + Date.now()
     );
-    if (!res.ok) return; // silently fail - keep last displayed value
+    if (!res.ok) return;
     const data = await res.json();
     const luncVal = data.lunc || 0;
     const ustcVal = data.ustc || 0;
-    if (luncVal > 0) setTxt('oracle-lunc', fmtFull(luncVal));
-    if (ustcVal > 0) setTxt('oracle-ustc', fmtFull(ustcVal));
+    if (luncVal > 0) {
+      setTxt('oracle-lunc', fmtFull(luncVal));
+      setTxt('oracle-lunc-pie', fmtFull(luncVal) + ' LUNC');
+    }
+    if (ustcVal > 0) {
+      setTxt('oracle-ustc', fmtFull(ustcVal));
+      setTxt('oracle-ustc-pie', fmtFull(ustcVal) + ' USTC');
+      setTxt('oracle-total-pie', fmtFull(luncVal + ustcVal) + ' total');
+    }
     drawOracleChartS(luncVal, ustcVal);
-  } catch {} // silently fail - keep last displayed value
+  } catch {}
 }
 
 async function loadValidatorsS() {
@@ -2389,21 +2396,102 @@ function drawStakedChartS(bonded, ratio) {
   ['30d ago','20d ago','10d ago','Today'].forEach((l,i)=>ctx.fillText(l,pad.l+(i/3)*cw,h-4));
 }
 function drawOracleChartS(lunc, ustc) {
-  const C = resolveCanvasS('oracleChart', 140); if (!C) return;
-  const { ctx, w, h } = C;
-  const pad = { l:56, r:54, t:12, b:28 };
-  const cw = w-pad.l-pad.r, ch = h-pad.t-pad.b, DAYS=30;
-  const lData=mockDeclineS(lunc,DAYS,500000000,0.002);
-  const uData=mockDeclineS(ustc,DAYS,900000,0.002);
-  const lMin=Math.min(...lData)*0.999,lMax=Math.max(...lData)*1.001;
-  const uMin=Math.min(...uData)*0.999,uMax=Math.max(...uData)*1.001;
-  ctx.strokeStyle='#1e3358';ctx.lineWidth=1;
-  for(let i=0;i<=2;i++){const y=pad.t+(ch/2)*i;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke();}
-  drawLineS(ctx,lData,pad,cw,ch,lMin,lMax,'#66ffaa',2);
-  ctx.beginPath();uData.forEach((v,i)=>{const x=pad.l+(i/(DAYS-1))*cw;const y=pad.t+(1-(v-uMin)/(uMax-uMin+0.0001))*ch;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
-  ctx.strokeStyle='#5493f7';ctx.lineWidth=2;ctx.setLineDash([4,3]);ctx.stroke();ctx.setLineDash([]);
-  ctx.fillStyle='#66ffaa';ctx.font='10px Exo 2';ctx.textAlign='right';ctx.fillText(fmtS(lMax),pad.l-4,pad.t+10);
-  ctx.fillStyle='#5493f7';ctx.textAlign='left';ctx.fillText(fmtS(uMax),pad.l+cw+4,pad.t+10);
+  const canvas = document.getElementById('oracleChart');
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const size = Math.min(canvas.parentElement.clientWidth || 280, 280);
+  canvas.width = size * dpr; canvas.height = size * dpr;
+  canvas.style.width = size + 'px'; canvas.style.height = size + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, size, size);
+
+  const cx = size / 2, cy = size / 2, r = size * 0.38, inner = size * 0.22;
+  const total = lunc + ustc;
+  if (total <= 0) return;
+
+  const luncPct = lunc / total;
+  const ustcPct = ustc / total;
+  const gap = 0.03; // gap between segments in radians
+
+  // LUNC segment (green) - large
+  const luncStart = -Math.PI / 2 + gap / 2;
+  const luncEnd = luncStart + (Math.PI * 2 * luncPct) - gap;
+
+  // USTC segment (blue) - small
+  const ustcStart = luncEnd + gap;
+  const ustcEnd = ustcStart + (Math.PI * 2 * ustcPct) - gap;
+
+  // Glow effect for LUNC
+  ctx.shadowColor = '#66ffaa';
+  ctx.shadowBlur = 18;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.arc(cx, cy, r, luncStart, luncEnd);
+  ctx.closePath();
+  const luncGrad = ctx.createRadialGradient(cx, cy, inner, cx, cy, r);
+  luncGrad.addColorStop(0, 'rgba(102,255,170,0.6)');
+  luncGrad.addColorStop(1, 'rgba(102,255,170,0.95)');
+  ctx.fillStyle = luncGrad;
+  ctx.fill();
+
+  // Glow effect for USTC
+  ctx.shadowColor = '#5493f7';
+  ctx.shadowBlur = 18;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.arc(cx, cy, r, ustcStart, ustcEnd);
+  ctx.closePath();
+  const ustcGrad = ctx.createRadialGradient(cx, cy, inner, cx, cy, r);
+  ustcGrad.addColorStop(0, 'rgba(84,147,247,0.6)');
+  ustcGrad.addColorStop(1, 'rgba(84,147,247,0.95)');
+  ctx.fillStyle = ustcGrad;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Donut hole
+  ctx.beginPath();
+  ctx.arc(cx, cy, inner, 0, Math.PI * 2);
+  ctx.fillStyle = '#0a1224';
+  ctx.fill();
+
+  // Inner ring border
+  ctx.beginPath();
+  ctx.arc(cx, cy, inner, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(84,147,247,0.15)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Center text - total
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold ' + Math.round(size * 0.072) + 'px Rajdhani, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(fmtS(lunc + ustc), cx, cy - size * 0.04);
+  ctx.fillStyle = 'rgba(176,196,232,0.7)';
+  ctx.font = Math.round(size * 0.042) + 'px Exo 2, sans-serif';
+  ctx.fillText('TOTAL', cx, cy + size * 0.06);
+
+  // Legend labels on segments
+  ctx.shadowBlur = 0;
+  // LUNC label
+  const luncMid = luncStart + (luncEnd - luncStart) / 2;
+  const luncLx = cx + Math.cos(luncMid) * (r * 0.72);
+  const luncLy = cy + Math.sin(luncMid) * (r * 0.72);
+  ctx.fillStyle = '#0a1224';
+  ctx.font = 'bold ' + Math.round(size * 0.052) + 'px Exo 2, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText((luncPct * 100).toFixed(1) + '%', luncLx, luncLy);
+
+  // USTC label (only if segment big enough)
+  if (ustcPct > 0.04) {
+    const ustcMid = ustcStart + (ustcEnd - ustcStart) / 2;
+    const ustcLx = cx + Math.cos(ustcMid) * (r * 0.72);
+    const ustcLy = cy + Math.sin(ustcMid) * (r * 0.72);
+    ctx.fillStyle = '#0a1224';
+    ctx.fillText((ustcPct * 100).toFixed(1) + '%', ustcLx, ustcLy);
+  }
 }
 
 async function loadAllStats() {
