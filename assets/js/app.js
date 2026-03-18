@@ -2537,32 +2537,30 @@ function drawOracleChartS(lunc, ustc) {
   const canvas = document.getElementById('oracleChart');
   if (!canvas) return;
   const dpr = window.devicePixelRatio || 1;
-  const size = Math.min(canvas.parentElement.clientWidth || 300, 300);
+  const base = Math.min(canvas.parentElement.clientWidth || 280, 280);
+  const pad = Math.round(base * 0.2); // padding for external labels
+  const size = base + pad * 2;
   canvas.width = size * dpr; canvas.height = size * dpr;
   canvas.style.width = size + 'px'; canvas.style.height = size + 'px';
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, size, size);
 
-  const cx = size / 2, cy = size / 2, r = size * 0.38, inner = size * 0.22;
+  const cx = size / 2, cy = size / 2, r = base * 0.38, inner = base * 0.22;
   const total = lunc + ustc;
   if (total <= 0) return;
 
   const luncPct = lunc / total;
   const ustcPct = ustc / total;
-  const gap = 0.03; // gap between segments in radians
+  const gap = 0.03;
 
-  // LUNC segment (green) - large
   const luncStart = -Math.PI / 2 + gap / 2;
   const luncEnd = luncStart + (Math.PI * 2 * luncPct) - gap;
-
-  // USTC segment (blue) - small
   const ustcStart = luncEnd + gap;
   const ustcEnd = ustcStart + (Math.PI * 2 * ustcPct) - gap;
 
-  // Glow effect for LUNC
-  ctx.shadowColor = '#66ffaa';
-  ctx.shadowBlur = 18;
+  // LUNC segment
+  ctx.shadowColor = '#66ffaa'; ctx.shadowBlur = 18;
   ctx.beginPath();
   ctx.moveTo(cx, cy);
   ctx.arc(cx, cy, r, luncStart, luncEnd);
@@ -2573,9 +2571,8 @@ function drawOracleChartS(lunc, ustc) {
   ctx.fillStyle = luncGrad;
   ctx.fill();
 
-  // Glow effect for USTC
-  ctx.shadowColor = '#5493f7';
-  ctx.shadowBlur = 18;
+  // USTC segment
+  ctx.shadowColor = '#5493f7'; ctx.shadowBlur = 18;
   ctx.beginPath();
   ctx.moveTo(cx, cy);
   ctx.arc(cx, cy, r, ustcStart, ustcEnd);
@@ -2600,25 +2597,24 @@ function drawOracleChartS(lunc, ustc) {
   ctx.lineWidth = 1;
   ctx.stroke();
 
-  // Center text - total
+  // Center text
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold ' + Math.round(size * 0.072) + 'px Rajdhani, sans-serif';
+  ctx.font = 'bold ' + Math.round(base * 0.072) + 'px Rajdhani, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(fmtS(lunc + ustc), cx, cy - size * 0.04);
+  ctx.fillText(fmtS(lunc + ustc), cx, cy - base * 0.04);
   ctx.fillStyle = 'rgba(176,196,232,0.7)';
-  ctx.font = Math.round(size * 0.042) + 'px Exo 2, sans-serif';
-  ctx.fillText('TOTAL', cx, cy + size * 0.06);
+  ctx.font = Math.round(base * 0.042) + 'px Exo 2, sans-serif';
+  ctx.fillText('TOTAL', cx, cy + base * 0.06);
 
   // External labels with lines
-  ctx.shadowBlur = 0;
-  ctx.font = 'bold ' + Math.round(size * 0.048) + 'px Exo 2, sans-serif';
+  ctx.font = 'bold ' + Math.round(base * 0.052) + 'px Exo 2, sans-serif';
   ctx.textBaseline = 'middle';
 
   function drawLabel(midAngle, pct, color) {
-    const labelR = r * 1.28;       // label anchor point
-    const lineR1 = r * 1.05;       // line start (just outside segment)
-    const lineR2 = r * 1.22;       // line end (before text)
+    const lineR1 = r * 1.06;
+    const lineR2 = r * 1.25;
+    const labelR = r * 1.32;
     const lx1 = cx + Math.cos(midAngle) * lineR1;
     const ly1 = cy + Math.sin(midAngle) * lineR1;
     const lx2 = cx + Math.cos(midAngle) * lineR2;
@@ -2626,7 +2622,6 @@ function drawOracleChartS(lunc, ustc) {
     const tx  = cx + Math.cos(midAngle) * labelR;
     const ty  = cy + Math.sin(midAngle) * labelR;
 
-    // Line
     ctx.beginPath();
     ctx.moveTo(lx1, ly1);
     ctx.lineTo(lx2, ly2);
@@ -2634,7 +2629,6 @@ function drawOracleChartS(lunc, ustc) {
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    // Text
     ctx.fillStyle = color;
     ctx.textAlign = Math.cos(midAngle) >= 0 ? 'left' : 'right';
     ctx.fillText(pct.toFixed(1) + '%', tx, ty);
@@ -2646,37 +2640,3 @@ function drawOracleChartS(lunc, ustc) {
   drawLabel(ustcMid, ustcPct * 100, '#5493f7');
 }
 
-async function loadAllStats() {
-  const el = document.getElementById('updated-time');
-  if (el) { el.textContent = 'Refreshing...'; el.dataset.lastUpdate = 'Refreshing...'; }
-  const validatorsPromise = loadValidatorsS();
-  await Promise.allSettled([loadStatsData(), loadOraclePoolS(), validatorsPromise]);
-  const timeStr = 'Updated ' + new Date().toLocaleTimeString();
-  if (el) { el.dataset.lastUpdate = timeStr; el.textContent = timeStr + ' · 🔥 30s'; }
-  // Reset countdown
-  statsNextRefresh = Date.now() + 30000;
-}
-
-// - INIT -
-renderBoard();
-
-// Scroll to top on every page load/refresh
-window.scrollTo(0, 0);
-if (history.scrollRestoration) history.scrollRestoration = 'manual';
-
-// Fast smooth scroll to top (300ms, ease-out)
-function smoothScrollTop() {
-  const start = window.scrollY;
-  if (start === 0) return;
-  const duration = 300;
-  const startTime = performance.now();
-  function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
-  function step(now) {
-    const elapsed = now - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-    window.scrollTo(0, start * (1 - easeOut(progress)));
-    if (progress < 1) requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
-}
-window.addEventListener('load', () => { window.scrollTo(0, 0); });
