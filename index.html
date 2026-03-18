@@ -795,6 +795,21 @@
   </div>
   <div id="pool-history-msg" style="text-align:center;font-size:11px;color:var(--muted);padding:20px 0;display:none;">Not enough data yet — check back in a few days</div>
   <canvas id="poolHistoryChart" height="120" style="width:100%;"></canvas>
+  <!-- BURN HISTORY CHART -->
+  <div class="card" style="margin-top:16px;">
+   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+    <div style="font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;color:#fff;">🔥 LUNC Burn History</div>
+    <div style="display:flex;gap:4px;">
+     <button class="tf-btn burn-tab active-tf" data-period="30d" onclick="setBurnPeriod('30d')">30D</button>
+     <button class="tf-btn burn-tab" data-period="7d"  onclick="setBurnPeriod('7d')">7D</button>
+     <button class="tf-btn burn-tab" data-period="3m"  onclick="setBurnPeriod('3m')">3M</button>
+     <button class="tf-btn burn-tab" data-period="6m"  onclick="setBurnPeriod('6m')">6M</button>
+     <button class="tf-btn burn-tab" data-period="all" onclick="setBurnPeriod('all')">ALL</button>
+    </div>
+   </div>
+   <div id="burnHistoryMsg" style="text-align:center;font-size:11px;color:var(--muted);padding:20px 0;display:none;">Bootstrap in progress — check back soon</div>
+   <canvas id="burnHistoryChart" style="width:100%;display:block;"></canvas>
+  </div>
  </div>
   <div class="section-title" style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:10px;">⚡ Validators <span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
  <div class="card">
