@@ -1157,8 +1157,131 @@ async function loadOraclePoolS() {
       setTxt('oracle-total-pie', '≈ $' + fmtFull(Math.round(luncUSD + ustcUSD)));
     }
     drawOracleChartS(luncUSD, ustcUSD);
+    loadPoolHistory();
   } catch {}
 }
+
+let _poolHistoryPeriod = '7d';
+
+function setPoolHistoryPeriod(p) {
+  _poolHistoryPeriod = p;
+  ['7d','1m','all'].forEach(id => {
+    const el = document.getElementById('ph-' + id);
+    if (el) el.classList.toggle('active-tf', id === p);
+  });
+  drawPoolHistoryChart();
+}
+
+async function loadPoolHistory() {
+  try {
+    const res = await fetch(
+      'https://raw.githubusercontent.com/Baydashaaa/lunc-anonymous-signal/main/assets/data/oracle-pool.json?t=' + Date.now()
+    );
+    if (!res.ok) return;
+    const data = await res.json();
+    window._poolHistory = data.history || [];
+    drawPoolHistoryChart();
+  } catch {}
+}
+
+function drawPoolHistoryChart() {
+  const canvas = document.getElementById('poolHistoryChart');
+  const msg = document.getElementById('pool-history-msg');
+  if (!canvas) return;
+
+  let history = window._poolHistory || [];
+
+  // Filter by period
+  const now = new Date();
+  if (_poolHistoryPeriod === '7d') {
+    const cutoff = new Date(now - 7 * 86400000).toISOString().slice(0,10);
+    history = history.filter(h => h.date >= cutoff);
+  } else if (_poolHistoryPeriod === '1m') {
+    const cutoff = new Date(now - 30 * 86400000).toISOString().slice(0,10);
+    history = history.filter(h => h.date >= cutoff);
+  }
+
+  if (history.length < 2) {
+    if (msg) msg.style.display = 'block';
+    canvas.style.display = 'none';
+    return;
+  }
+  if (msg) msg.style.display = 'none';
+  canvas.style.display = 'block';
+
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.parentElement.clientWidth - 40 || 600;
+  const h = 120;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+
+  const pad = { l: 60, r: 16, t: 10, b: 28 };
+  const cw = w - pad.l - pad.r;
+  const ch = h - pad.t - pad.b;
+
+  const luncData = history.map(h => h.lunc);
+  const ustcData = history.map(h => h.ustc);
+  const lMin = Math.min(...luncData) * 0.998;
+  const lMax = Math.max(...luncData) * 1.002;
+  const uMin = Math.min(...ustcData) * 0.998;
+  const uMax = Math.max(...ustcData) * 1.002;
+  const n = history.length;
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(30,51,88,0.6)'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 3; i++) {
+    const y = pad.t + (ch / 3) * i;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + cw, y); ctx.stroke();
+  }
+
+  // LUNC line (green)
+  ctx.beginPath();
+  luncData.forEach((v, i) => {
+    const x = pad.l + (i / (n-1)) * cw;
+    const y = pad.t + (1 - (v - lMin) / (lMax - lMin + 0.001)) * ch;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = '#66ffaa'; ctx.lineWidth = 2;
+  ctx.shadowColor = '#66ffaa'; ctx.shadowBlur = 6;
+  ctx.stroke(); ctx.shadowBlur = 0;
+
+  // USTC line (blue, dashed)
+  ctx.beginPath();
+  ustcData.forEach((v, i) => {
+    const x = pad.l + (i / (n-1)) * cw;
+    const y = pad.t + (1 - (v - uMin) / (uMax - uMin + 0.001)) * ch;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = '#5493f7'; ctx.lineWidth = 2;
+  ctx.setLineDash([4, 3]);
+  ctx.shadowColor = '#5493f7'; ctx.shadowBlur = 6;
+  ctx.stroke(); ctx.setLineDash([]); ctx.shadowBlur = 0;
+
+  // Y axis labels (LUNC)
+  ctx.fillStyle = '#66ffaa'; ctx.font = '9px Exo 2'; ctx.textAlign = 'right';
+  ctx.fillText(fmtS(lMax), pad.l - 4, pad.t + 8);
+  ctx.fillText(fmtS(lMin), pad.l - 4, pad.t + ch);
+
+  // X axis labels
+  ctx.fillStyle = 'rgba(122,158,196,0.5)'; ctx.textAlign = 'center'; ctx.font = '9px Exo 2';
+  const step = Math.max(1, Math.floor(n / 4));
+  for (let i = 0; i < n; i += step) {
+    const x = pad.l + (i / (n-1)) * cw;
+    const label = history[i].date.slice(5); // MM-DD
+    ctx.fillText(label, x, h - 6);
+  }
+
+  // Legend
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#66ffaa'; ctx.font = 'bold 9px Exo 2';
+  ctx.fillText('● LUNC', pad.l, pad.t - 2);
+  ctx.fillStyle = '#5493f7';
+  ctx.fillText('● USTC', pad.l + 52, pad.t - 2);
+}
+
 
 async function loadValidatorsS() {
   try {
