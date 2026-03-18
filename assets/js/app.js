@@ -1728,12 +1728,7 @@ async function loadSupplyChart(period) {
     // 1. Get current real supply from LCD
     let currentSupply = 6.466e12;
     try {
-      // Try multiple LCD endpoints with fallback
-      const lcdEndpoints = [
-        'https://lcd.terra-classic.hexxagon.io',
-        'https://api-lunc-lcd.binodes.com',
-      ];
-      for (const base of lcdEndpoints) {
+      for (const base of ['https://lcd.terra-classic.hexxagon.io','https://api-lunc-lcd.binodes.com']) {
         try {
           const lcdRes = await Promise.race([
             fetch(base + '/cosmos/bank/v1beta1/supply/by_denom?denom=uluna'),
