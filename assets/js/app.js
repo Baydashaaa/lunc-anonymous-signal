@@ -2537,7 +2537,7 @@ function drawOracleChartS(lunc, ustc) {
   const canvas = document.getElementById('oracleChart');
   if (!canvas) return;
   const dpr = window.devicePixelRatio || 1;
-  const size = Math.min(canvas.parentElement.clientWidth || 280, 280);
+  const size = Math.min(canvas.parentElement.clientWidth || 300, 300);
   canvas.width = size * dpr; canvas.height = size * dpr;
   canvas.style.width = size + 'px'; canvas.style.height = size + 'px';
   const ctx = canvas.getContext('2d');
@@ -2610,26 +2610,40 @@ function drawOracleChartS(lunc, ustc) {
   ctx.font = Math.round(size * 0.042) + 'px Exo 2, sans-serif';
   ctx.fillText('TOTAL', cx, cy + size * 0.06);
 
-  // Legend labels on segments
+  // External labels with lines
   ctx.shadowBlur = 0;
-  // LUNC label
-  const luncMid = luncStart + (luncEnd - luncStart) / 2;
-  const luncLx = cx + Math.cos(luncMid) * (r * 0.72);
-  const luncLy = cy + Math.sin(luncMid) * (r * 0.72);
-  ctx.fillStyle = '#0a1224';
-  ctx.font = 'bold ' + Math.round(size * 0.052) + 'px Exo 2, sans-serif';
-  ctx.textAlign = 'center';
+  ctx.font = 'bold ' + Math.round(size * 0.048) + 'px Exo 2, sans-serif';
   ctx.textBaseline = 'middle';
-  ctx.fillText((luncPct * 100).toFixed(1) + '%', luncLx, luncLy);
 
-  // USTC label (only if segment big enough)
-  if (ustcPct > 0.04) {
-    const ustcMid = ustcStart + (ustcEnd - ustcStart) / 2;
-    const ustcLx = cx + Math.cos(ustcMid) * (r * 0.72);
-    const ustcLy = cy + Math.sin(ustcMid) * (r * 0.72);
-    ctx.fillStyle = '#0a1224';
-    ctx.fillText((ustcPct * 100).toFixed(1) + '%', ustcLx, ustcLy);
+  function drawLabel(midAngle, pct, color) {
+    const labelR = r * 1.28;       // label anchor point
+    const lineR1 = r * 1.05;       // line start (just outside segment)
+    const lineR2 = r * 1.22;       // line end (before text)
+    const lx1 = cx + Math.cos(midAngle) * lineR1;
+    const ly1 = cy + Math.sin(midAngle) * lineR1;
+    const lx2 = cx + Math.cos(midAngle) * lineR2;
+    const ly2 = cy + Math.sin(midAngle) * lineR2;
+    const tx  = cx + Math.cos(midAngle) * labelR;
+    const ty  = cy + Math.sin(midAngle) * labelR;
+
+    // Line
+    ctx.beginPath();
+    ctx.moveTo(lx1, ly1);
+    ctx.lineTo(lx2, ly2);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Text
+    ctx.fillStyle = color;
+    ctx.textAlign = Math.cos(midAngle) >= 0 ? 'left' : 'right';
+    ctx.fillText(pct.toFixed(1) + '%', tx, ty);
   }
+
+  const luncMid = luncStart + (luncEnd - luncStart) / 2;
+  const ustcMid = ustcStart + (ustcEnd - ustcStart) / 2;
+  drawLabel(luncMid, luncPct * 100, '#66ffaa');
+  drawLabel(ustcMid, ustcPct * 100, '#5493f7');
 }
 
 async function loadAllStats() {
