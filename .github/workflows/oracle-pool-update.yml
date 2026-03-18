@@ -1,0 +1,58 @@
+name: Update Oracle Pool Data
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'   # every 30 minutes
+  workflow_dispatch:           # manual trigger
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch Oracle Pool balances
+        run: |
+          ADDR="terra1jgp27m8fykex4e4jtt0l7ze8q528ux2lh4zh0f"
+          ENDPOINTS=(
+            "https://lcd.terra-classic.hexxagon.io"
+            "https://terra-classic-lcd.publicnode.com"
+            "https://api-lunc-lcd.binodes.com"
+          )
+          DATA=""
+          for BASE in "${ENDPOINTS[@]}"; do
+            DATA=$(curl -sf --max-time 10 "$BASE/cosmos/bank/v1beta1/balances/$ADDR" || true)
+            if [ -n "$DATA" ]; then
+              echo "Success with $BASE"
+              break
+            fi
+          done
+
+          if [ -z "$DATA" ]; then
+            echo "All endpoints failed"
+            exit 1
+          fi
+
+          LUNC=$(echo "$DATA" | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          bals = d.get('balances', [])
+          lunc = next((b for b in bals if b['denom']=='uluna'), None)
+          ustc = next((b for b in bals if b['denom']=='uusd'), None)
+          lunc_val = int(lunc['amount']) / 1e6 if lunc else 0
+          ustc_val = int(ustc['amount']) / 1e6 if ustc else 0
+          print(json.dumps({'lunc': lunc_val, 'ustc': ustc_val, 'updated': '$(date -u +%Y-%m-%dT%H:%M:%SZ)'}))
+          ")
+
+          mkdir -p assets/data
+          echo "$LUNC" > assets/data/oracle-pool.json
+          echo "Written: $LUNC"
+
+      - name: Commit and push
+        run: |
+          git config user.name "oracle-bot"
+          git config user.email "oracle-bot@users.noreply.github.com"
+          git add assets/data/oracle-pool.json
+          git diff --staged --quiet || git commit -m "chore: update oracle pool data $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push
