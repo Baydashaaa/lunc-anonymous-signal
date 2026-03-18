@@ -2533,110 +2533,141 @@ function drawStakedChartS(bonded, ratio) {
   ctx.fillStyle='#3a5070';ctx.font='10px Exo 2';ctx.textAlign='center';
   ['30d ago','20d ago','10d ago','Today'].forEach((l,i)=>ctx.fillText(l,pad.l+(i/3)*cw,h-4));
 }
+// Oracle chart state
+let _oracleHover = null;
+let _oracleAnimFrame = null;
+let _oracleExplode = { lunc: 0, ustc: 0 };
+let _oracleLastData = { lunc: 0, ustc: 0 };
+
 function drawOracleChartS(lunc, ustc) {
+  _oracleLastData = { lunc, ustc };
+  const canvas = document.getElementById('oracleChart');
+  if (!canvas) return;
+
+  if (!canvas._oracleHoverBound) {
+    canvas._oracleHoverBound = true;
+    canvas.style.cursor = 'pointer';
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const size = parseFloat(canvas.style.width);
+      const cx = size / 2, cy = size / 2;
+      const dx = mx - cx, dy = my - cy;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const r = size * 0.38, inner = size * 0.22;
+      if (dist < inner || dist > r * 1.15) {
+        _oracleHover = null;
+      } else {
+        let angle = Math.atan2(dy, dx);
+        const total = _oracleLastData.lunc + _oracleLastData.ustc;
+        const luncPct = _oracleLastData.lunc / total;
+        const gap = 0.03;
+        const luncStart = -Math.PI / 2 + gap / 2;
+        const luncEnd = luncStart + (Math.PI * 2 * luncPct) - gap;
+        if (angle < luncStart) angle += Math.PI * 2;
+        _oracleHover = (angle >= luncStart && angle <= luncEnd) ? 'lunc' : 'ustc';
+      }
+    });
+    canvas.addEventListener('mouseleave', () => { _oracleHover = null; });
+  }
+
+  if (_oracleAnimFrame) cancelAnimationFrame(_oracleAnimFrame);
+  function animate() {
+    const tl = _oracleHover === 'lunc' ? 1 : 0;
+    const tu = _oracleHover === 'ustc' ? 1 : 0;
+    const speed = 0.14;
+    _oracleExplode.lunc += (tl - _oracleExplode.lunc) * speed;
+    _oracleExplode.ustc += (tu - _oracleExplode.ustc) * speed;
+    _renderOracleChart(lunc, ustc);
+    const diff = Math.abs(_oracleExplode.lunc - tl) + Math.abs(_oracleExplode.ustc - tu);
+    if (diff > 0.002) _oracleAnimFrame = requestAnimationFrame(animate);
+  }
+  animate();
+}
+
+function _renderOracleChart(lunc, ustc) {
   const canvas = document.getElementById('oracleChart');
   if (!canvas) return;
   const dpr = window.devicePixelRatio || 1;
-  const base = Math.min(canvas.parentElement.clientWidth || 280, 280);
-  const pad = Math.round(base * 0.2); // padding for external labels
-  const size = base + pad * 2;
+  const size = Math.min(canvas.parentElement.clientWidth || 280, 280);
   canvas.width = size * dpr; canvas.height = size * dpr;
   canvas.style.width = size + 'px'; canvas.style.height = size + 'px';
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, size, size);
 
-  const cx = size / 2, cy = size / 2, r = base * 0.38, inner = base * 0.22;
+  const cx = size / 2, cy = size / 2, r = size * 0.38, inner = size * 0.22;
   const total = lunc + ustc;
   if (total <= 0) return;
 
   const luncPct = lunc / total;
   const ustcPct = ustc / total;
   const gap = 0.03;
-
   const luncStart = -Math.PI / 2 + gap / 2;
   const luncEnd = luncStart + (Math.PI * 2 * luncPct) - gap;
   const ustcStart = luncEnd + gap;
   const ustcEnd = ustcStart + (Math.PI * 2 * ustcPct) - gap;
-
-  // LUNC segment
-  ctx.shadowColor = '#66ffaa'; ctx.shadowBlur = 18;
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.arc(cx, cy, r, luncStart, luncEnd);
-  ctx.closePath();
-  const luncGrad = ctx.createRadialGradient(cx, cy, inner, cx, cy, r);
-  luncGrad.addColorStop(0, 'rgba(102,255,170,0.6)');
-  luncGrad.addColorStop(1, 'rgba(102,255,170,0.95)');
-  ctx.fillStyle = luncGrad;
-  ctx.fill();
-
-  // USTC segment
-  ctx.shadowColor = '#5493f7'; ctx.shadowBlur = 18;
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.arc(cx, cy, r, ustcStart, ustcEnd);
-  ctx.closePath();
-  const ustcGrad = ctx.createRadialGradient(cx, cy, inner, cx, cy, r);
-  ustcGrad.addColorStop(0, 'rgba(84,147,247,0.6)');
-  ustcGrad.addColorStop(1, 'rgba(84,147,247,0.95)');
-  ctx.fillStyle = ustcGrad;
-  ctx.fill();
-  ctx.shadowBlur = 0;
-
-  // Donut hole
-  ctx.beginPath();
-  ctx.arc(cx, cy, inner, 0, Math.PI * 2);
-  ctx.fillStyle = '#0a1224';
-  ctx.fill();
-
-  // Inner ring border
-  ctx.beginPath();
-  ctx.arc(cx, cy, inner, 0, Math.PI * 2);
-  ctx.strokeStyle = 'rgba(84,147,247,0.15)';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  // Center text
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold ' + Math.round(base * 0.072) + 'px Rajdhani, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(fmtS(lunc + ustc), cx, cy - base * 0.04);
-  ctx.fillStyle = 'rgba(176,196,232,0.7)';
-  ctx.font = Math.round(base * 0.042) + 'px Exo 2, sans-serif';
-  ctx.fillText('TOTAL', cx, cy + base * 0.06);
-
-  // External labels with lines
-  ctx.font = 'bold ' + Math.round(base * 0.052) + 'px Exo 2, sans-serif';
-  ctx.textBaseline = 'middle';
-
-  function drawLabel(midAngle, pct, color) {
-    const lineR1 = r * 1.06;
-    const lineR2 = r * 1.25;
-    const labelR = r * 1.32;
-    const lx1 = cx + Math.cos(midAngle) * lineR1;
-    const ly1 = cy + Math.sin(midAngle) * lineR1;
-    const lx2 = cx + Math.cos(midAngle) * lineR2;
-    const ly2 = cy + Math.sin(midAngle) * lineR2;
-    const tx  = cx + Math.cos(midAngle) * labelR;
-    const ty  = cy + Math.sin(midAngle) * labelR;
-
-    ctx.beginPath();
-    ctx.moveTo(lx1, ly1);
-    ctx.lineTo(lx2, ly2);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    ctx.fillStyle = color;
-    ctx.textAlign = Math.cos(midAngle) >= 0 ? 'left' : 'right';
-    ctx.fillText(pct.toFixed(1) + '%', tx, ty);
-  }
-
   const luncMid = luncStart + (luncEnd - luncStart) / 2;
   const ustcMid = ustcStart + (ustcEnd - ustcStart) / 2;
-  drawLabel(luncMid, luncPct * 100, '#66ffaa');
-  drawLabel(ustcMid, ustcPct * 100, '#5493f7');
+  const EXPLODE = size * 0.05;
+
+  function drawSegment(start, end, mid, explode, c1, c2, glow) {
+    const ox = Math.cos(mid) * EXPLODE * explode;
+    const oy = Math.sin(mid) * EXPLODE * explode;
+    ctx.save();
+    ctx.translate(ox, oy);
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = 18 + explode * 16;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, start, end);
+    ctx.closePath();
+    const grad = ctx.createRadialGradient(cx, cy, inner, cx, cy, r);
+    grad.addColorStop(0, c1); grad.addColorStop(1, c2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  drawSegment(luncStart, luncEnd, luncMid, _oracleExplode.lunc,
+    'rgba(102,255,170,0.6)', 'rgba(102,255,170,0.95)', '#66ffaa');
+  drawSegment(ustcStart, ustcEnd, ustcMid, _oracleExplode.ustc,
+    'rgba(84,147,247,0.6)', 'rgba(84,147,247,0.95)', '#5493f7');
+
+  ctx.shadowBlur = 0;
+  ctx.beginPath(); ctx.arc(cx, cy, inner, 0, Math.PI * 2);
+  ctx.fillStyle = '#0a1224'; ctx.fill();
+  ctx.beginPath(); ctx.arc(cx, cy, inner, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(84,147,247,0.15)'; ctx.lineWidth = 1; ctx.stroke();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold ' + Math.round(size * 0.072) + 'px Rajdhani, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(fmtS(lunc + ustc), cx, cy - size * 0.04);
+  ctx.fillStyle = 'rgba(176,196,232,0.7)';
+  ctx.font = Math.round(size * 0.042) + 'px Exo 2, sans-serif';
+  ctx.fillText('TOTAL', cx, cy + size * 0.06);
+
+  ctx.font = 'bold ' + Math.round(size * 0.048) + 'px Exo 2, sans-serif';
+  ctx.textBaseline = 'middle';
+
+  function drawLabel(midAngle, pct, color, explode) {
+    const ox = Math.cos(midAngle) * EXPLODE * explode;
+    const oy = Math.sin(midAngle) * EXPLODE * explode;
+    const labelR = r * 1.3 + EXPLODE * explode;
+    ctx.beginPath();
+    ctx.moveTo(cx + ox + Math.cos(midAngle) * r * 1.05, cy + oy + Math.sin(midAngle) * r * 1.05);
+    ctx.lineTo(cx + ox + Math.cos(midAngle) * r * 1.22, cy + oy + Math.sin(midAngle) * r * 1.22);
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.textAlign = Math.cos(midAngle) >= 0 ? 'left' : 'right';
+    ctx.fillText(pct.toFixed(1) + '%',
+      cx + ox + Math.cos(midAngle) * labelR,
+      cy + oy + Math.sin(midAngle) * labelR);
+  }
+
+  drawLabel(luncMid, luncPct * 100, '#66ffaa', _oracleExplode.lunc);
+  drawLabel(ustcMid, ustcPct * 100, '#5493f7', _oracleExplode.ustc);
 }
 
