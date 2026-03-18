@@ -1,0 +1,39 @@
+name: Burn Bootstrap
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'Сколько дней истории собрать (по умолчанию 365)'
+        required: false
+        default: '365'
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Restore checkpoint
+        uses: actions/cache@v4
+        with:
+          path: /tmp/burn_checkpoint.json
+          key: burn-checkpoint-${{ github.run_number }}
+          restore-keys: |
+            burn-checkpoint-
+
+      - name: Run bootstrap
+        run: python3 burn_bootstrap.py ${{ github.event.inputs.days || 365 }}
+
+      - name: Commit burn_history.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add assets/data/burn_history.json
+          git diff --cached --quiet || git commit -m "burn bootstrap: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push
