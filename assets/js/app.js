@@ -2240,12 +2240,12 @@ function updateBinanceCountdown() {
   }
 
   if (inWindow) {
-    set('bnb-burn-date', `🔥+ BURN EXPECTED T- ${burnMon} 1 T-2 days`);
+    set('bnb-burn-date', `🔥 BURN EXPECTED · ${burnMon} 1 T-2 days`);
     // Flash the digits
     const digits = document.getElementById('bnb-countdown-digits');
     if (digits) digits.style.opacity = (Math.floor(Date.now()/600) % 2 === 0) ? '1' : '0.4';
   } else {
-    set('bnb-burn-date', `${burnMon} 1, ${burnYr} T- T-2 days window`);
+    set('bnb-burn-date', `${burnMon} 1, ${burnYr} · T-2 days window`);
     const digits = document.getElementById('bnb-countdown-digits');
     if (digits) digits.style.opacity = '1';
   }
@@ -2268,7 +2268,7 @@ function updateBinanceCountdown() {
   const AVG_MONTHLY = 600_000_000; // conservative ~600M average
   const est = Math.round(AVG_MONTHLY * (0.7 + pct / 300)); // slight ramp as month progresses
   const fmtB = v => v >= 1e9 ? (v/1e9).toFixed(2)+'B' : (v/1e6).toFixed(0)+'M';
-  set('bnb-est-amount', `Est. next Binance burn: ~${fmtB(est)} LUNC T- Based on avg monthly volume`);
+  set('bnb-est-amount', `Est. next Binance burn: ~${fmtB(est)} LUNC · Based on avg monthly volume`);
 }
 
 async function runSupplyAudit() {
@@ -2397,7 +2397,7 @@ async function loadAllStats() {
   const validatorsPromise = loadValidatorsS();
   await Promise.allSettled([loadStatsData(), loadOraclePoolS(), validatorsPromise]);
   const timeStr = 'Updated ' + new Date().toLocaleTimeString();
-  if (el) { el.dataset.lastUpdate = timeStr; el.textContent = timeStr + ' T- 🔥- 30s'; }
+  if (el) { el.dataset.lastUpdate = timeStr; el.textContent = timeStr + ' · 🔥 30s'; }
   // Reset countdown
   statsNextRefresh = Date.now() + 30000;
 }
