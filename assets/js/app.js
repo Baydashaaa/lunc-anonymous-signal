@@ -1975,7 +1975,14 @@ async function loadSupplyChart(period) {
     // Build map: timestamp (start of hour or day in UTC) → burn amount
     const burnMap = {};
     burnSource.forEach(d => {
-      if (d.date) {
+      if (d.ts) {
+        // hourly: "2026-03-17T05" → parse as UTC
+        const [datePart, hourPart] = d.ts.split('T');
+        const [y, m, dd] = datePart.split('-').map(Number);
+        const h = parseInt(hourPart) || 0;
+        const ts = Math.floor(Date.UTC(y, m - 1, dd, h) / 1000);
+        burnMap[ts] = d.burn || 0;
+      } else if (d.date) {
         // daily: "YYYY-MM-DD"
         const [y, m, dd] = d.date.split('-').map(Number);
         const ts = Math.floor(Date.UTC(y, m - 1, dd) / 1000);
