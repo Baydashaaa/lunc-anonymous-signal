@@ -1299,27 +1299,91 @@ function drawPoolHistoryChart() {
   canvas._phW = w;
   canvas._phCW = cw;
 
+  if (drawPoolHistoryChart._redrawOnly) return;
+
   if (!canvas._phBound) {
     canvas._phBound = true;
-    canvas.addEventListener('mousemove', function(e) {
-      const rect = canvas.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
+
+    function drawCrosshair(mx) {
       const history = canvas._phHistory;
       const pad = canvas._phPad;
       const cw = canvas._phCW;
       const n = canvas._phN;
       if (!history || !n) return;
+
       const idx = Math.round(Math.max(0, Math.min(n-1, (mx - pad.l) / cw * (n-1))));
       const d = history[idx];
       if (!d) return;
+
+      // Redraw chart
+      drawPoolHistoryChart._redrawOnly = true;
+      drawPoolHistoryChart();
+      drawPoolHistoryChart._redrawOnly = false;
+
+      const dpr = window.devicePixelRatio || 1;
+      const ctx = canvas.getContext('2d');
+      ctx.save();
+      ctx.scale(dpr, dpr);
+
+      const x = pad.l + (idx / (n-1)) * cw;
+      const h = canvas.height / dpr;
+
+      // Vertical crosshair line
+      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(x, pad.t);
+      ctx.lineTo(x, h - pad.b);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // LUNC dot
+      const ly = canvas._phToLY(d.lunc);
+      ctx.beginPath();
+      ctx.arc(x, ly, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#66ffaa';
+      ctx.shadowColor = '#66ffaa';
+      ctx.shadowBlur = 10;
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // USTC dot
+      const uy = canvas._phToUY(d.ustc);
+      ctx.beginPath();
+      ctx.arc(x, uy, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#5493f7';
+      ctx.shadowColor = '#5493f7';
+      ctx.shadowBlur = 10;
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      ctx.restore();
+
+      // Tooltip
       const tip = document.getElementById('pool-tooltip');
       if (tip) {
         tip.innerHTML = `<span style="color:var(--muted)">${d.date}</span> &nbsp;
           <span style="color:#66ffaa">LUNC: ${d.lunc.toLocaleString('en-US', {maximumFractionDigits:0})}</span> &nbsp;
           <span style="color:#5493f7">USTC: ${d.ustc.toLocaleString('en-US', {maximumFractionDigits:0})}</span>`;
       }
+    }
+
+    canvas.addEventListener('mousemove', function(e) {
+      const rect = canvas.getBoundingClientRect();
+      drawCrosshair(e.clientX - rect.left);
     });
+
     canvas.addEventListener('mouseleave', function() {
+      drawPoolHistoryChart._redrawOnly = true;
+      drawPoolHistoryChart();
+      drawPoolHistoryChart._redrawOnly = false;
       const tip = document.getElementById('pool-tooltip');
       if (tip) tip.innerHTML = '';
     });
