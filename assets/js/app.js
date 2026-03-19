@@ -2133,7 +2133,7 @@ function renderSupplyChart(candles, period) {
     const latestDelta = latest.close - latest.open;
     const periodLabels = { '1h':'1h', '4h':'4h', 'D':'24h', 'W':'7d', 'M':'30d' };
     const label = periodLabels[period] || period;
-    deltaEl.innerHTML = `<span style="font-size:14px;">🔥</span> ${fmtDelta(Math.round(latestBurned))} burned in latest candlestick`;
+    deltaEl.innerHTML = `<span style="font-size:14px;">🔥</span> <span style="color:#ff6b6b;">${fmtDelta(Math.round(latestBurned))}</span> burned in latest candlestick`;
     deltaEl.style.color = '#aac4d8';
   }
   drawCombinedChart(candles, period);
