@@ -2128,8 +2128,12 @@ function renderSupplyChart(candles, period) {
   const deltaEl = document.getElementById('supply-delta');
   if (deltaEl) {
     const fmtDelta = v => Math.round(v).toLocaleString('en-US');
-    const totalBurned = candles.reduce((s, c) => s + c.burned, 0);
-    deltaEl.innerHTML = `<span style="font-size:14px;">🔥</span> ${fmtDelta(Math.round(totalBurned))} burned in period &nbsp; <span style="color:#ff6b6b;">${delta < 0 ? '▼' : '▲'} ${delta < 0 ? '-' : '+'}${fmtDelta(Math.abs(delta))}</span>`;
+    const latest = candles[candles.length - 1];
+    const latestBurned = latest.burned;
+    const latestDelta = latest.close - latest.open;
+    const periodLabels = { '1h':'1h', '4h':'4h', 'D':'24h', 'W':'7d', 'M':'30d' };
+    const label = periodLabels[period] || period;
+    deltaEl.innerHTML = `<span style="font-size:14px;">🔥</span> ${fmtDelta(Math.round(latestBurned))} burned in latest candlestick`;
     deltaEl.style.color = '#aac4d8';
   }
   drawCombinedChart(candles, period);
