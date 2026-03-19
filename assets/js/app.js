@@ -1,5 +1,4 @@
 if (history.scrollRestoration) history.scrollRestoration = 'manual';
-if (history.scrollRestoration) history.scrollRestoration = 'manual';
 
 // Fast smooth scroll to top (300ms, ease-out)
 function smoothScrollTop() {
@@ -18,7 +17,6 @@ function smoothScrollTop() {
 }
 window.addEventListener('load', () => { window.scrollTo(0, 0); });
 function loadAllStats() { loadStatsData(); loadOraclePoolS(); loadValidatorsS(); loadBurnHistory(); }
-function smoothScrollTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
 // ─── ADMIN KEY ───────────────────────────────────────────────
 const ADMIN_KEY = 'TerraOracle#9X4K-2025';
@@ -1673,7 +1671,7 @@ function drawLineS(ctx, data, pad, cw, ch, min, max, color, lineW=2) {
 }
 
 let currentSupplyPeriod='1h', supplyChartCache={}, currentChartMode='combined';
-function setChartMode(mode) { currentChartMode='combined'; const cached=supplyChartCache[currentSupplyPeriod]; if(cached) renderSupplyChart(cached.data,currentSupplyPeriod); else loadSupplyChart(currentSupplyPeriod); }
+// setChartMode removed — unused
 
 const TF_CONFIG = {
   '1h': { endpoint:'histohour', limit:48, secPerCandle:3600, label:'1h' },
@@ -2298,8 +2296,7 @@ function renderSupplyChart(candles, period) {
 }
 
 // - COMBINED CHART: Supply bars (top) + Burned bars (bottom) -
-function drawBurnedChart(candles, period, hoverIdx = -1) { drawCombinedChart(candles, period, hoverIdx); }
-function drawCandleChart(candles, period, hoverIdx = -1) { drawCombinedChart(candles, period, hoverIdx); }
+// drawBurnedChart / drawCandleChart aliases removed — unused
 
 function drawCombinedChart(candles, period, hoverIdx = -1) {
   const C = resolveCanvasS('supplyChart', 300); if (!C) return;
@@ -2545,61 +2542,6 @@ function drawCombinedChart(candles, period, hoverIdx = -1) {
     ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
     ctx.fillText(xLabel, px + pw / 2, py + ph - 3);
   }
-}
-
-// Shared X-axis drawing - used by both supply and burned charts
-function drawXAxisLabels(ctx, items, pad, cw, gap, period) {
-  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const h = ctx.canvas.height;
-  ctx.font = '10px Exo 2'; ctx.textAlign = 'center';
-  const drawnPositions = [];
-  const minSpacing = 58;
-
-  items.forEach((c, i) => {
-    const x = pad.l + i * gap + gap / 2;
-    const d = new Date(c.t);
-    const hh = d.getHours().toString().padStart(2,'0');
-    const day = d.getDate().toString().padStart(2,'0');
-    const mon = MONTHS[d.getMonth()];
-    const prevD = i > 0 ? new Date(items[i-1].t) : null;
-    const isNewDay   = !prevD || prevD.getDate()        !== d.getDate();
-    const isNewMonth = !prevD || prevD.getMonth()       !== d.getMonth();
-    const isNewYear  = !prevD || prevD.getFullYear()    !== d.getFullYear();
-    const yr2 = String(d.getFullYear()).slice(2);
-
-    let label = null;
-    if (period === '1h' || period === '4h') {
-      if (i === 0) label = `${day} ${mon}, ${hh}:00`;
-      else if (isNewDay) label = `${day} ${mon}`;
-    } else if (period === 'D') {
-      if (i === 0 || i % 5 === 0) label = `${day} ${mon}`;
-    } else if (period === 'W') {
-      if (i === 0) label = `${mon} '${yr2}`;
-      else if (isNewYear) label = String(d.getFullYear());
-      else if (isNewMonth) label = `${mon} '${yr2}`;
-    } else if (period === 'M') {
-      if (i === 0) label = String(d.getFullYear());
-      else if (isNewYear) label = String(d.getFullYear());
-      else if (d.getMonth() % 3 === 0) label = `${mon} '${yr2}`;
-    } else {
-      if (i === 0 || isNewYear) label = String(d.getFullYear());
-      else if (isNewMonth) label = `${mon} '${yr2}`;
-    }
-
-    if (label && !drawnPositions.some(px => Math.abs(px - x) < minSpacing)) {
-      drawnPositions.push(x);
-      ctx.fillStyle = '#3a5578';
-      ctx.fillText(label, x, h - 14);
-    }
-  });
-  ctx.fillStyle = 'rgba(58,85,120,0.4)'; ctx.font = '9px Exo 2'; ctx.textAlign = 'center';
-  ctx.fillText('UTC Time Buckets', pad.l + cw / 2, h - 2);
-}
-
-function fmtSupply(v) {
-  if (v >= 1e12) return (v/1e12).toFixed(4) + 'T';
-  if (v >= 1e9)  return (v/1e9).toFixed(2) + 'B';
-  return fmtS(v);
 }
 
 function setupCandleHover(candles, period) {
