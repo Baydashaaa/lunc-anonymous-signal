@@ -1621,6 +1621,7 @@ async function fetchBinanceBurnsFromChain() {
     // ── 2026 ────────────────────────────────────────────────────────────────
     { ts: new Date('2026-01-01').getTime()/1000, amount:   534_000_000 }, // Batch 41 est. ~534M (avg monthly volume)
     { ts: new Date('2026-02-01').getTime()/1000, amount:   480_000_000 }, // Batch 42 est. ~480M
+    { ts: new Date('2026-03-01').getTime()/1000, amount:   460_000_000 }, // Batch 43 est. ~460M
   ];
   _binanceBurnsCache = HISTORICAL_BURNS;
   _binanceBurnsCacheTs = Date.now();
@@ -2144,7 +2145,7 @@ function drawCombinedChart(candles, period, hoverIdx = -1) {
   const { ctx, w, h } = C;
   ctx.clearRect(0, 0, w, h);
 
-  const pad = { l:72, r:16, t:12, b:28 };
+  const pad = { l:82, r:16, t:12, b:28 };
   const cw = w - pad.l - pad.r;
   const ch = h - pad.t - pad.b;
 
@@ -2184,7 +2185,7 @@ function drawCombinedChart(candles, period, hoverIdx = -1) {
 
   // - GRID: Supply (top) -
   ctx.font = '10px Exo 2'; ctx.textAlign = 'right';
-  const sGridLines = 5;
+  const sGridLines = 4;
   for (let i = 0; i <= sGridLines; i++) {
     const y = supplyTop + (supplyH / sGridLines) * i;
     const v = sHi - sRange * (i / sGridLines);
