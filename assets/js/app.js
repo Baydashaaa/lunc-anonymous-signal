@@ -2161,9 +2161,13 @@ function drawCombinedChart(candles, period, hoverIdx = -1) {
   const barW = Math.max(2, Math.min(18, gap * 0.72));
 
   function fmtY(v) {
-    if (Math.abs(v) >= 1e12) return (v/1e12).toFixed(2)+'T';
-    if (Math.abs(v) >= 1e9)  return (v/1e9).toFixed(1)+'B';
-    if (Math.abs(v) >= 1e6)  return (v/1e6).toFixed(0)+'M';
+    if (Math.abs(v) >= 1e12) {
+      // Use enough decimals so adjacent grid lines don't look identical
+      const t = v / 1e12;
+      return t.toFixed(t >= 10 ? 2 : 3) + 'T';
+    }
+    if (Math.abs(v) >= 1e9)  return (v/1e9).toFixed(2)+'B';
+    if (Math.abs(v) >= 1e6)  return (v/1e6).toFixed(1)+'M';
     return v.toFixed(0);
   }
 
