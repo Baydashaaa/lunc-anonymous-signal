@@ -1314,117 +1314,182 @@ function setBurnPeriod(p) {
   if (_burnHistoryData) drawBurnHistoryChart(_burnHistoryData);
 }
 
-function drawBurnHistoryChart(data) {
-  const canvas = document.getElementById('burnHistoryChart');
-  const msg = document.getElementById('burnHistoryMsg');
-  if (!canvas) return;
+let _burnChart = null;        // lightweight-charts instance
+let _burnSeries = null;       // histogram series
+let _burnCapLine = null;      // optional marker line for capped outliers
 
-  // выбираем источник данных по периоду
-  let points = [];
-  const now = Date.now();
+function drawBurnHistoryChart(period) {
+  // ── container ──────────────────────────────────────────────────────────────
+  const wrap = document.getElementById('burnHistoryWrap');   // outer div
+  const container = document.getElementById('burnHistoryChart'); // chart div
+  if (!container || !wrap) return;
 
-  if (_burnPeriod === '7d' || _burnPeriod === '30d') {
-    // hourly данные
-    let hourly = data.hourly || [];
-    const cutoffH = new Date(now - (_burnPeriod === '7d' ? 7 : 30) * 86400000)
-      .toISOString().slice(0, 13);
-    hourly = hourly.filter(h => h.ts >= cutoffH);
-    points = hourly.map(h => ({ label: h.ts.slice(5, 13), value: h.burn / 1e6 }));
-  } else {
-    // daily данные
-    let daily = data.daily || [];
-    if (_burnPeriod === '3m') {
-      const cutoff = new Date(now - 90 * 86400000).toISOString().slice(0, 10);
-      daily = daily.filter(d => d.date >= cutoff);
-    } else if (_burnPeriod === '6m') {
-      const cutoff = new Date(now - 180 * 86400000).toISOString().slice(0, 10);
-      daily = daily.filter(d => d.date >= cutoff);
-    }
-    // иначе all — всё что есть
-    points = daily.map(d => ({ label: d.date.slice(5), value: d.burn / 1e6 }));
-  }
+  // ── filter data by period ─────────────────────────────────────────────────
+  const now = Math.floor(Date.now() / 1000);
+  const cutoffs = { '7D': 7, '30D': 30, '3M': 90, '6M': 180, 'ALL': 99999 };
+  const days = cutoffs[period] || 99999;
+  const since = now - days * 86400;
 
-  if (points.length < 2) {
-    if (msg) { msg.style.display = 'block'; msg.textContent = 'Not enough data yet — check back soon'; }
-    canvas.style.display = 'none';
+  // burnHistoryData is loaded earlier by loadBurnHistory()
+  // shape: [{ date: "2022-08-01", burned: 1234567890 }, ...]
+  const raw = (window.burnHistoryData || []).filter(d => {
+    const ts = Math.floor(new Date(d.date).getTime() / 1000);
+    return ts >= since;
+  });
+
+  if (!raw.length) {
+    container.innerHTML = '<p style="color:#666;padding:20px">No data for period</p>';
     return;
   }
-  if (msg) msg.style.display = 'none';
-  canvas.style.display = 'block';
 
-  const dpr = window.devicePixelRatio || 1;
-  const w = canvas.parentElement.clientWidth - 40 || 600;
-  const h = 160;
-  canvas.width = w * dpr; canvas.height = h * dpr;
-  canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, w, h);
+  // ── outlier cap (Binance spike etc.) ──────────────────────────────────────
+  const values = raw.map(d => d.burned).sort((a, b) => a - b);
+  const p99idx = Math.floor(values.length * 0.99);
+  const cap    = values[p99idx] * 1.5;   // generous cap, still kills the spike
+  const outliers = raw.filter(d => d.burned > cap);
 
-  const pad = { l: 58, r: 16, t: 14, b: 28 };
-  const cw = w - pad.l - pad.r;
-  const ch = h - pad.t - pad.b;
-  const n = points.length;
-  const vals = points.map(p => p.value);
-  const vMin = 0;
-  const vMax = Math.max(...vals) * 1.1 || 1;
+  // ── build lightweight-charts data ─────────────────────────────────────────
+  // time must be "YYYY-MM-DD" string (Day format)
+  const chartData = raw.map(d => ({
+    time:  d.date,                          // "YYYY-MM-DD"
+    value: Math.min(d.burned, cap),         // cap outliers visually
+    color: d.burned > cap
+      ? '#ff4444'                           // outlier bar: bright red
+      : undefined,                          // normal bar: uses series color
+  }));
 
-  // Grid
-  ctx.strokeStyle = 'rgba(30,51,88,0.6)'; ctx.lineWidth = 1;
-  for (let i = 0; i <= 4; i++) {
-    const y = pad.t + (ch / 4) * i;
-    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + cw, y); ctx.stroke();
+  // ── destroy & recreate chart on period change ─────────────────────────────
+  if (_burnChart) {
+    _burnChart.remove();
+    _burnChart = null;
+    _burnSeries = null;
   }
 
-  // Filled area под линией
-  const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + ch);
-  grad.addColorStop(0, 'rgba(255,80,80,0.25)');
-  grad.addColorStop(1, 'rgba(255,80,80,0.02)');
-  ctx.beginPath();
-  points.forEach((p, i) => {
-    const x = pad.l + (i / (n - 1)) * cw;
-    const y = pad.t + (1 - (p.value - vMin) / (vMax - vMin)) * ch;
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  container.style.position = 'relative';
+  container.innerHTML = '';   // clear any old content
+
+  // ── chart options ─────────────────────────────────────────────────────────
+  _burnChart = LightweightCharts.createChart(container, {
+    width:  container.clientWidth  || 600,
+    height: container.clientHeight || 260,
+    layout: {
+      background: { type: 'solid', color: 'transparent' },
+      textColor:  '#8ab4d0',
+    },
+    grid: {
+      vertLines:  { color: '#1a2e44', style: 1 },
+      horzLines:  { color: '#1a2e44', style: 1 },
+    },
+    rightPriceScale: {
+      borderColor: '#1e3a55',
+      scaleMargins: { top: 0.08, bottom: 0.02 },
+    },
+    timeScale: {
+      borderColor:      '#1e3a55',
+      timeVisible:      true,
+      secondsVisible:   false,
+      tickMarkFormatter: (time) => {
+        // time is epoch seconds here
+        const d = new Date(time * 1000);
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      },
+    },
+    crosshair: {
+      mode: LightweightCharts.CrosshairMode.Magnet,
+      vertLine: { color: '#ff6b2b', width: 1, style: 2 },
+      horzLine: { color: '#ff6b2b', width: 1, style: 2 },
+    },
+    localization: {
+      priceFormatter: (v) => fmtLUNC(v),  // see helper below
+    },
+    handleScroll:  { mouseWheel: false, pressedMouseMove: true },
+    handleScale:   { mouseWheel: false, pinch: true, axisPressedMouseMove: true },
   });
-  ctx.lineTo(pad.l + cw, pad.t + ch);
-  ctx.lineTo(pad.l, pad.t + ch);
-  ctx.closePath();
-  ctx.fillStyle = grad;
-  ctx.fill();
 
-  // Линия
-  ctx.beginPath();
-  points.forEach((p, i) => {
-    const x = pad.l + (i / (n - 1)) * cw;
-    const y = pad.t + (1 - (p.value - vMin) / (vMax - vMin)) * ch;
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  // ── histogram series ──────────────────────────────────────────────────────
+  _burnSeries = _burnChart.addHistogramSeries({
+    color:           '#ff6b2b',   // default bar colour (overridden per-bar if needed)
+    priceFormat: {
+      type:      'custom',
+      formatter: (v) => fmtLUNC(v),
+    },
+    priceLineVisible: false,
+    lastValueVisible: false,
   });
-  ctx.strokeStyle = '#ff5050'; ctx.lineWidth = 2;
-  ctx.shadowColor = '#ff5050'; ctx.shadowBlur = 8;
-  ctx.stroke(); ctx.shadowBlur = 0;
 
-  // Y axis
-  ctx.fillStyle = 'rgba(122,158,196,0.7)'; ctx.font = '9px Exo 2'; ctx.textAlign = 'right';
-  for (let i = 0; i <= 4; i++) {
-    const v = vMin + (vMax - vMin) * (1 - i / 4);
-    const y = pad.t + (ch / 4) * i;
-    ctx.fillText(fmtS(v) + 'M', pad.l - 4, y + 3);
+  _burnSeries.setData(chartData);
+
+  // ── outlier marker lines ──────────────────────────────────────────────────
+  if (outliers.length) {
+    // Add a price-line at the cap value so user sees where bars are clipped
+    _burnSeries.createPriceLine({
+      price:     cap,
+      color:     '#ff4444',
+      lineWidth: 1,
+      lineStyle: LightweightCharts.LineStyle.Dashed,
+      title:     `⚡ spike capped (${outliers.map(o => o.date).join(', ')})`,
+      axisLabelVisible: false,
+    });
   }
 
-  // X axis labels
-  ctx.fillStyle = 'rgba(122,158,196,0.5)'; ctx.textAlign = 'center'; ctx.font = '9px Exo 2';
-  const step = Math.max(1, Math.floor(n / 6));
-  for (let i = 0; i < n; i += step) {
-    const x = pad.l + (i / (n - 1)) * cw;
-    ctx.fillText(points[i].label, x, h - 6);
-  }
+  // ── tooltip ───────────────────────────────────────────────────────────────
+  const tooltip = document.createElement('div');
+  tooltip.style.cssText = `
+    position:absolute;top:8px;left:12px;z-index:10;
+    background:rgba(10,20,40,0.92);border:1px solid #1e4060;
+    border-radius:6px;padding:6px 10px;font-size:12px;color:#8ab4d0;
+    pointer-events:none;display:none;line-height:1.6;
+  `;
+  container.appendChild(tooltip);
 
-  // Legend
-  ctx.textAlign = 'left';
-  ctx.fillStyle = '#ff5050'; ctx.font = 'bold 9px Exo 2';
-  ctx.fillText('🔥 LUNC Burned (M)', pad.l, pad.t - 2);
+  _burnChart.subscribeCrosshairMove((param) => {
+    if (!param.time || !param.seriesData) {
+      tooltip.style.display = 'none';
+      return;
+    }
+    const val = param.seriesData.get(_burnSeries);
+    if (!val) { tooltip.style.display = 'none'; return; }
+
+    const d = new Date(param.time * 1000);
+    const label = d.toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
+    const real  = raw.find(r => r.date === param.time) || { burned: val.value };
+    const isOut = real.burned > cap;
+
+    tooltip.innerHTML = `
+      <span style="color:#ff6b2b">🔥 ${label}</span><br>
+      <b style="color:#fff">${fmtLUNC(real.burned)} LUNC</b>
+      ${isOut ? '<br><span style="color:#ff4444;font-size:11px">⚡ outlier — bar capped</span>' : ''}
+    `;
+    tooltip.style.display = 'block';
+  });
+
+  // ── responsive resize ─────────────────────────────────────────────────────
+  const ro = new ResizeObserver(() => {
+    if (_burnChart) {
+      _burnChart.applyOptions({ width: container.clientWidth });
+    }
+  });
+  ro.observe(container);
+
+  // ── visible range: show last N bars by default ────────────────────────────
+  _burnChart.timeScale().fitContent();
+
+  // ── summary stats ─────────────────────────────────────────────────────────
+  const totalBurned = raw.reduce((s, d) => s + d.burned, 0);
+  const el = document.getElementById('burn-history-total');
+  if (el) el.textContent = `🔥 Total burned (${period}): ${fmtLUNC(totalBurned)} LUNC`;
 }
 
+// ── HELPER: Y-axis / tooltip formatter ────────────────────────────────────────
+// Produces "276.6M", "1.23B", "45.2K" — no "KM" bug
+function fmtLUNC(v) {
+  if (v === null || v === undefined || isNaN(v)) return '—';
+  const abs = Math.abs(v);
+  if (abs >= 1e9)  return (v / 1e9).toFixed(2)  + 'B';
+  if (abs >= 1e6)  return (v / 1e6).toFixed(1)  + 'M';
+  if (abs >= 1e3)  return (v / 1e3).toFixed(1)  + 'K';
+  return v.toFixed(0);
+}
 
 async function loadValidatorsS() {
   try {
