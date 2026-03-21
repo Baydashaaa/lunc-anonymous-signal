@@ -77,7 +77,6 @@
   <button class="wallet-profile-btn" onclick="openProfile()">👤 My Profile</button>
   <button class="wallet-disconnect" onclick="disconnectWallet()">✕ Disconnect</button>
 </div>
-
  </div>
  </div>
  <button class="treasury-btn" onclick="showPage_treasury(event)">
@@ -115,7 +114,36 @@
  </svg> <span class="coming-soon">SOON</span>
  </a>
  </div>
+
+ <!-- Hamburger button (mobile only) -->
+ <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">
+  <span></span><span></span><span></span>
+ </button>
 </nav>
+
+<!-- Mobile navigation drawer -->
+<div class="nav-mobile-drawer" id="nav-mobile-drawer">
+ <button class="nav-tab" onclick="mobileNavGo('board')">📋 Board</button>
+ <button class="nav-tab" onclick="mobileNavGo('ask')">❓ Ask</button>
+ <button class="nav-tab" onclick="mobileNavGo('chat')">💬 Chat</button>
+ <button class="nav-tab" onclick="mobileNavGo('vote')">🗳️ Vote</button>
+ <button class="nav-tab" onclick="mobileNavGo('about')">ℹ️ About</button>
+ <button class="nav-tab" onclick="mobileNavGoFn('showPage_treasury')">💰 Treasury</button>
+ <button class="nav-tab" onclick="mobileNavGoFn('showPage_stats')">📊 Stats</button>
+ <div style="width:100%;max-width:320px;margin-top:8px;display:flex;flex-direction:column;gap:8px;">
+  <div class="wallet-btn-wrap" id="wallet-wrap-mobile" style="width:100%;">
+   <button class="wallet-btn" style="width:100%;justify-content:center;" onclick="toggleWalletDropdown();toggleMobileNav()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;">
+     <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 12h2"/><path d="M2 10V5a2 2 0 012-2h16a2 2 0 012 2v5"/>
+    </svg>
+    <span id="wallet-btn-label-mobile">Connect Wallet</span>
+   </button>
+  </div>
+  <a class="lottery-btn" href="https://baydashaaa.github.io/lottery-classic" target="_blank" style="width:100%;justify-content:center;text-decoration:none;">
+   🎰 Lottery Classic
+  </a>
+ </div>
+</div>
 <div class="page" id="page-home" style="position:relative;">
  <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:0;">
  <img src="assets/images/img_01.webp" style="width:800px;height:800px;opacity:0.3;filter:drop-shadow(0 0 100px rgba(84,147,247,0.7));user-select:none;">
@@ -963,8 +991,50 @@
 
   <!-- Логика -->
   <script src="assets/js/app.js"></script>
-  <script src="assets/js/stats.js"></script>
-  <script src="assets/js/profile.js"></script>
-  <script src="assets/js/charts.js"></script>
+<script>
+// ── Mobile navigation ──
+function toggleMobileNav() {
+  const drawer = document.getElementById('nav-mobile-drawer');
+  const btn = document.getElementById('nav-hamburger');
+  const isOpen = drawer.classList.toggle('open');
+  btn.classList.toggle('open', isOpen);
+  document.body.style.overflow = isOpen ? 'hidden' : '';
+}
+
+function mobileNavGo(page) {
+  showPage(page);
+  toggleMobileNav();
+}
+
+function mobileNavGoFn(fn) {
+  if (fn === 'showPage_treasury') showPage_treasury({target: document.createElement('button')});
+  if (fn === 'showPage_stats') showPage_stats({target: document.createElement('button')});
+  toggleMobileNav();
+}
+
+// Close drawer on outside click
+document.addEventListener('click', function(e) {
+  const drawer = document.getElementById('nav-mobile-drawer');
+  const btn = document.getElementById('nav-hamburger');
+  if (drawer && drawer.classList.contains('open')) {
+    if (!drawer.contains(e.target) && !btn.contains(e.target)) {
+      drawer.classList.remove('open');
+      btn.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+  }
+});
+
+// Sync mobile wallet label with desktop
+const _origSetWalletConnectedMobile = window.setWalletConnected;
+if (typeof setWalletConnected !== 'undefined') {
+  const _prev = window.setWalletConnected;
+  window.setWalletConnected = function(address) {
+    _prev(address);
+    const mobileLabel = document.getElementById('wallet-btn-label-mobile');
+    if (mobileLabel) mobileLabel.textContent = address.slice(0,8)+'...'+address.slice(-4);
+  };
+}
+</script>
 </body>
 </html>
