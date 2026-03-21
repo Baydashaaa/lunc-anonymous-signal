@@ -335,7 +335,7 @@ function drawPoolHistoryChart() {
 // ============================================================
 const BURN_HISTORY_URL = 'https://raw.githubusercontent.com/Baydashaaa/lunc-anonymous-signal/main/assets/data/burn_history.json';
 
-let _burnHistoryData = null;
+window._burnHistoryData = null;
 let _burnPeriod = '30d';
 
 async function loadBurnHistory() {
