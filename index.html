@@ -23,18 +23,18 @@
 <div class="orb orb-2"></div>
 <nav>
  <div class="nav-logo" onclick="showPage('home')" style="cursor:pointer;position:relative;" title="Go to Home">
- <div style="display:flex;align-items:center;gap:0px;">
+ <div style="display:flex;align-items:center;gap:8px;">
  <img src="assets/images/img_01.webp"
  style="height:78px;width:78px;object-fit:contain;flex-shrink:0;filter:drop-shadow(0 0 14px rgba(84,147,247,0.8));margin:-12px 0;"
  alt="Terra Oracle Classic">
- <div style="position:absolute;left:45px;display:flex;flex-direction:column;justify-content:center;z-index:2;">
+ <div style="display:flex;flex-direction:column;justify-content:center;">
  <div style="font-family:'Boldonse',sans-serif;font-weight:400;font-size:14px;
  letter-spacing:0.06em;color:#fff;text-transform:uppercase;line-height:1.1;white-space:nowrap;
  text-shadow:0 0 12px rgba(0,0,0,0.9),0 2px 6px rgba(0,0,0,0.8);">
  Terra Oracle <span style="color:#7eb8ff;">Classic</span>
  </div>
  <div style="font-size:9px;color:var(--gold);letter-spacing:0.2em;margin-top:3px;opacity:0.95;white-space:nowrap;
- font-family:'Exo 2',sans-serif;text-shadow:0 0 8px rgba(0,0,0,0.9);margin-left:40px;">
+ font-family:'Exo 2',sans-serif;text-shadow:0 0 8px rgba(0,0,0,0.9);">
  TCO · LUNC ECOSYSTEM
  </div>
  </div>
@@ -1007,8 +1007,19 @@ function mobileNavGo(page) {
 }
 
 function mobileNavGoFn(fn) {
-  if (fn === 'showPage_treasury') showPage_treasury({target: document.createElement('button')});
-  if (fn === 'showPage_stats') showPage_stats({target: document.createElement('button')});
+  if (fn === 'showPage_treasury') {
+    if (typeof showPage_treasury === 'function') showPage_treasury({target: document.createElement('button')});
+  }
+  if (fn === 'showPage_stats') {
+    if (typeof showPage_stats === 'function') {
+      showPage_stats({target: document.createElement('button')});
+    } else {
+      // fallback: stats.js not loaded yet
+      setTimeout(() => {
+        if (typeof showPage_stats === 'function') showPage_stats({target: document.createElement('button')});
+      }, 300);
+    }
+  }
   toggleMobileNav();
 }
 
