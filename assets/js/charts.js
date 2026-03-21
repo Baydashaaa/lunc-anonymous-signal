@@ -35,10 +35,10 @@ async function loadSupplyChart(period) {
     } catch {}
 
     // 2. Make sure burn_history.json is loaded
-    if (!_burnHistoryData) {
+    if (!window._burnHistoryData) {
       try {
         const r = await fetch(BURN_HISTORY_URL + '?t=' + Date.now());
-        if (r.ok) _burnHistoryData = await r.json();
+        if (r.ok) window._burnHistoryData = await r.json();
       } catch {}
     }
 
@@ -46,8 +46,8 @@ async function loadSupplyChart(period) {
     // For 1h/4h — use hourly array; for D/W/M — use daily array
     const useHourly = (period === '1h' || period === '4h');
     const burnSource = useHourly
-      ? (_burnHistoryData?.hourly || [])
-      : (_burnHistoryData?.daily  || []);
+      ? (window._burnHistoryData?.hourly || [])
+      : (window._burnHistoryData?.daily  || []);
 
     // Build map: timestamp (start of hour or day in UTC) → burn amount
     const burnMap = {};
