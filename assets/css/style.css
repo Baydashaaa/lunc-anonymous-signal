@@ -89,15 +89,24 @@ canvas {
   /* Логотип — компактный */
   .nav-logo {
     min-width: unset;
-    gap: 8px;
+    gap: 6px;
     flex: 1;
   }
   .nav-logo img {
-    height: 44px !important;
-    width: 44px !important;
+    height: 48px !important;
+    width: 48px !important;
+    margin: -6px 0 !important;
   }
   .nav-logo-text {
     font-size: 12px;
+  }
+  .nav-logo div[style*="Boldonse"] {
+    font-size: 12px !important;
+    letter-spacing: 0.04em !important;
+  }
+  .nav-logo div[style*="TCO"] {
+    font-size: 8px !important;
+    letter-spacing: 0.12em !important;
   }
 
   /* Скрываем десктопные табы и кнопки */
