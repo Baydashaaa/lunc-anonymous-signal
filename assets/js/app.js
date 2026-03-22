@@ -765,6 +765,23 @@ window.sendChatMessage = async function() {
     const stored = JSON.parse(localStorage.getItem('dao_chat_pending') || '[]');
     stored.push({ text, author: short, fullAddr: sender, txHash: result.transactionHash, isVerified: true, timestamp: Date.now() });
     localStorage.setItem('dao_chat_pending', JSON.stringify(stored));
+
+    // ── Track message count for Weekly lottery milestones ──────
+    if (typeof incrementMessageCount === 'function') {
+      const newCount = incrementMessageCount(sender);
+      // Check if user just hit a milestone — notify them
+      const milestones = [10, 25, 50, 100];
+      if (milestones.includes(newCount)) {
+        const entries = typeof getMsgMilestoneEntries === 'function' ? getMsgMilestoneEntries(newCount) : '';
+        setTimeout(() => {
+          statusEl.style.cssText = 'display:block;border-radius:8px;padding:10px 14px;font-size:12px;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.3);color:#a78bfa;margin-top:10px;';
+          statusEl.innerHTML = `🎉 Milestone reached! <strong>${newCount} messages</strong> — you earned a free Weekly Lottery entry! Total free entries: <strong>${entries}</strong>`;
+          setTimeout(() => { statusEl.style.display = 'none'; }, 8000);
+        }, 3000);
+      }
+    }
+    // ──────────────────────────────────────────────────────────
+
     document.getElementById('chat-page-input').value = '';
     document.getElementById('chat-page-count').textContent = '256';
     document.getElementById('chat-ring').style.strokeDashoffset = '87.96';
