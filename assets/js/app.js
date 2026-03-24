@@ -277,7 +277,7 @@ function removeTag(tag) {
 document.addEventListener('DOMContentLoaded', () => {
   // Restore page from URL hash on refresh
   const hash = window.location.hash.replace('#', '');
-  const validPages = ['home','board','ask','chat','vote','about','treasury','stats'];
+  const validPages = ['home','board','ask','chat','vote','about','treasury','bag'];
   const startPage = validPages.includes(hash) ? hash : 'home';
   if (startPage === 'treasury') showPage_treasury();
   else showPage(startPage);
