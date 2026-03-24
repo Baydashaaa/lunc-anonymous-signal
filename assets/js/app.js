@@ -1,51 +1,5 @@
 if (history.scrollRestoration) history.scrollRestoration = 'manual';
 
-// ── Chat message milestones → free Weekly Draw entries (max 2/day) ──────────
-const MAX_DAILY_ENTRIES = 2;
-const MSGS_PER_ENTRY    = 10;
-
-function _getTodayUTC() {
-  const d = new Date();
-  return `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`;
-}
-
-function incrementMessageCount(address) {
-  const key   = `msg_count_${address}`;
-  const count = (parseInt(localStorage.getItem(key)) || 0) + 1;
-  localStorage.setItem(key, count);
-  return count;
-}
-
-function getMsgMilestoneEntries(msgCount) {
-  const address  = window.globalWalletAddress || 'anon';
-  const dayKey   = `chat_entries_day_${address}`;
-  const today    = _getTodayUTC();
-
-  let saved = JSON.parse(localStorage.getItem(dayKey) || '{}');
-  // Reset if it's a new day
-  if (saved.date !== today) saved = { date: today, entries: 0 };
-
-  // Each 10th message = 1 entry, but max 2 per day
-  const earnedToday = Math.floor(msgCount / MSGS_PER_ENTRY);
-  const newEntries  = Math.min(earnedToday, MAX_DAILY_ENTRIES) - saved.entries;
-
-  if (newEntries > 0) {
-    saved.entries += newEntries;
-    localStorage.setItem(dayKey, JSON.stringify(saved));
-  }
-
-  return saved.entries; // total entries earned today
-}
-
-function getDailyEntriesLeft(address) {
-  const dayKey = `chat_entries_day_${address || 'anon'}`;
-  const today  = _getTodayUTC();
-  const saved  = JSON.parse(localStorage.getItem(dayKey) || '{}');
-  if (saved.date !== today) return MAX_DAILY_ENTRIES;
-  return Math.max(0, MAX_DAILY_ENTRIES - (saved.entries || 0));
-}
-// ────────────────────────────────────────────────────────────────────────────
-
 // Fast smooth scroll to top (300ms, ease-out)
 function smoothScrollTop() {
   const start = window.scrollY;
@@ -217,7 +171,7 @@ async function loadTreasuryData() {
 
   const [price, oracleB, lotteryB, burnB] = await Promise.all([
     fetchLuncPrice(),
-    fetchBalance(TREASURY_WALLETS.oracle.addr),
+    fetchBalance(TREASURY_WALLETS.treasury.addr),
     fetchBalance(TREASURY_WALLETS.lottery.addr),
     fetchBalance(TREASURY_WALLETS.burn.addr),
   ]);
@@ -258,7 +212,7 @@ async function loadRecentTxs() {
   const el = document.getElementById('t-recent-txs');
   if (!el) return;
   try {
-    const res = await fetch(`https://terra-classic-lcd.publicnode.com/cosmos/tx/v1beta1/txs?events=transfer.recipient=%27${TREASURY_WALLETS.oracle.addr}%27&pagination.limit=5&order_by=2`);
+    const res = await fetch(`https://terra-classic-lcd.publicnode.com/cosmos/tx/v1beta1/txs?events=transfer.recipient=%27${TREASURY_WALLETS.treasury.addr}%27&pagination.limit=5&order_by=2`);
     if (!res.ok) throw new Error();
     const data = await res.json();
     if (!data.txs || data.txs.length === 0) { el.textContent = 'No transactions yet'; return; }
@@ -845,17 +799,12 @@ window.sendChatMessage = async function() {
     if (typeof incrementMessageCount === 'function') {
       const newCount = incrementMessageCount(sender);
       // Check if user just hit a milestone — notify them
-      if (newCount % MSGS_PER_ENTRY === 0) {
-        const entries  = getMsgMilestoneEntries(newCount);
-        const left     = getDailyEntriesLeft(sender);
-        const hitLimit = left === 0;
+      const milestones = [10, 25, 50, 100];
+      if (milestones.includes(newCount)) {
+        const entries = typeof getMsgMilestoneEntries === 'function' ? getMsgMilestoneEntries(newCount) : '';
         setTimeout(() => {
           statusEl.style.cssText = 'display:block;border-radius:8px;padding:10px 14px;font-size:12px;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.3);color:#a78bfa;margin-top:10px;';
-          if (hitLimit) {
-            statusEl.innerHTML = `🎟 You've reached the daily limit — <strong>${MAX_DAILY_ENTRIES} Weekly Draw entries</strong> earned today. Come back tomorrow!`;
-          } else {
-            statusEl.innerHTML = `🎉 <strong>${newCount} messages</strong> — you earned a free <strong>Weekly Draw entry!</strong> Today: <strong>${entries}/${MAX_DAILY_ENTRIES}</strong>`;
-          }
+          statusEl.innerHTML = `🎉 Milestone reached! <strong>${newCount} messages</strong> — you earned a free Weekly Lottery entry! Total free entries: <strong>${entries}</strong>`;
           setTimeout(() => { statusEl.style.display = 'none'; }, 8000);
         }, 3000);
       }
