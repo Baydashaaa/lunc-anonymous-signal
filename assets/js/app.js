@@ -744,6 +744,8 @@ window.disconnectWallet = function() {
   const adminPanel = document.getElementById('admin-panel');
   if (adminPanel) adminPanel.style.display = 'none';
   disconnectChatKeplr();
+  // Update My Bag on disconnect
+  renderOracleBag();
 }
 
 // ─── CHAT PAGE ────────────────────────────────────────────────
