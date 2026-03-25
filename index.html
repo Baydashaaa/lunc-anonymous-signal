@@ -83,6 +83,7 @@
 </head>
 <body>
 
+<canvas id="bg-canvas" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;pointer-events:none;"></canvas>
 <div class="orb orb-1"></div>
 <div class="orb orb-2"></div>
 <nav>
@@ -969,7 +970,7 @@
     <div style="font-size:48px;margin-bottom:16px;">🔒</div>
     <div style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:#f4d03f;margin-bottom:8px;">Connect your wallet</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:24px;">Connect to see your Oracle Mask NFTs and draw history</div>
-    <button onclick="openBagWalletPicker()"
+    <button onclick="document.getElementById('wallet-main-btn').click()"
       style="padding:14px 36px;border-radius:12px;cursor:pointer;
       font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;letter-spacing:0.08em;
       background:linear-gradient(135deg,#8b0000,#cc1100);border:1px solid rgba(255,100,0,0.4);
@@ -1120,6 +1121,116 @@ if (typeof setWalletConnected !== 'undefined') {
     if (mobileLabel) mobileLabel.textContent = address.slice(0,8)+'...'+address.slice(-4);
   };
 }
+</script>
+
+<style>
+/* ── Animated orbs ─────────────────────────────── */
+@keyframes orbFloat1 {
+  0%   { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(60px, -80px) scale(1.08); }
+  66%  { transform: translate(-40px, 40px) scale(0.95); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+@keyframes orbFloat2 {
+  0%   { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(-70px, 60px) scale(1.05); }
+  66%  { transform: translate(50px, -30px) scale(0.92); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+.orb-1 { animation: orbFloat1 18s ease-in-out infinite; }
+.orb-2 { animation: orbFloat2 22s ease-in-out infinite; }
+</style>
+
+<script>
+/* ── Starfield canvas ──────────────────────────── */
+(function() {
+  const canvas = document.getElementById('bg-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  let W, H, stars, nebulas;
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+
+  function initStars() {
+    // Regular stars
+    stars = Array.from({ length: 180 }, () => ({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r: Math.random() * 1.2 + 0.2,
+      speed: Math.random() * 0.12 + 0.02,
+      opacity: Math.random() * 0.6 + 0.2,
+      twinkleSpeed: Math.random() * 0.008 + 0.003,
+      twinkleDir: Math.random() > 0.5 ? 1 : -1,
+      // colour: mostly white, some blue-tinted, a few gold
+      hue: Math.random() < 0.15 ? 'gold' : Math.random() < 0.25 ? 'blue' : 'white',
+    }));
+
+    // Soft nebula blobs
+    nebulas = Array.from({ length: 4 }, (_, i) => ({
+      x: [0.15, 0.85, 0.3, 0.7][i] * W,
+      y: [0.2,  0.15, 0.8, 0.75][i] * H,
+      r: (Math.random() * 180 + 160),
+      color: i % 2 === 0
+        ? 'rgba(84,147,247,0.045)'
+        : 'rgba(167,100,250,0.035)',
+      driftX: (Math.random() - 0.5) * 0.15,
+      driftY: (Math.random() - 0.5) * 0.10,
+    }));
+  }
+
+  let frame = 0;
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    frame++;
+
+    // Nebula blobs
+    nebulas.forEach(n => {
+      n.x += n.driftX;
+      n.y += n.driftY;
+      if (n.x < -n.r || n.x > W + n.r) n.driftX *= -1;
+      if (n.y < -n.r || n.y > H + n.r) n.driftY *= -1;
+      const g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r);
+      g.addColorStop(0, n.color);
+      g.addColorStop(1, 'transparent');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Stars
+    stars.forEach(s => {
+      // gentle drift downward
+      s.y += s.speed;
+      if (s.y > H + 2) { s.y = -2; s.x = Math.random() * W; }
+
+      // twinkle
+      s.opacity += s.twinkleSpeed * s.twinkleDir;
+      if (s.opacity > 0.85 || s.opacity < 0.1) s.twinkleDir *= -1;
+
+      let color;
+      if (s.hue === 'gold')  color = `rgba(245,197,24,${s.opacity})`;
+      else if (s.hue === 'blue') color = `rgba(130,180,255,${s.opacity})`;
+      else color = `rgba(220,230,255,${s.opacity})`;
+
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+    });
+
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', () => { resize(); initStars(); });
+  resize();
+  initStars();
+  draw();
+})();
 </script>
 </body>
 </html>
