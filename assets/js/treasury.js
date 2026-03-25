@@ -67,7 +67,7 @@ async function tLoadRecentTxs() {
   const el = document.getElementById('t-recent-txs');
   if (!el) return;
   try {
-    const url = `${T_LCD[0]}/cosmos/tx/v1beta1/txs?events=transfer.recipient%3D%27${T_WALLETS.treasury}%27&pagination.limit=8&order_by=ORDER_BY_DESC`;
+    const url = `${T_LCD[0]}/cosmos/tx/v1beta1/txs?events=transfer.recipient%3D%27${T_WALLETS.treasury}%27&pagination.limit=8&order_by=2`;
     const r = await fetch(url);
     if (!r.ok) throw new Error();
     const data = await r.json();
