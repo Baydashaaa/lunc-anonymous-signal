@@ -731,12 +731,23 @@ function setWalletConnected(address) {
     document.getElementById('mode-keplr').textContent = '🔑 ' + addrShort;
     setMode('keplr');
   }
+}
+
   // Обновляем My Bag при подключении кошелька
   renderOracleBag();
 }
 
+window.openBagWalletPicker = function() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  setTimeout(() => {
+    const dropdown = document.getElementById('wallet-dropdown');
+    if (dropdown) dropdown.classList.add('open');
+  }, 350);
+}
+
 window.disconnectWallet = function() {
   globalWalletAddress = null;
+  connectedAddress = null;  // сброс адреса Ask-страницы
   clearWalletSession();
   document.getElementById('wallet-btn-label').textContent = 'Connect';
   document.getElementById('wallet-main-btn').classList.remove('connected');
@@ -746,7 +757,6 @@ window.disconnectWallet = function() {
   const adminPanel = document.getElementById('admin-panel');
   if (adminPanel) adminPanel.style.display = 'none';
   disconnectChatKeplr();
-  // Update My Bag on disconnect
   renderOracleBag();
 }
 
@@ -1191,15 +1201,6 @@ function renderOracleBag() {
         </tr>`).join('');
     }
   }
-}
-
-// ── BAG: открыть дропдаун кошелька со страницы My Bag ────────
-window.openBagWalletPicker = function() {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  setTimeout(() => {
-    const dropdown = document.getElementById('wallet-dropdown');
-    if (dropdown) dropdown.classList.add('open');
-  }, 350);
 }
 
 function filterOracleBagNFTs(filter) {
