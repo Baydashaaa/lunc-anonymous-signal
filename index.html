@@ -1762,36 +1762,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const sr = stage.getBoundingClientRect();
     W = canvas.width  = sr.width;
     H = canvas.height = sr.height;
-
-    /* Центр = слово "Classic" (.hero-h1-sub)
-       getBoundingClientRect относительно stage — самый точный способ */
-    const classicEl = stage.querySelector('.hero-h1-sub');
-    if (classicEl) {
-      const sr2 = stage.getBoundingClientRect();
-      const cr  = classicEl.getBoundingClientRect();
-      center = {
-        x: cr.left - sr2.left + cr.width  / 2,
-        y: cr.top  - sr2.top  + cr.height / 2,
-        w: cr.width,
-        h: cr.height,
-      };
-    } else {
-      center = { x: W / 2, y: H / 2, w: 180, h: 60 };
-    }
-
-    /* Находим 4 карточки по классу zk-module */
-    const modules = stage.querySelectorAll('.zk-module');
-    cards = [];
-    modules.forEach((el, i) => {
-      if (i > 3) return;
-      const r = el.getBoundingClientRect();
-      cards.push({
-        x: r.left - sr.left + r.width  / 2,
-        y: r.top  - sr.top  + r.height / 2,
-        color: CARD_COLORS[i] || '#7B5CFF',
-        el
-      });
-    });
   }
 
   function spawnPulse() {
@@ -1863,9 +1833,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /* ── Рамка вокруг слова "Classic" — без ореола ── */
     const cp = (t * 0.6) % (Math.PI * 2);
-    /* Уже: только +6px по горизонтали, +8px по вертикали */
-    const cw = (center.w || 180) / 2 + 6;
-    const ch = (center.h || 55) / 2 + 8;
+    /* Узкий: +2px по горизонтали, +7px по вертикали */
+    const cw = (center.w || 180) / 2 + 2;
+    const ch = (center.h || 55) / 2 + 7;
     const rx = 8;
 
     /* Основной контур */
@@ -1954,36 +1924,55 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /* Ждём пока карточки отрендерятся */
-  /* Ждём завершения CSS-анимации Classic (delay 0.75s + duration 1.4s = ~2.2s) */
-  function tryInit() {
+  /* heroFadeUp на Classic: delay=0.75s + duration=1.4s = 2.15s total
+     Ждём 2.4s — гарантированно после завершения всех transform/opacity анимаций */
+  const ANIM_DONE = 2400;
+
+  function safeGetCenter() {
     const classicEl = document.querySelector('.hero-h1-sub');
-    if (!classicEl) { setTimeout(tryInit, 100); return; }
-    /* Проверяем что элемент уже виден (opacity > 0) */
-    const computed = window.getComputedStyle(classicEl);
-    const opacity = parseFloat(computed.opacity);
-    if (opacity < 0.5) {
-      /* Ещё анимируется — ждём */
-      setTimeout(tryInit, 80);
-      return;
-    }
-    init();
+    if (!classicEl) return;
+    const stage = document.getElementById('hero-stage');
+    if (!stage) return;
+    /* Временно отключаем анимацию чтобы получить финальную позицию */
+    const prevAnim = classicEl.style.animation;
+    classicEl.style.animation = 'none';
+    classicEl.style.opacity   = '1';
+    classicEl.style.transform = 'none';
+    /* Force reflow */
+    void classicEl.offsetWidth;
+    const sr2 = stage.getBoundingClientRect();
+    const cr  = classicEl.getBoundingClientRect();
+    center = {
+      x: cr.left - sr2.left + cr.width  / 2,
+      y: cr.top  - sr2.top  + cr.height / 2,
+      w: cr.width,
+      h: cr.height,
+    };
+    /* Восстанавливаем */
+    classicEl.style.animation = prevAnim;
+    classicEl.style.opacity   = '';
+    classicEl.style.transform = '';
+    /* Пересчитываем карточки тоже */
+    const modules = stage.querySelectorAll('.zk-module');
+    cards = [];
+    modules.forEach((el, i) => {
+      if (i > 3) return;
+      const r = el.getBoundingClientRect();
+      cards.push({
+        x: r.left - sr2.left + r.width  / 2,
+        y: r.top  - sr2.top  + r.height / 2,
+        color: CARD_COLORS[i] || '#7B5CFF',
+        el
+      });
+    });
   }
 
   if (document.readyState === 'complete') {
-    setTimeout(tryInit, 100);
+    setTimeout(() => { safeGetCenter(); draw(); }, ANIM_DONE);
   } else {
-    window.addEventListener('load', () => setTimeout(tryInit, 100));
+    window.addEventListener('load', () => setTimeout(() => { safeGetCenter(); draw(); }, ANIM_DONE));
   }
-  /* Пересчитываем при ресайзе */
-  window.addEventListener('resize', () => {
-    setTimeout(getCardCenters, 50);
-  });
-  /* Пересчитываем после завершения CSS-анимации на Classic */
-  document.addEventListener('animationend', function(e) {
-    if (e.target && e.target.classList && e.target.classList.contains('hero-h1-sub')) {
-      getCardCenters();
-    }
-  });
+  window.addEventListener('resize', () => setTimeout(safeGetCenter, 100));
 })();
 </script>
 
