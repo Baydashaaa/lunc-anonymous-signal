@@ -91,6 +91,7 @@
   align-items: center;
   gap: 0;
   position: relative;
+  padding: 0 4px;
 }
 
 .nav-node {
@@ -192,7 +193,7 @@
    pointer-events:none;animation:logoGlow 3s ease-in-out infinite alternate;"></div>
  <div style="display:flex;align-items:center;gap:0px;position:relative;z-index:1;">
  <img src="v1.gif"
- style="height:100px;width:100px;object-fit:contain;flex-shrink:0;margin:-16px 0;"
+ style="height:100px;width:100px;object-fit:contain;flex-shrink:0;margin:-16px 0;mix-blend-mode:screen;"
  alt="Terra Oracle Classic">
  <div style="position:absolute;left:45px;display:flex;flex-direction:column;justify-content:center;z-index:2;">
  <div style="font-family:'Boldonse',sans-serif;font-weight:400;font-size:14px;
@@ -1424,16 +1425,23 @@ function drawNavLines() {
   const nodes = system.querySelectorAll('.nav-node');
   if (nodes.length < 2) return;
 
+  // Set SVG size to match system
+  const w = system.offsetWidth;
+  const h = system.offsetHeight;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.style.width = w + 'px';
+  svg.style.height = h + 'px';
   svg.innerHTML = '';
+
   const sysRect = system.getBoundingClientRect();
 
   for (let i = 0; i < nodes.length - 1; i++) {
     const a = nodes[i].getBoundingClientRect();
     const b = nodes[i+1].getBoundingClientRect();
     const x1 = a.right - sysRect.left;
-    const y1 = a.top - sysRect.top + a.height / 2;
+    const y1 = h / 2;
     const x2 = b.left - sysRect.left;
-    const y2 = b.top - sysRect.top + b.height / 2;
+    const y2 = h / 2;
 
     const line = document.createElementNS('http://www.w3.org/2000/svg','line');
     line.setAttribute('x1', x1); line.setAttribute('y1', y1);
@@ -1441,11 +1449,13 @@ function drawNavLines() {
     line.setAttribute('class','nav-connector');
     svg.appendChild(line);
 
-    // Hover: light up line on adjacent node hover
-    nodes[i].addEventListener('mouseenter', () => { line.style.stroke='rgba(120,80,255,0.55)'; line.style.strokeDasharray='none'; });
-    nodes[i].addEventListener('mouseleave', () => { line.style.stroke=''; line.style.strokeDasharray=''; });
-    nodes[i+1].addEventListener('mouseenter', () => { line.style.stroke='rgba(120,80,255,0.55)'; line.style.strokeDasharray='none'; });
-    nodes[i+1].addEventListener('mouseleave', () => { line.style.stroke=''; line.style.strokeDasharray=''; });
+    const idx = i;
+    const lightUp = () => { svg.querySelectorAll('.nav-connector')[idx].style.stroke='rgba(150,100,255,0.7)'; svg.querySelectorAll('.nav-connector')[idx].style.strokeDasharray='none'; };
+    const dim = () => { svg.querySelectorAll('.nav-connector')[idx].style.stroke=''; svg.querySelectorAll('.nav-connector')[idx].style.strokeDasharray=''; };
+    nodes[i].addEventListener('mouseenter', lightUp);
+    nodes[i].addEventListener('mouseleave', dim);
+    nodes[i+1].addEventListener('mouseenter', lightUp);
+    nodes[i+1].addEventListener('mouseleave', dim);
   }
 }
 
