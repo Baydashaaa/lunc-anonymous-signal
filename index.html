@@ -100,6 +100,27 @@
   transition: color 0.2s, text-shadow 0.2s;
 }
 
+/* Connector line AFTER each node (except last) */
+.nav-node:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  right: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(100,70,220,0.3), rgba(100,70,220,0.15));
+  z-index: 0;
+  transition: background 0.3s;
+  pointer-events: none;
+}
+
+.nav-node:not(:last-child):hover::before {
+  background: linear-gradient(90deg, rgba(150,100,255,0.7), rgba(150,100,255,0.3));
+  box-shadow: 0 0 4px rgba(150,100,255,0.4);
+}
+
+/* Bottom glow line on active/hover */
 .nav-node::after {
   content: '';
   position: absolute;
@@ -127,14 +148,6 @@
 .nav-node.active {
   color: #c8b0ff !important;
   text-shadow: 0 0 12px rgba(120,80,255,0.7);
-}
-
-/* Connector line between nodes */
-.nav-connector {
-  stroke: rgba(100,70,220,0.25);
-  stroke-width: 1;
-  stroke-dasharray: 3,4;
-  transition: stroke 0.3s, stroke-dasharray 0.3s;
 }
 
 /* ── GLASSMORPHISM BUTTONS ───────────────────────────────── */
@@ -193,7 +206,7 @@
    pointer-events:none;animation:logoGlow 3s ease-in-out infinite alternate;"></div>
  <div style="display:flex;align-items:center;gap:0px;position:relative;z-index:1;">
  <img src="v1.gif"
- style="height:100px;width:100px;object-fit:contain;flex-shrink:0;margin:-16px 0;mix-blend-mode:screen;"
+ style="height:100px;width:100px;object-fit:contain;flex-shrink:0;margin:-16px 0;mix-blend-mode:lighten;"
  alt="Terra Oracle Classic">
  <div style="position:absolute;left:45px;display:flex;flex-direction:column;justify-content:center;z-index:2;">
  <div style="font-family:'Boldonse',sans-serif;font-weight:400;font-size:14px;
@@ -216,7 +229,7 @@
  <button class="nav-tab nav-node" onclick="showPage('vote')" data-page="vote">Vote</button>
  <button class="nav-tab nav-node" onclick="showPage('about')" data-page="about">About</button>
  <button class="nav-tab nav-node" onclick="showPage('bag',event)" data-page="bag" style="color:#f4d03f;">My Bag</button>
- <svg class="nav-lines" id="nav-lines" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible;"></svg>
+ <svg class="nav-lines" id="nav-lines" style="display:none;"></svg>
  </div>
  <div class="wallet-btn-wrap" id="wallet-wrap">
  <button class="wallet-btn glass-btn" id="wallet-main-btn" onclick="toggleWalletDropdown()">
@@ -1419,44 +1432,7 @@ window.openBagWalletPicker = function() {
 
 /* ── NAV CONNECTOR LINES ─────────────────────────────────── */
 function drawNavLines() {
-  const svg = document.getElementById('nav-lines');
-  const system = document.getElementById('nav-system');
-  if (!svg || !system) return;
-  const nodes = system.querySelectorAll('.nav-node');
-  if (nodes.length < 2) return;
-
-  // Set SVG size to match system
-  const w = system.offsetWidth;
-  const h = system.offsetHeight;
-  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-  svg.style.width = w + 'px';
-  svg.style.height = h + 'px';
-  svg.innerHTML = '';
-
-  const sysRect = system.getBoundingClientRect();
-
-  for (let i = 0; i < nodes.length - 1; i++) {
-    const a = nodes[i].getBoundingClientRect();
-    const b = nodes[i+1].getBoundingClientRect();
-    const x1 = a.right - sysRect.left;
-    const y1 = h / 2;
-    const x2 = b.left - sysRect.left;
-    const y2 = h / 2;
-
-    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
-    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
-    line.setAttribute('class','nav-connector');
-    svg.appendChild(line);
-
-    const idx = i;
-    const lightUp = () => { svg.querySelectorAll('.nav-connector')[idx].style.stroke='rgba(150,100,255,0.7)'; svg.querySelectorAll('.nav-connector')[idx].style.strokeDasharray='none'; };
-    const dim = () => { svg.querySelectorAll('.nav-connector')[idx].style.stroke=''; svg.querySelectorAll('.nav-connector')[idx].style.strokeDasharray=''; };
-    nodes[i].addEventListener('mouseenter', lightUp);
-    nodes[i].addEventListener('mouseleave', dim);
-    nodes[i+1].addEventListener('mouseenter', lightUp);
-    nodes[i+1].addEventListener('mouseleave', dim);
-  }
+  // Lines handled via CSS ::before pseudo-elements
 }
 
 // Mark active nav node
