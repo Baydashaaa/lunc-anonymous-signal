@@ -1861,63 +1861,50 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.fill();
     });
 
-    /* ── Свечение вокруг слова "Classic" ── */
+    /* ── Рамка вокруг слова "Classic" — без ореола ── */
     const cp = (t * 0.6) % (Math.PI * 2);
-    const cw = (center.w || 180) / 2 + 12;
-    const ch = (center.h || 55) / 2 + 10;
+    /* Уже: только +6px по горизонтали, +8px по вертикали */
+    const cw = (center.w || 180) / 2 + 6;
+    const ch = (center.h || 55) / 2 + 8;
+    const rx = 8;
 
-    /* Широкий ореол за словом */
-    const glow = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, cw * 2.2);
-    glow.addColorStop(0,   `rgba(123,92,255,${0.10 + 0.05 * Math.sin(cp)})`);
-    glow.addColorStop(0.4, `rgba(168,85,247,${0.06 + 0.03 * Math.sin(cp)})`);
-    glow.addColorStop(0.8, `rgba(0,212,255,${0.03 + 0.02 * Math.sin(cp)})`);
-    glow.addColorStop(1,   'rgba(0,0,0,0)');
-    ctx.beginPath();
-    ctx.ellipse(center.x, center.y, cw * 2.2, ch * 2.5, 0, 0, Math.PI * 2);
-    ctx.fillStyle = glow;
-    ctx.fill();
-
-    /* Обводка вокруг слова — скруглённый прямоугольник */
-    const rx = 10;
+    /* Основной контур */
     ctx.save();
     ctx.beginPath();
-    ctx.roundRect
-      ? ctx.roundRect(center.x - cw, center.y - ch, cw * 2, ch * 2, rx)
-      : ctx.rect(center.x - cw, center.y - ch, cw * 2, ch * 2);
-    ctx.strokeStyle = `rgba(123,92,255,${0.22 + 0.12 * Math.sin(cp)})`;
+    if (ctx.roundRect) {
+      ctx.roundRect(center.x - cw, center.y - ch, cw * 2, ch * 2, rx);
+    } else {
+      ctx.rect(center.x - cw, center.y - ch, cw * 2, ch * 2);
+    }
+    ctx.strokeStyle = `rgba(123,92,255,${0.28 + 0.14 * Math.sin(cp)})`;
     ctx.lineWidth = 1;
     ctx.stroke();
     ctx.restore();
 
-    /* Второй контур — cyan, чуть больше */
+    /* Второй контур — cyan, на 4px больше */
     ctx.save();
     ctx.beginPath();
-    ctx.roundRect
-      ? ctx.roundRect(center.x - cw - 5, center.y - ch - 5, cw * 2 + 10, ch * 2 + 10, rx + 4)
-      : ctx.rect(center.x - cw - 5, center.y - ch - 5, cw * 2 + 10, ch * 2 + 10);
-    ctx.strokeStyle = `rgba(0,212,255,${0.10 + 0.07 * Math.sin(cp + 1)})`;
-    ctx.lineWidth = 0.7;
+    if (ctx.roundRect) {
+      ctx.roundRect(center.x - cw - 4, center.y - ch - 4, cw * 2 + 8, ch * 2 + 8, rx + 3);
+    } else {
+      ctx.rect(center.x - cw - 4, center.y - ch - 4, cw * 2 + 8, ch * 2 + 8);
+    }
+    ctx.strokeStyle = `rgba(0,212,255,${0.12 + 0.08 * Math.sin(cp + 1)})`;
+    ctx.lineWidth = 0.6;
     ctx.stroke();
     ctx.restore();
 
-    /* 4 угловых акцента */
+    /* 4 угловых точки */
     const corners = [
-      [center.x - cw,     center.y - ch    ],
-      [center.x + cw,     center.y - ch    ],
-      [center.x - cw,     center.y + ch    ],
-      [center.x + cw,     center.y + ch    ],
+      [center.x - cw, center.y - ch],
+      [center.x + cw, center.y - ch],
+      [center.x - cw, center.y + ch],
+      [center.x + cw, center.y + ch],
     ];
     corners.forEach(([cx2, cy2]) => {
       ctx.beginPath();
-      ctx.arc(cx2, cy2, 3, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(123,92,255,${0.5 + 0.3 * Math.sin(cp)})`;
-      ctx.fill();
-      const cng = ctx.createRadialGradient(cx2, cy2, 0, cx2, cy2, 10);
-      cng.addColorStop(0, `rgba(123,92,255,${0.2 + 0.1 * Math.sin(cp)})`);
-      cng.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.beginPath();
-      ctx.arc(cx2, cy2, 10, 0, Math.PI * 2);
-      ctx.fillStyle = cng;
+      ctx.arc(cx2, cy2, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(123,92,255,${0.55 + 0.3 * Math.sin(cp)})`;
       ctx.fill();
     });
 
