@@ -401,37 +401,12 @@
    <img src="logo.png" style="width:640px;height:640px;opacity:0.2;user-select:none;object-fit:contain;animation:centerPulse 6s ease-in-out infinite;">
   </div>
 
-  <!-- CENTER TEXT — animated -->
-  <div class="hero-center" style="position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);
-    z-index:4;text-align:center;display:flex;flex-direction:column;align-items:center;
-    width:360px;pointer-events:none;">
-
-    <!-- Eyebrow label -->
-    <div class="hero-eyebrow">Terra Classic Ecosystem</div>
-
-    <!-- H1: gradient flow + glow pulse -->
-    <h1 class="hero-h1"><span class="hero-h1-terra">Terra</span> <span class="hero-h1-oracle">Oracle</span></h1>
-    <div class="hero-h1-sub">Classic</div>
-
-    <!-- Подзаголовок: reveal -->
-    <div class="hero-sub">The intelligence layer of Terra Classic</div>
-
-    <!-- Мелкий текст: shimmer -->
-    <div class="hero-micro">
-      <span class="hero-micro-inner">Q&amp;A · Governance · Verifiable Draws</span><br>
-      <span class="hero-micro-muted">powered by LUNC</span>
-    </div>
-
-    <!-- TCO pill -->
-    <div class="hero-tco-pill" style="pointer-events:all;">
-      🪙 Future token: <strong style="letter-spacing:0.1em;">TCO</strong> · Terra Classic Oracle
-    </div>
-  </div>
-
-  <!-- КАРТОЧКИ — flex по бокам, растянуты по высоте stage -->
-  <div style="position:relative;z-index:3;width:100%;height:100%;min-height:620px;
+  <!-- КАРТОЧКИ + CENTER — единый flex-контейнер, текст по центру flex -->
+  <div style="position:relative;z-index:3;width:100%;min-height:620px;
     display:flex;align-items:stretch;justify-content:space-between;
     padding:32px 24px;box-sizing:border-box;gap:20px;max-width:1280px;margin:0 auto;">
+
+    <!-- CENTER TEXT — в потоке flex, занимает место между колонками -->
 
     <!-- ЛЕВАЯ КОЛОНКА -->
     <div style="display:flex;flex-direction:column;gap:20px;width:300px;flex-shrink:0;">
@@ -464,8 +439,24 @@
 
     </div>
 
-    <!-- ЦЕНТР — пустой, текст абсолютный поверх -->
-    <div style="flex:1;min-width:0;"></div>
+    <!-- ЦЕНТР — текст в потоке flex -->
+    <div style="flex:1;min-width:0;display:flex;align-items:center;justify-content:center;">
+      <div class="hero-center" style="text-align:center;display:flex;flex-direction:column;
+        align-items:center;width:360px;pointer-events:none;">
+
+        <div class="hero-eyebrow">Terra Classic Ecosystem</div>
+        <h1 class="hero-h1"><span class="hero-h1-terra">Terra</span> <span class="hero-h1-oracle">Oracle</span></h1>
+        <div class="hero-h1-sub">Classic</div>
+        <div class="hero-sub">The intelligence layer of Terra Classic</div>
+        <div class="hero-micro">
+          <span class="hero-micro-inner">Q&amp;A · Governance · Verifiable Draws</span><br>
+          <span class="hero-micro-muted">powered by LUNC</span>
+        </div>
+        <div class="hero-tco-pill" style="pointer-events:all;">
+          🪙 Future token: <strong style="letter-spacing:0.1em;">TCO</strong> · Terra Classic Oracle
+        </div>
+      </div>
+    </div>
 
     <!-- ПРАВАЯ КОЛОНКА -->
     <div style="display:flex;flex-direction:column;gap:20px;width:300px;flex-shrink:0;">
