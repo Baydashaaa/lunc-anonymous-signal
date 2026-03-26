@@ -1773,23 +1773,16 @@ document.addEventListener('DOMContentLoaded', () => {
     H = canvas.height = sr.height;
 
     /* Центр = слово "Classic" (.hero-h1-sub)
-       Используем offsetTop/offsetLeft — стабильны до/после анимации opacity */
+       getBoundingClientRect относительно stage — самый точный способ */
     const classicEl = stage.querySelector('.hero-h1-sub');
     if (classicEl) {
-      /* Собираем offset относительно hero-stage */
-      let el = classicEl, ox = 0, oy = 0;
-      while (el && el !== stage) {
-        ox += el.offsetLeft;
-        oy += el.offsetTop;
-        el = el.offsetParent;
-      }
-      const cw = classicEl.offsetWidth;
-      const ch = classicEl.offsetHeight;
+      const sr2 = stage.getBoundingClientRect();
+      const cr  = classicEl.getBoundingClientRect();
       center = {
-        x: ox + cw / 2,
-        y: oy + ch / 2,
-        w: cw,
-        h: ch,
+        x: cr.left - sr2.left + cr.width  / 2,
+        y: cr.top  - sr2.top  + cr.height / 2,
+        w: cr.width,
+        h: cr.height,
       };
     } else {
       center = { x: W / 2, y: H / 2, w: 180, h: 60 };
@@ -1983,10 +1976,25 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /* Ждём пока карточки отрендерятся */
+  /* Ждём завершения CSS-анимации Classic (delay 0.75s + duration 1.4s = ~2.2s) */
+  function tryInit() {
+    const classicEl = document.querySelector('.hero-h1-sub');
+    if (!classicEl) { setTimeout(tryInit, 100); return; }
+    /* Проверяем что элемент уже виден (opacity > 0) */
+    const computed = window.getComputedStyle(classicEl);
+    const opacity = parseFloat(computed.opacity);
+    if (opacity < 0.5) {
+      /* Ещё анимируется — ждём */
+      setTimeout(tryInit, 80);
+      return;
+    }
+    init();
+  }
+
   if (document.readyState === 'complete') {
-    setTimeout(init, 300);
+    setTimeout(tryInit, 100);
   } else {
-    window.addEventListener('load', () => setTimeout(init, 300));
+    window.addEventListener('load', () => setTimeout(tryInit, 100));
   }
   /* Пересчитываем при ресайзе */
   window.addEventListener('resize', () => {
