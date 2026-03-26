@@ -777,7 +777,7 @@
  </div>
  <div class="chat-page-wrap">
  <div class="note" style="margin-bottom:20px;">
- 💬 Every <strong style="color:var(--accent)">10th message</strong> earns a free <strong style="color:var(--gold)">Weekly Draw entry</strong>. Message fees go to the Protocol Treasury.
+ Earn a free <strong style="color:var(--gold)">Weekly Draw entry</strong> every <strong style="color:var(--accent)">10 messages</strong>. Up to <strong style="color:var(--accent)">2 entries per day</strong>. Fees are directed to the Protocol Treasury.
  </div>
  <div class="chat-page-messages" id="chat-page-messages">
  <div style="text-align:center;color:var(--muted);font-size:12px;padding:20px;">Loading messages...</div>
@@ -1595,6 +1595,60 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+
+
+<script>
+/* ── incrementMessageCount + getMsgMilestoneEntries
+   Called by app.js after every successful chat TX.
+   Every 10 messages → +1 Weekly Draw entry, max 2 per day.        ──── */
+(function() {
+  const KEY_MSGS  = 'tco_msg_count';      // total messages by wallet
+  const KEY_DATE  = 'tco_entry_date';     // YYYY-MM-DD of last entry award
+  const KEY_TODAY = 'tco_entries_today';  // entries earned today (max 2)
+  const MAX_DAY   = 2;
+  const PER_MSGS  = 10;                   // messages per entry
+
+  function todayStr() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  /* Returns entries earned today, resets if new day */
+  function entriesToday() {
+    if (localStorage.getItem(KEY_DATE) !== todayStr()) {
+      localStorage.setItem(KEY_DATE, todayStr());
+      localStorage.setItem(KEY_TODAY, '0');
+    }
+    return parseInt(localStorage.getItem(KEY_TODAY) || '0', 10);
+  }
+
+  /* Increment per-wallet message count, return new total */
+  window.incrementMessageCount = function(walletAddr) {
+    const key = KEY_MSGS + '_' + (walletAddr || 'anon');
+    const n = parseInt(localStorage.getItem(key) || '0', 10) + 1;
+    localStorage.setItem(key, String(n));
+    return n;
+  };
+
+  /* Called by app.js to get how many entries milestone earned.
+     Returns string like "1" or "" if daily limit hit.             */
+  window.getMsgMilestoneEntries = function(msgCount) {
+    if (msgCount % PER_MSGS !== 0) return '';
+    const today = entriesToday();
+    if (today >= MAX_DAY) {
+      console.info('[TerraOracle] Daily entry limit reached (' + MAX_DAY + '/day)');
+      return 'limit reached (max ' + MAX_DAY + '/day)';
+    }
+    const newToday = today + 1;
+    localStorage.setItem(KEY_TODAY, String(newToday));
+    localStorage.setItem(KEY_DATE, todayStr());
+    /* Store in profile entries list */
+    const entries = JSON.parse(localStorage.getItem('tco_free_entries') || '[]');
+    entries.push({ date: todayStr(), reason: 'chat_milestone_' + msgCount });
+    localStorage.setItem('tco_free_entries', JSON.stringify(entries));
+    return String(newToday);
+  };
+})();
+</script>
 
 </body>
 </html>
