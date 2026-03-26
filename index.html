@@ -394,10 +394,10 @@
  <div id="hero-stage" style="position:relative;width:100%;min-height:620px;overflow:visible;">
 
   <!-- Connection lines canvas — под карточками, над фоном -->
-  <canvas id="hero-connections" style="position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;"></canvas>
+  <canvas id="hero-connections" style="position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;"></canvas>
 
   <!-- Фоновый логотип — точно по центру stage -->
-  <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:0;">
+  <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:2;">
    <img src="logo.png" style="width:640px;height:640px;opacity:0.2;user-select:none;object-fit:contain;animation:centerPulse 6s ease-in-out infinite;">
   </div>
 
@@ -1821,50 +1821,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.fill();
     });
 
-    /* ── Рамка вокруг "Classic" — только когда координаты готовы ── */
-    if (centerReady) {
-      const cp = (t * 0.6) % (Math.PI * 2);
-      const cw = (center.w || 180) / 2 + 2;
-      const ch = (center.h || 55) / 2 + 7;
-      const rx = 8;
 
-      ctx.save();
-      ctx.beginPath();
-      if (ctx.roundRect) {
-        ctx.roundRect(center.x - cw, center.y - ch, cw * 2, ch * 2, rx);
-      } else {
-        ctx.rect(center.x - cw, center.y - ch, cw * 2, ch * 2);
-      }
-      ctx.strokeStyle = `rgba(123,92,255,${0.28 + 0.14 * Math.sin(cp)})`;
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.restore();
-
-      ctx.save();
-      ctx.beginPath();
-      if (ctx.roundRect) {
-        ctx.roundRect(center.x - cw - 4, center.y - ch - 4, cw * 2 + 8, ch * 2 + 8, rx + 3);
-      } else {
-        ctx.rect(center.x - cw - 4, center.y - ch - 4, cw * 2 + 8, ch * 2 + 8);
-      }
-      ctx.strokeStyle = `rgba(0,212,255,${0.12 + 0.08 * Math.sin(cp + 1)})`;
-      ctx.lineWidth = 0.6;
-      ctx.stroke();
-      ctx.restore();
-
-      const corners = [
-        [center.x - cw, center.y - ch],
-        [center.x + cw, center.y - ch],
-        [center.x - cw, center.y + ch],
-        [center.x + cw, center.y + ch],
-      ];
-      corners.forEach(([cx2, cy2]) => {
-        ctx.beginPath();
-        ctx.arc(cx2, cy2, 2.5, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(123,92,255,${0.55 + 0.3 * Math.sin(cp)})`;
-        ctx.fill();
-      });
-    }
 
     /* ── Пульсы ── */
     if (Math.random() < 0.025) spawnPulse();
