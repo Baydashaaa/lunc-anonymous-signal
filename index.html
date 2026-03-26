@@ -78,6 +78,104 @@
 }
 </style>
 
+<style>
+/* ── LOGO GLOW ANIMATION ─────────────────────────────────── */
+@keyframes logoGlow {
+  from { opacity:0.6; transform:translateY(-50%) scale(0.95); }
+  to   { opacity:1;   transform:translateY(-50%) scale(1.08); }
+}
+
+/* ── NAV SYSTEM (connected nodes) ───────────────────────── */
+.nav-system {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  position: relative;
+}
+
+.nav-node {
+  position: relative;
+  z-index: 1;
+  transition: color 0.2s, text-shadow 0.2s;
+}
+
+.nav-node::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 80%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(120,80,255,0.8), transparent);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border-radius: 1px;
+}
+
+.nav-node:hover::after,
+.nav-node.active::after {
+  transform: translateX(-50%) scaleX(1);
+  box-shadow: 0 0 6px rgba(120,80,255,0.6);
+}
+
+.nav-node:hover {
+  color: #c8b0ff !important;
+  text-shadow: 0 0 10px rgba(120,80,255,0.5);
+}
+
+.nav-node.active {
+  color: #c8b0ff !important;
+  text-shadow: 0 0 12px rgba(120,80,255,0.7);
+}
+
+/* Connector line between nodes */
+.nav-connector {
+  stroke: rgba(100,70,220,0.25);
+  stroke-width: 1;
+  stroke-dasharray: 3,4;
+  transition: stroke 0.3s, stroke-dasharray 0.3s;
+}
+
+/* ── GLASSMORPHISM BUTTONS ───────────────────────────────── */
+.glass-btn {
+  background: rgba(20,25,40,0.6) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  transition: all 0.25s ease !important;
+}
+
+/* Wallet button glass */
+.wallet-btn.glass-btn {
+  border: 1px solid rgba(120,80,255,0.4) !important;
+  box-shadow: 0 0 10px rgba(120,80,255,0.2), inset 0 0 10px rgba(120,80,255,0.08) !important;
+}
+.wallet-btn.glass-btn:hover,
+.wallet-btn.glass-btn.connected {
+  border-color: rgba(120,80,255,0.7) !important;
+  box-shadow: 0 0 16px rgba(120,80,255,0.4), inset 0 0 14px rgba(120,80,255,0.15) !important;
+}
+
+/* Treasury button glass - gold */
+.treasury-btn.glass-gold {
+  border: 1px solid rgba(245,197,24,0.4) !important;
+  box-shadow: 0 0 10px rgba(245,197,24,0.2), inset 0 0 10px rgba(245,197,24,0.06) !important;
+}
+.treasury-btn.glass-gold:hover {
+  border-color: rgba(245,197,24,0.7) !important;
+  box-shadow: 0 0 16px rgba(245,197,24,0.35), inset 0 0 14px rgba(245,197,24,0.12) !important;
+}
+
+/* Oracle Draw button glass - orange */
+.lottery-btn.glass-orange {
+  border: 1px solid rgba(255,100,30,0.45) !important;
+  box-shadow: 0 0 10px rgba(255,100,30,0.25), inset 0 0 10px rgba(255,100,30,0.08) !important;
+}
+.lottery-btn.glass-orange:hover {
+  border-color: rgba(255,100,30,0.75) !important;
+  box-shadow: 0 0 18px rgba(255,100,30,0.4), inset 0 0 14px rgba(255,100,30,0.15) !important;
+}
+</style>
+
   <!-- Charts -->
   <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
 </head>
@@ -88,7 +186,11 @@
 <div class="orb orb-2"></div>
 <nav>
  <div class="nav-logo" onclick="showPage('home')" style="cursor:pointer;position:relative;" title="Go to Home">
- <div style="display:flex;align-items:center;gap:0px;">
+ <!-- Radial glow behind logo -->
+ <div style="position:absolute;left:-10px;top:50%;transform:translateY(-50%);width:110px;height:110px;border-radius:50%;
+   background:radial-gradient(circle,rgba(120,60,255,0.35) 0%,rgba(60,100,255,0.2) 40%,transparent 70%);
+   pointer-events:none;animation:logoGlow 3s ease-in-out infinite alternate;"></div>
+ <div style="display:flex;align-items:center;gap:0px;position:relative;z-index:1;">
  <img src="v1.gif"
  style="height:100px;width:100px;object-fit:contain;flex-shrink:0;margin:-16px 0;"
  alt="Terra Oracle Classic">
@@ -106,14 +208,17 @@
  </div>
  </div>
  <div class="nav-tabs">
- <button class="nav-tab" onclick="showPage('board')">Board</button>
- <button class="nav-tab" onclick="showPage('ask')">Ask</button>
- <button class="nav-tab" onclick="showPage('chat')">Chat</button>
- <button class="nav-tab" onclick="showPage('vote')">Vote</button>
- <button class="nav-tab" onclick="showPage('about')">About</button>
- <button class="nav-tab" onclick="showPage('bag',event)" style="color:#f4d03f;">My Bag</button>
+ <div class="nav-system" id="nav-system">
+ <button class="nav-tab nav-node" onclick="showPage('board')" data-page="board">Board</button>
+ <button class="nav-tab nav-node" onclick="showPage('ask')" data-page="ask">Ask</button>
+ <button class="nav-tab nav-node" onclick="showPage('chat')" data-page="chat">Chat</button>
+ <button class="nav-tab nav-node" onclick="showPage('vote')" data-page="vote">Vote</button>
+ <button class="nav-tab nav-node" onclick="showPage('about')" data-page="about">About</button>
+ <button class="nav-tab nav-node" onclick="showPage('bag',event)" data-page="bag" style="color:#f4d03f;">My Bag</button>
+ <svg class="nav-lines" id="nav-lines" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible;"></svg>
+ </div>
  <div class="wallet-btn-wrap" id="wallet-wrap">
- <button class="wallet-btn" id="wallet-main-btn" onclick="toggleWalletDropdown()">
+ <button class="wallet-btn glass-btn" id="wallet-main-btn" onclick="toggleWalletDropdown()">
  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
  <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 12h2"/><path d="M2 10V5a2 2 0 012-2h16a2 2 0 012 2v5"/>
  </svg>
@@ -170,11 +275,11 @@
 </div>
  </div>
  </div>
- <button class="treasury-btn" onclick="showPage_treasury(event)">
+ <button class="treasury-btn glass-btn glass-gold" onclick="showPage_treasury(event)">
  💰 Treasury
  </button>
 
- <a class="lottery-btn" href="https://baydashaaa.github.io/oracle-draw" target="_blank">
+ <a class="lottery-btn glass-btn glass-orange" href="https://baydashaaa.github.io/oracle-draw" target="_blank">
  <svg width="16" height="16" viewBox="0 0 100 100" style="flex-shrink:0">
  <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="4"/>
  <circle cx="50" cy="50" r="8" fill="#fff" opacity="0.9"/>
@@ -1310,6 +1415,51 @@ window.openBagWalletPicker = function() {
     if (dropdown) dropdown.classList.add('open');
   }, 350);
 };
+
+/* ── NAV CONNECTOR LINES ─────────────────────────────────── */
+function drawNavLines() {
+  const svg = document.getElementById('nav-lines');
+  const system = document.getElementById('nav-system');
+  if (!svg || !system) return;
+  const nodes = system.querySelectorAll('.nav-node');
+  if (nodes.length < 2) return;
+
+  svg.innerHTML = '';
+  const sysRect = system.getBoundingClientRect();
+
+  for (let i = 0; i < nodes.length - 1; i++) {
+    const a = nodes[i].getBoundingClientRect();
+    const b = nodes[i+1].getBoundingClientRect();
+    const x1 = a.right - sysRect.left;
+    const y1 = a.top - sysRect.top + a.height / 2;
+    const x2 = b.left - sysRect.left;
+    const y2 = b.top - sysRect.top + b.height / 2;
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('class','nav-connector');
+    svg.appendChild(line);
+
+    // Hover: light up line on adjacent node hover
+    nodes[i].addEventListener('mouseenter', () => { line.style.stroke='rgba(120,80,255,0.55)'; line.style.strokeDasharray='none'; });
+    nodes[i].addEventListener('mouseleave', () => { line.style.stroke=''; line.style.strokeDasharray=''; });
+    nodes[i+1].addEventListener('mouseenter', () => { line.style.stroke='rgba(120,80,255,0.55)'; line.style.strokeDasharray='none'; });
+    nodes[i+1].addEventListener('mouseleave', () => { line.style.stroke=''; line.style.strokeDasharray=''; });
+  }
+}
+
+// Mark active nav node
+const _origShowPage = window.showPage;
+window.showPage = function(name, e) {
+  _origShowPage(name, e);
+  document.querySelectorAll('.nav-node').forEach(n => {
+    n.classList.toggle('active', n.dataset.page === name);
+  });
+};
+
+window.addEventListener('load', () => { setTimeout(drawNavLines, 100); });
+window.addEventListener('resize', drawNavLines);
 </script>
 </body>
 </html>
