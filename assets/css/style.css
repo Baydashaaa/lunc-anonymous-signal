@@ -624,3 +624,22 @@ canvas {
 #page-home div[style*="flex-wrap:wrap"] {
   max-width: 100%;
 }
+
+/* ── Hero stage responsive ── */
+@media (max-width: 900px) {
+  #hero-stage > div[style*="display:flex;align-items:stretch"] {
+    flex-direction: column !important;
+    padding: 20px 16px !important;
+  }
+  #hero-stage > div[style*="display:flex;align-items:stretch"] > div[style*="width:300px"] {
+    width: 100% !important;
+    flex-direction: row !important;
+  }
+  #hero-stage > div[style*="position:absolute;left:50%"] {
+    position: relative !important;
+    left: auto !important; top: auto !important;
+    transform: none !important;
+    width: 100% !important;
+    padding: 32px 20px 24px !important;
+  }
+}
