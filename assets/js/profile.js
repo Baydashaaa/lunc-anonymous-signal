@@ -96,35 +96,50 @@ async function fetchChatStats(address) {
     try {
       let offset = 0, done = false, found = false;
       while (!done) {
-        let url, txs;
+        let url;
+        let data = null;
         if (type === 'fcd') {
           url = `${base}/v1/txs?account=${address}&limit=100&offset=${offset}`;
           const res = await fetch(url, { headers: { 'Accept': 'application/json' }, signal: AbortSignal.timeout(10000) });
           if (!res.ok) break;
-          const data = await res.json();
-          txs = data.txs || [];
+          data = await res.json();
         } else {
           url = `${base}/cosmos/tx/v1beta1/txs?events=transfer.sender=%27${address}%27&pagination.limit=50&order_by=2&pagination.offset=${offset}`;
           const res = await fetch(url, { headers: { 'Accept': 'application/json' }, signal: AbortSignal.timeout(10000) });
           if (!res.ok) break;
-          const data = await res.json();
-          txs = []; // unused — see below
+          data = await res.json();
         }
+        if (!data) break;
 
-        // LCD v1beta1: txs[] = bodies, tx_responses[] = metadata — parallel arrays
-        const _txBodies    = data.txs || [];
-        const _txResponses = data.tx_responses || [];
-        const _txCount = Math.max(_txBodies.length, _txResponses.length);
-        if (!_txCount) break;
+        // FCD: flat txs[] each with tx.tx.value.memo + timestamp
+        // LCD: parallel txs[] (bodies) + tx_responses[] (metadata)
+        let _entries = [];
+        if (type === 'fcd') {
+          const fcdTxs = data.txs || [];
+          _entries = fcdTxs.map(tx => ({
+            ts:        Math.floor(new Date(tx.timestamp).getTime() / 1000),
+            memo:      tx.tx?.value?.memo || tx.tx?.body?.memo || '',
+            msgs:      tx.tx?.value?.msg  || tx.tx?.body?.messages || [],
+          }));
+        } else {
+          const _txBodies    = data.txs || [];
+          const _txResponses = data.tx_responses || [];
+          const _n = Math.max(_txBodies.length, _txResponses.length);
+          for (let i = 0; i < _n; i++) {
+            _entries.push({
+              ts:   Math.floor(new Date(_txResponses[i]?.timestamp || 0).getTime() / 1000),
+              memo: _txBodies[i]?.body?.memo || '',
+              msgs: _txBodies[i]?.body?.messages || [],
+            });
+          }
+        }
+        if (!_entries.length) break;
 
-        for (let _idx = 0; _idx < _txCount; _idx++) {
-          const _txBody = _txBodies[_idx];
-          const _txMeta = _txResponses[_idx];
-          const ts = Math.floor(new Date(_txMeta?.timestamp || 0).getTime() / 1000);
+        for (const _entry of _entries) {
+          const ts   = _entry.ts;
+          const memo = _entry.memo;
+          const msgs = _entry.msgs;
           if (ts < cutoff) { done = true; break; }
-
-          const memo = _txBody?.body?.memo || '';
-          const msgs = _txBody?.body?.messages || [];
 
           for (const msg of msgs) {
             const msgType  = msg['@type'] || msg.type || '';
@@ -155,7 +170,7 @@ async function fetchChatStats(address) {
             }
           }
         }
-        if (_txCount < 50) break;
+        if (_entries.length < 50) break;
         offset += 50;
       }
       // If we got through without error, stop trying nodes
