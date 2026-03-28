@@ -436,108 +436,92 @@ function disconnectKeplr() {
 }
 
 // ─── AMINO SIGNING HELPER (no cosmjs) ────────────────────────────────────────
-async function sendLuncAmino(fromAddr, toAddr, amountUluna, memo, chainId) {
-  const LCD = 'https://terra-classic-lcd.publicnode.com';
-  const RPC = 'https://terra-classic-rpc.publicnode.com';
+async function sendLuncDirect(fromAddr, toAddr, amountUluna, memo, chainId) {
+  const LCD   = 'https://terra-classic-lcd.publicnode.com';
   const CHAIN = chainId || 'columbus-5';
-
-  const aminoSigner = window.keplr.getOfflineSignerOnlyAmino(CHAIN);
 
   // Get account info
   const accRes  = await fetch(`${LCD}/cosmos/auth/v1beta1/accounts/${fromAddr}`);
   const accData = await accRes.json();
   const acct    = accData?.account || {};
-  const accountNumber = String(acct.account_number || '0');
-  const sequence      = String(acct.sequence || '0');
+  const accountNumber = parseInt(acct.account_number || '0');
+  const sequence      = parseInt(acct.sequence || '0');
 
   // Fee = gas + 0.5% tax
-  const gasFee  = Math.ceil(200000 * 28.325);
-  const taxFee  = Math.ceil(amountUluna * 0.005);
+  const gasFee   = Math.ceil(200000 * 28.325);
+  const taxFee   = Math.ceil(amountUluna * 0.005);
   const totalFee = gasFee + taxFee;
 
-  const signDoc = {
-    chain_id: CHAIN,
-    account_number: accountNumber,
-    sequence,
-    fee: { amount: [{ denom: 'uluna', amount: String(totalFee) }], gas: '200000' },
-    msgs: [{ type: 'cosmos-sdk/MsgSend', value: { from_address: fromAddr, to_address: toAddr, amount: [{ denom: 'uluna', amount: String(amountUluna) }] } }],
-    memo,
-  };
-
-  const { signed, signature } = await aminoSigner.signAmino(fromAddr, signDoc);
-
-  // Use EXACTLY what Keplr signed
-  const sFrom   = signed.msgs[0].value.from_address;
-  const sTo     = signed.msgs[0].value.to_address;
-  const sAmt    = signed.msgs[0].value.amount[0].amount;
-  const sMemo   = signed.memo;
-  const sFeeAmt = signed.fee.amount[0].amount;
-  const sGas    = parseInt(signed.fee.gas);
-  const sSeq    = parseInt(signed.sequence);
-
-  // Encode protobuf TxRaw
+  // Protobuf helpers
   function encodeVarint(n) { n=Number(n); const b=[]; while(n>127){b.push((n&0x7f)|0x80);n=Math.floor(n/128);}b.push(n&0x7f);return new Uint8Array(b); }
   function encodeField(f,w,d){const t=encodeVarint((f<<3)|w);if(w===2){const l=encodeVarint(d.length);const o=new Uint8Array(t.length+l.length+d.length);o.set(t);o.set(l,t.length);o.set(d,t.length+l.length);return o;}return t;}
   function concat(...a){const tot=a.reduce((s,x)=>s+x.length,0);const o=new Uint8Array(tot);let off=0;for(const x of a){o.set(x,off);off+=x.length;}return o;}
   const enc = new TextEncoder();
 
-  // MsgSend — use signed values
-  const coinP  = concat(encodeField(1,2,enc.encode('uluna')), encodeField(2,2,enc.encode(sAmt)));
-  const msgSP  = concat(encodeField(1,2,enc.encode(sFrom)), encodeField(2,2,enc.encode(sTo)), encodeField(3,2,coinP));
+  // MsgSend
+  const coinP  = concat(encodeField(1,2,enc.encode('uluna')), encodeField(2,2,enc.encode(String(amountUluna))));
+  const msgSP  = concat(encodeField(1,2,enc.encode(fromAddr)), encodeField(2,2,enc.encode(toAddr)), encodeField(3,2,coinP));
   const anyMsg = concat(encodeField(1,2,enc.encode('/cosmos.bank.v1beta1.MsgSend')), encodeField(2,2,msgSP));
+  const txBodyP = concat(encodeField(1,2,anyMsg), encodeField(2,2,enc.encode(memo)));
 
-  // Fee — use signed values
-  const feeCoinP = concat(encodeField(1,2,enc.encode('uluna')), encodeField(2,2,enc.encode(sFeeAmt)));
-  const feeP     = concat(encodeField(1,2,feeCoinP), encodeVarint((2<<3)|0), encodeVarint(sGas));
-
-  // PubKey
-  const pubkeyB   = Uint8Array.from(atob(signature.pub_key.value), c=>c.charCodeAt(0));
+  // Get pubkey from Keplr
+  const directSigner = window.keplr.getOfflineSigner(CHAIN);
+  const accounts = await directSigner.getAccounts();
+  const pubkeyB   = accounts[0].pubkey;
   const pubkeyAny = concat(
     encodeField(1,2,enc.encode('/cosmos.crypto.secp256k1.PubKey')),
     encodeField(2,2,encodeField(1,2,pubkeyB))
   );
 
-  // ModeInfo Single{mode: SIGN_MODE_LEGACY_AMINO_JSON=127}
-  const singleProto = concat(encodeVarint((1<<3)|0), encodeVarint(127));
-  const modeInfoP   = encodeField(1,2,singleProto);
+  // ModeInfo: SIGN_MODE_DIRECT = 1
+  const modeInfoP = encodeField(1,2,concat(encodeVarint((1<<3)|0), encodeVarint(1)));
 
   // SignerInfo
   const signerP = concat(
     encodeField(1,2,pubkeyAny),
     encodeField(2,2,modeInfoP),
-    encodeVarint((3<<3)|0), encodeVarint(sSeq)
+    encodeVarint((3<<3)|0), encodeVarint(sequence)
   );
 
-  // AuthInfo
+  // Fee
+  const feeCoinP  = concat(encodeField(1,2,enc.encode('uluna')), encodeField(2,2,enc.encode(String(totalFee))));
+  const feeP      = concat(encodeField(1,2,feeCoinP), encodeVarint((2<<3)|0), encodeVarint(200000));
   const authInfoP = concat(encodeField(1,2,signerP), encodeField(2,2,feeP));
 
-  // TxBody — use signed memo
-  const txBodyP = concat(encodeField(1,2,anyMsg), encodeField(2,2,enc.encode(sMemo)));
+  // Sign with signDirect
+  const { signed, signature } = await directSigner.signDirect(fromAddr, {
+    bodyBytes:     txBodyP,
+    authInfoBytes: authInfoP,
+    chainId:       CHAIN,
+    accountNumber: BigInt(accountNumber),
+  });
 
-  // Signature
-  const sigB = Uint8Array.from(atob(signature.signature), c=>c.charCodeAt(0));
-
-  // TxRaw
-  const txRawP   = concat(encodeField(1,2,txBodyP), encodeField(2,2,authInfoP), encodeField(3,2,sigB));
-  const txBase64 = btoa(String.fromCharCode(...txRawP));
+  // Use signed bytes (Keplr may have modified them)
+  const finalBody     = signed.bodyBytes     || txBodyP;
+  const finalAuthInfo = signed.authInfoBytes || authInfoP;
+  const sigB          = Uint8Array.from(atob(signature.signature), c=>c.charCodeAt(0));
+  const txRawP        = concat(encodeField(1,2,finalBody), encodeField(2,2,finalAuthInfo), encodeField(3,2,sigB));
+  const txBase64      = btoa(String.fromCharCode(...txRawP));
 
   const res  = await fetch(`${LCD}/cosmos/tx/v1beta1/txs`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ tx_bytes: txBase64, mode: 'BROADCAST_MODE_SYNC' }),
   });
-  const data = await res.json();
+  const data   = await res.json();
   const txHash = data?.tx_response?.txhash || data?.txhash;
   const code   = data?.tx_response?.code ?? data?.code ?? 0;
+  if (code !== 0) throw new Error('TX failed: ' + (data?.tx_response?.raw_log || JSON.stringify(data)));
 
-  // Poll for confirmation
-  for (let i = 0; i < 10; i++) {
-    await new Promise(r => setTimeout(r, 3000));
+  // Poll for confirmation — max 5 × 4s
+  for (let i = 0; i < 5; i++) {
+    await new Promise(r => setTimeout(r, 4000));
     try {
       const chk = await fetch(`${LCD}/cosmos/tx/v1beta1/txs/${txHash}`);
-      const chkData = await chk.json();
-      if (chkData?.tx_response?.txhash) {
-        if ((chkData.tx_response.code ?? 0) !== 0) throw new Error('TX failed: ' + chkData.tx_response.raw_log);
+      if (chk.ok) {
+        const chkData = await chk.json();
+        if (chkData?.tx_response?.txhash) {
+          if ((chkData.tx_response.code ?? 0) !== 0) throw new Error('TX failed on-chain: ' + chkData.tx_response.raw_log);
         return txHash;
       }
     } catch(e) { if (e.message?.includes('TX failed')) throw e; }
@@ -554,9 +538,9 @@ async function autoPayAndUnlock() {
   btn.textContent = '⏳ Opening Keplr...'; btn.disabled = true;
   try {
     await window.keplr.enable('columbus-5');
-    const accounts = await window.keplr.getOfflineSignerOnlyAmino('columbus-5').getAccounts();
+    const accounts = await window.keplr.getOfflineSigner('columbus-5').getAccounts();
     const sender = accounts[0].address;
-    const txHash = await sendLuncAmino(sender, ORACLE_WALLET, 200000000000, 'Terra Oracle Question Payment', 'columbus-5');
+    const txHash = await sendLuncDirect(sender, ORACLE_WALLET, 200000000000, 'Terra Oracle Question Payment', 'columbus-5');
     document.getElementById('verified-tx-hidden').value = txHash;
     showTxStatus('success', '✅ Payment confirmed! 200,000 LUNC sent. Form unlocked.');
     setTimeout(() => {
@@ -809,9 +793,9 @@ window.sendChatMessage = async function() {
   statusEl.style.display = 'none';
   try {
     await window.keplr.enable('columbus-5');
-    const accounts = await window.keplr.getOfflineSignerOnlyAmino('columbus-5').getAccounts();
+    const accounts = await window.keplr.getOfflineSigner('columbus-5').getAccounts();
     const sender = accounts[0].address;
-    const txHash = await sendLuncAmino(sender, ORACLE_WALLET, 5000000000, text.slice(0, 256), 'columbus-5');
+    const txHash = await sendLuncDirect(sender, ORACLE_WALLET, 5000000000, text.slice(0, 256), 'columbus-5');
     const result = { transactionHash: txHash };
     const short = sender.slice(0,8)+'...'+sender.slice(-4);
     const stored = JSON.parse(localStorage.getItem('dao_chat_pending') || '[]');
