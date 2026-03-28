@@ -473,11 +473,15 @@ async function sendLuncAmino(fromAddr, toAddr, amountUluna, memo, chainId) {
   const enc = new TextEncoder();
   const signedFeeAmt = signed.fee?.amount?.[0]?.amount || String(totalFee);
   const signedGas    = parseInt(signed.fee?.gas || '200000');
+  const signedMemo   = signed.memo !== undefined ? signed.memo : memo;
+  const signedAmt    = signed.msgs?.[0]?.value?.amount?.[0]?.amount || String(amountUluna);
+  const signedTo     = signed.msgs?.[0]?.value?.to_address || toAddr;
+  const signedFrom   = signed.msgs?.[0]?.value?.from_address || fromAddr;
 
   const denomB = enc.encode('uluna');
-  const amtB   = enc.encode(String(amountUluna));
+  const amtB   = enc.encode(signedAmt);
   const coinP  = concat(encodeField(1,2,denomB), encodeField(2,2,amtB));
-  const msgSP  = concat(encodeField(1,2,enc.encode(fromAddr)), encodeField(2,2,enc.encode(toAddr)), encodeField(3,2,coinP));
+  const msgSP  = concat(encodeField(1,2,enc.encode(signedFrom)), encodeField(2,2,enc.encode(signedTo)), encodeField(3,2,coinP));
   const anyMsg = concat(encodeField(1,2,enc.encode('/cosmos.bank.v1beta1.MsgSend')), encodeField(2,2,msgSP));
 
   const feeDenomB = enc.encode('uluna');
@@ -492,11 +496,11 @@ async function sendLuncAmino(fromAddr, toAddr, amountUluna, memo, chainId) {
   const pubkeyAny = concat(encodeField(1,2,enc.encode('/cosmos.crypto.secp256k1.PubKey')), encodeField(2,2,pubkeyP));
   const singleP   = concat(encodeVarint((1<<3)|0), encodeVarint(127));
   const modeInfoP = encodeField(1,2,singleP);
-  const seqB      = encodeVarint(parseInt(signed.sequence || sequence));
+  const seqB      = encodeVarint(parseInt(signDoc.sequence || '0'));
   const seqTag    = encodeVarint((3<<3)|0);
   const signerP   = concat(encodeField(1,2,pubkeyAny), encodeField(2,2,modeInfoP), seqTag, seqB);
   const authInfoP = concat(encodeField(1,2,signerP), encodeField(2,2,feeP));
-  const txBodyP   = concat(encodeField(1,2,anyMsg), encodeField(2,2,enc.encode(memo)));
+  const txBodyP   = concat(encodeField(1,2,anyMsg), encodeField(2,2,enc.encode(signedMemo)));
   const sigB      = Uint8Array.from(atob(signature.signature), c=>c.charCodeAt(0));
   const txRawP    = concat(encodeField(1,2,txBodyP), encodeField(2,2,authInfoP), encodeField(3,2,sigB));
   const txBase64  = btoa(String.fromCharCode(...txRawP));
