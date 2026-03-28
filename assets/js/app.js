@@ -448,7 +448,8 @@ async function sendLuncDirect(fromAddr, toAddr, amountUluna, memo, chainId) {
   const sequence      = parseInt(acct.sequence || '0');
 
   // Fee = gas + 0.5% tax
-  const gasFee   = Math.ceil(200000 * 28.325);
+  const gasLimit = 300000;
+  const gasFee   = Math.ceil(gasLimit * 28.325);
   const taxFee   = Math.ceil(amountUluna * 0.005);
   const totalFee = gasFee + taxFee;
 
@@ -485,7 +486,7 @@ async function sendLuncDirect(fromAddr, toAddr, amountUluna, memo, chainId) {
 
   // Fee
   const feeCoinP  = concat(encodeField(1,2,enc.encode('uluna')), encodeField(2,2,enc.encode(String(totalFee))));
-  const feeP      = concat(encodeField(1,2,feeCoinP), encodeVarint((2<<3)|0), encodeVarint(200000));
+  const feeP      = concat(encodeField(1,2,feeCoinP), encodeVarint((2<<3)|0), encodeVarint(gasLimit));
   const authInfoP = concat(encodeField(1,2,signerP), encodeField(2,2,feeP));
 
   // Sign with signDirect
