@@ -366,7 +366,10 @@ document.getElementById('ask-form').addEventListener('submit', async function(e)
   const alias = wallet ? ('Anonymous#' + Math.floor(1000 + Math.random() * 9000)) : 'Anonymous';
   const tagsRaw = document.getElementById('tags-hidden').value;
   const tags = tagsRaw ? tagsRaw.split(',').filter(Boolean) : [];
-  const newQ = { id: ref, alias, isAdmin: false, title: '🌱 Seeker', category, text, tags, time: 'just now', createdAt: Date.now(), votes: 0, answers: [], voted: false, open: false, formOpen: false, txHash, wallet };
+  // Use real title from profile.js if available
+  const _userTitle = (typeof getUserTitle === 'function' && wallet) ? getUserTitle(wallet) : null;
+  const _titleLabel = _userTitle ? _userTitle.name : '🌱 Seeker';
+  const newQ = { id: ref, alias, isAdmin: false, title: _titleLabel, category, text, tags, time: 'just now', createdAt: Date.now(), votes: 0, answers: [], voted: false, open: false, formOpen: false, txHash, wallet };
   questions.unshift(newQ);
   saveQuestions(questions);
   try { await fetch(this.action, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } }); } catch(e) {}
@@ -399,6 +402,16 @@ async function connectKeplr() {
     const offlineSigner = window.keplr.getOfflineSigner('columbus-5');
     const accounts = await offlineSigner.getAccounts();
     connectedAddress = accounts[0].address;
+    // Update Pay button with discounted price if user has a title
+    const _title = (typeof getUserTitle === 'function') ? getUserTitle(accounts[0].address) : null;
+    const _discPct  = _title ? (_title.discount || 0) : 0;
+    const _discAmt  = Math.round(200000 * (_discPct / 100));
+    const _price    = 200000 - _discAmt;
+    const _btnEl    = document.getElementById('verify-btn');
+    if (_btnEl) {
+      const _disc = _discPct > 0 ? ` (${_discPct}% off)` : '';
+      _btnEl.textContent = `Pay ${_price.toLocaleString()} LUNC & Unlock →${_disc}`;
+    }
     document.getElementById('connected-addr').textContent = connectedAddress.slice(0,10)+'...'+connectedAddress.slice(-4);
     document.getElementById('verified-wallet-hidden').value = connectedAddress;
     // Refresh My Bag if open
@@ -542,9 +555,42 @@ async function autoPayAndUnlock() {
     await window.keplr.enable('columbus-5');
     const accounts = await window.keplr.getOfflineSigner('columbus-5').getAccounts();
     const sender = accounts[0].address;
-    const txHash = await sendLuncDirect(sender, ORACLE_WALLET, 200000000000, 'Terra Oracle Question Payment', 'columbus-5');
-    document.getElementById('verified-tx-hidden').value = txHash;
-    showTxStatus('success', '✅ Payment confirmed! 200,000 LUNC sent. Form unlocked.');
+
+    // ── Apply title discount ───────────────────────────────────
+    // getUserTitle is defined in profile.js — falls back to base if not available
+    const userTitle    = (typeof getUserTitle === 'function') ? getUserTitle(sender) : null;
+    const discountPct  = userTitle ? (userTitle.discount || 0) : 0;
+
+    // Discount is % of total 200,000 LUNC, subtracted from Treasury portion
+    // Weekly Pool: always 100,000 LUNC (fixed)
+    // Treasury: 100,000 - (200,000 × discount%)
+    const toWeekly    = 100000 * 1e6;                                          // always fixed
+    const discountAmt = Math.round(200000 * (discountPct / 100));              // e.g. 5% → 10,000
+    const toTreasury  = Math.round((100000 - discountAmt) * 1e6);              // e.g. 90,000 LUNC
+    const totalLunc   = 100000 + (100000 - discountAmt);                       // e.g. 190,000
+
+    const discountLabel = discountPct > 0
+      ? ` (${discountPct}% off — saved ${discountAmt.toLocaleString()} LUNC)`
+      : '';
+
+    // Send to Weekly Draw Pool first
+    const txHash1 = await sendLuncDirect(
+      sender, LOTTERY_WALLET, toWeekly,
+      'Terra Oracle Q&A — Weekly Pool', 'columbus-5'
+    );
+
+    // Send to Treasury (discounted amount)
+    const txHash2 = await sendLuncDirect(
+      sender, ORACLE_WALLET, toTreasury,
+      'Terra Oracle Q&A — Treasury', 'columbus-5'
+    );
+
+    // Store primary tx hash (Weekly Pool tx) for question record
+    document.getElementById('verified-tx-hidden').value = txHash1;
+    document.getElementById('verified-wallet-hidden').value = sender;
+
+    const luncPaid = totalLunc.toLocaleString();
+    showTxStatus('success', `✅ Payment confirmed! ${luncPaid} LUNC sent${discountLabel}. Form unlocked.`);
     setTimeout(() => {
       document.getElementById('tx-section').style.display = 'none';
       document.getElementById('keplr-connected').style.display = 'none';
@@ -579,13 +625,16 @@ async function verifyTX() {
       const toAddr = val.to_address || val.toAddress;
       const coins = val.amount || [];
       const lunc = Array.isArray(coins) ? coins.find(c => c.denom === 'uluna') : (coins.denom === 'uluna' ? coins : null);
-      if ((toAddr === ORACLE_WALLET || toAddr === PROTOCOL_WALLET) && lunc) {
-        foundAmount = parseInt(lunc.amount);
-        if (foundAmount >= REQUIRED_LUNC) { valid = true; break; }
+      // Accept payment to Treasury OR Weekly Pool (split payment — either tx is valid proof)
+      const MIN_ACCEPTED = 150000 * 1e6; // 150,000 LUNC minimum (max discount = 25%)
+      if ((toAddr === ORACLE_WALLET || toAddr === LOTTERY_WALLET || toAddr === PROTOCOL_WALLET) && lunc) {
+        foundAmount += parseInt(lunc.amount);
       }
     }
   }
-  if (!valid) { showTxStatus('error', `❌ Invalid payment. Expected 200,000 LUNC. Found: ${(foundAmount/1000000).toLocaleString()} LUNC.`); return; }
+  const MIN_ACCEPTED = 100000 * 1e6; // at least the Weekly Pool portion
+  if (foundAmount < MIN_ACCEPTED) { showTxStatus('error', `❌ Invalid payment. Expected 100,000+ LUNC to Oracle wallets. Found: ${(foundAmount/1000000).toLocaleString()} LUNC.`); return; }
+  valid = true;
   document.getElementById('verified-tx-hidden').value = txHash;
   showTxStatus('success', '✅ Payment verified! 200,000 LUNC confirmed. Form unlocked.');
   setTimeout(() => {
