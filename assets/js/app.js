@@ -960,23 +960,28 @@ async function loadChatFromChain() {
     const res = await fetch(`https://terra-classic-lcd.publicnode.com/cosmos/tx/v1beta1/txs?events=transfer.recipient=%27${CHAT_HISTORY_WALLET}%27&pagination.limit=50&order_by=2`);
     if (res.ok) { txList = await res.json(); }
   } catch(e) {}
-  if (!txList || !txList.txs) {
+  // LCD v1beta1 returns tx_responses[], not txs[]
+  const txArray = txList.tx_responses || txList.txs || [];
+  if (!txList || !txArray) {
     if (!cachedMsgs.length) {
       container.innerHTML = `<div style="text-align:center;padding:40px 20px;"><div style="font-size:22px;margin-bottom:10px;">⚠️</div><div style="color:var(--muted);font-size:12px;">Could not reach blockchain nodes</div><button onclick="loadChatFromChain()" style="margin-top:14px;background:rgba(84,147,247,0.1);border:1px solid rgba(84,147,247,0.25);color:var(--accent);border-radius:8px;padding:7px 16px;font-family:'Exo 2',sans-serif;font-size:11px;cursor:pointer;">↻ Retry now</button></div>`;
     }
     return;
   }
-  if (txList.txs.length === 0) { if (!cachedMsgs.length) container.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:40px;">No messages yet — be the first!</div>'; return; }
+  if (txArray.length === 0) { if (!cachedMsgs.length) container.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:40px;">No messages yet — be the first!</div>'; return; }
   const msgs = [];
-  for (const tx of txList.txs) {
+  for (const tx of txArray) {
     try {
-      const memo = tx.tx?.value?.memo || tx.tx?.body?.memo || '';
+      // tx_responses format: tx.body.memo + tx.body.messages
+      // txs format: tx.tx.body.memo + tx.tx.body.messages (or amino: tx.tx.value.memo)
+      const txBody  = tx.body || tx.tx?.body || tx.tx?.value;
+      const memo    = txBody?.memo || '';
       if (!memo || memo.trim() === '') continue;
-      const txMsgs = tx.tx?.value?.msg || tx.tx?.body?.messages || [];
+      const txMsgs  = txBody?.messages || txBody?.msg || [];
       let sender = null, luncAmount = 0;
       for (const msg of txMsgs) {
         const type = msg.type || msg['@type'] || '';
-        const val = msg.value || msg;
+        const val  = msg.value || msg;
         if (type.includes('MsgSend')) {
           const to = val.to_address || '';
           if (to === CHAT_WALLET) {
@@ -992,7 +997,7 @@ async function loadChatFromChain() {
       const luncFormatted = (luncAmount / 1000000).toLocaleString(undefined, {maximumFractionDigits: 0});
       const ts = tx.timestamp ? new Date(tx.timestamp) : null;
       const timeStr = ts ? ts.toLocaleDateString([], {month:'short',day:'numeric'}) + ' ' + ts.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
-      msgs.push({ author: short, fullAddr: sender, text: memo.slice(0, 256), amount: luncFormatted, txHash: tx.txhash || '', time: timeStr, ts: ts ? ts.getTime() : 0 });
+      msgs.push({ author: short, fullAddr: sender, text: memo.slice(0, 256), amount: luncFormatted, txHash: tx.txhash || tx.hash || '', time: timeStr, ts: ts ? ts.getTime() : 0 });
     } catch(e) { continue; }
   }
   msgs.sort((a, b) => a.ts - b.ts);
