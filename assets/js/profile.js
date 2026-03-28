@@ -87,6 +87,7 @@ async function fetchChatStats(address) {
   const allNodes = [
     { base: 'https://fcd.terra-classic.hexxagon.io',       type: 'fcd' },
     { base: 'https://terra-classic-fcd.publicnode.com',    type: 'fcd' },
+    { base: 'https://fcd.terraclassic.community',          type: 'fcd' },
     { base: 'https://terra-classic-lcd.publicnode.com',    type: 'lcd' },
     { base: 'https://lcd.terraclassic.community',          type: 'lcd' },
   ];
@@ -97,7 +98,7 @@ async function fetchChatStats(address) {
       while (!done) {
         let url, txs;
         if (type === 'fcd') {
-          url = `${base}/v1/txs?account=${address}&limit=50&offset=${offset}&chainId=columbus-5`;
+          url = `${base}/v1/txs?account=${address}&limit=50&offset=${offset}`;
           const res = await fetch(url, { headers: { 'Accept': 'application/json' }, signal: AbortSignal.timeout(10000) });
           if (!res.ok) break;
           const data = await res.json();
