@@ -108,7 +108,7 @@ async function fetchChatStats(address) {
           const res = await fetch(url, { headers: { 'Accept': 'application/json' }, signal: AbortSignal.timeout(10000) });
           if (!res.ok) break;
           const data = await res.json();
-          txs = data.txs || [];
+          txs = data.tx_responses || data.txs || [];
         }
 
         if (!txs.length) break;
@@ -118,8 +118,10 @@ async function fetchChatStats(address) {
           if (ts < cutoff) { done = true; break; }
 
           // Parse both amino and proto formats
-          const memo  = tx.tx?.body?.memo || tx.tx?.value?.memo || '';
-          const msgs  = tx.tx?.body?.messages || tx.tx?.value?.msg || [];
+          // tx_responses: body.memo/messages; txs: tx.body or amino tx.value
+          const txBody = tx.body || tx.tx?.body || tx.tx?.value;
+          const memo   = txBody?.memo || '';
+          const msgs   = txBody?.messages || txBody?.msg || [];
 
           for (const msg of msgs) {
             const msgType  = msg['@type'] || msg.type || '';
