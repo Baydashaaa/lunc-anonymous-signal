@@ -937,8 +937,8 @@ canvas {
   .mobile-section-label { display: flex !important; }
   .mobile-tco-block { display: block !important; }
   .mobile-flow-block { display: block !important; }
-  .mobile-secondary-cards { display: grid !important; }
-  .sticky-bottom-bar { display: flex !important; }
+  .mobile-secondary-cards { display: flex !important; }
+  /* .sticky-bottom-bar отключён */
 }
 
 @media (max-width: 900px) {
@@ -962,8 +962,8 @@ canvas {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -58%);
-    width: 300px;
-    height: 300px;
+    width: 330px;
+    height: 330px;
     pointer-events: none;
     z-index: 0;
   }
@@ -1088,14 +1088,22 @@ canvas {
     margin-bottom: 10px;
   }
   .mobile-secondary-cards {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;
+    display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;
   }
-  .mobile-secondary-cards .zk-module .zk-module-inner { padding: 14px; }
-  .mobile-secondary-cards .zk-module .zk-module-tag { font-size: 7px; margin-bottom: 8px; }
-  .mobile-secondary-cards .zk-module div[style*="font-size:30px"] { font-size: 22px !important; margin-bottom: 6px !important; }
-  .mobile-secondary-cards .zk-module .zk-module-title { font-size: 13px !important; margin-bottom: 4px !important; }
-  .mobile-secondary-cards .zk-module .zk-module-desc { font-size: 11px !important; line-height: 1.55 !important; color: #7a9abf !important; }
-  .mobile-secondary-cards .zk-module .zk-module-cta { margin-top: 10px !important; font-size: 10px !important; }
+  .mobile-secondary-cards .zk-module { width: 100%; }
+  .mobile-card-row .zk-module-inner { padding: 14px 16px !important; }
+  .mobile-card-row-inner {
+    display: flex; align-items: center; gap: 14px;
+  }
+  .mobile-card-icon {
+    font-size: 28px; flex-shrink: 0; width: 40px; text-align: center;
+  }
+  .mobile-card-text { flex: 1; min-width: 0; }
+  .mobile-card-text .zk-module-tag { margin-bottom: 3px; }
+  .mobile-card-cta {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
+    flex-shrink: 0; opacity: 0.9;
+  }
 
   /* Tap press effect */
   .zk-module:active {
@@ -1191,36 +1199,7 @@ canvas {
   .mobile-flow-pill.green { background: rgba(0,255,176,0.05); border-color: rgba(0,255,176,0.12); color: rgba(0,255,176,0.9); }
   .mobile-flow-pill.blue { background: rgba(0,212,255,0.06); border-color: rgba(0,212,255,0.15); color: rgba(0,212,255,0.9); }
 
-  /* ── STICKY BOTTOM BAR ── */
-  .sticky-bottom-bar {
-    display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
-    background: rgba(8,12,22,0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border-top: 1px solid rgba(123,92,255,0.2);
-    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
-    gap: 8px;
-    box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
-  }
-  .sticky-bar-btn {
-    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 4px; padding: 9px 4px;
-    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 10px; cursor: pointer; transition: all 0.2s;
-    font-family: 'Exo 2',sans-serif; font-size: 9px; font-weight: 700;
-    letter-spacing: 0.08em; text-transform: uppercase; color: rgba(160,185,220,0.7);
-  }
-  .sticky-bar-btn .sbb-icon { font-size: 16px; line-height: 1; }
-  .sticky-bar-btn:active { background: rgba(123,92,255,0.12); border-color: rgba(123,92,255,0.4); color: #c8b8ff; transform: scale(0.95); }
-  .sticky-bar-btn.draw-btn {
-    background: linear-gradient(135deg,rgba(59,31,204,0.5),rgba(123,92,255,0.4));
-    border-color: rgba(123,92,255,0.5); color: #e8e0ff;
-    box-shadow: 0 0 16px rgba(123,92,255,0.25);
-    position: relative; overflow: hidden;
-  }
-  .sticky-bar-btn.draw-btn::before {
-    content: ''; position: absolute; top:0; left:-100%; width:60%; height:100%;
-    background: linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);
-    transform: skewX(-20deg); animation: btnSweep 3s ease 1s infinite;
-  }
+  /* sticky bottom bar — отключён */
 
   /* ── MENU STAGGER ANIMATIONS ── */
   .nav-mobile-drawer.open .nav-tab,
