@@ -82,6 +82,12 @@ async function loadQuestionsFromWorker() {
       for (const a of q.answers) {
         if (votedA[a.id]) a.voted = true;
       }
+      // Restore poll vote
+      if (q.poll && q.pollVoters && globalWalletAddress && q.pollVoters.includes(globalWalletAddress)) {
+        const votedPollKey = 'poll_vote_' + q.id;
+        const savedOpt = localStorage.getItem(votedPollKey);
+        q.myPollVote = savedOpt !== null ? parseInt(savedOpt) : null;
+      }
     }
     _questionsLoaded = true;
     renderBoard();
@@ -230,6 +236,49 @@ function setBoardSort(s) {
 }
 
 // ─── RENDER BOARD ────────────────────────────────────────────
+function renderPoll(q, qi) {
+  const poll = q.poll;
+  const totalVotes = poll.reduce((s, o) => s + (o.votes || 0), 0);
+  const myVote = q.myPollVote || null; // index of voted option
+  return `<div class="poll-section" style="margin:10px 0;border:1px solid rgba(84,147,247,0.2);border-radius:10px;padding:12px;background:rgba(84,147,247,0.04);">
+    <div style="font-size:10px;color:var(--accent);letter-spacing:0.08em;margin-bottom:8px;">📊 COMMUNITY POLL</div>
+    ${poll.map((opt, oi) => {
+      const pct = totalVotes > 0 ? Math.round((opt.votes || 0) / totalVotes * 100) : 0;
+      const voted = myVote === oi;
+      return \`<div style="margin-bottom:6px;">
+        <button onclick="votePoll(\${qi},\${oi})" style="width:100%;text-align:left;padding:8px 12px;border-radius:8px;border:1px solid \${voted ? 'rgba(84,147,247,0.6)' : 'rgba(255,255,255,0.08)'};background:\${voted ? 'rgba(84,147,247,0.12)' : 'rgba(255,255,255,0.03)'};cursor:pointer;position:relative;overflow:hidden;">
+          <div style="position:absolute;left:0;top:0;height:100%;width:\${pct}%;background:rgba(84,147,247,0.08);border-radius:8px;transition:width 0.4s;"></div>
+          <div style="position:relative;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:12px;color:\${voted ? 'var(--accent)' : 'var(--text)'};">\${opt.text}</span>
+            <span style="font-size:11px;color:var(--muted);">\${pct}% · \${opt.votes || 0}</span>
+          </div>
+        </button>
+      </div>\`;
+    }).join('')}
+    <div style="font-size:10px;color:var(--muted);margin-top:4px;">\${totalVotes} vote\${totalVotes !== 1 ? 's' : ''} total</div>
+  </div>`;
+}
+
+async function votePoll(qi, optionIdx) {
+  if (!globalWalletAddress) { alert('Connect wallet to vote'); return; }
+  const q = questions[qi];
+  if (!q.poll) return;
+  if (q.myPollVote !== undefined && q.myPollVote !== null) return; // already voted
+
+  q.myPollVote = optionIdx;
+  q.poll[optionIdx].votes = (q.poll[optionIdx].votes || 0) + 1;
+  localStorage.setItem('poll_vote_' + q.id, String(optionIdx));
+  renderBoard();
+
+  try {
+    await fetch(`${WORKER_URL}/poll-vote`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questionId: q.id, optionIdx, wallet: globalWalletAddress }),
+    });
+  } catch(e) { console.warn('Poll vote sync failed:', e.message); }
+}
+
 function renderBoard() {
   const list = document.getElementById('questions-list');
   const count = document.getElementById('board-count');
@@ -274,6 +323,7 @@ function renderBoard() {
       </div>
       ${q.tags && q.tags.length ? `<div class="q-tags">${q.tags.map(t => `<span class="q-tag ${boardSearch === '#'+t || boardSearch === t ? 'active-tag' : ''}" onclick="setBoardSearch('#${t}')">#${t}</span>`).join('')}</div>` : ''}
       <div class="q-text">${boardSearch ? q.text.replace(new RegExp('(' + boardSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi'), '<mark style="background:rgba(84,147,247,0.25);color:var(--accent);border-radius:2px;padding:0 2px;">$1</mark>') : q.text}</div>
+      ${q.poll && q.poll.length >= 2 ? renderPoll(q, realQi) : ''}
       <div class="q-footer">
         <div class="q-votes">
           <button class="vote-btn ${q.voted ? 'voted' : ''}" onclick="voteQuestion(${realQi})">👍 ${q.votes}</button>
@@ -422,12 +472,17 @@ document.getElementById('ask-form').addEventListener('submit', async function(e)
   const tags = tagsRaw ? tagsRaw.split(',').filter(Boolean) : [];
   const _userTitle = (typeof getUserTitle === 'function' && wallet) ? getUserTitle(wallet) : null;
   const _titleLabel = _userTitle ? _userTitle.name : 'Seeker';
+  // Poll options
+  const _pollRaw = document.getElementById('poll-options-hidden')?.value || '';
+  let pollOptions = [];
+  try { pollOptions = JSON.parse(_pollRaw).filter(o => o.trim()); } catch {}
+  const poll = pollOptions.length >= 2 ? pollOptions.map(o => ({ text: o, votes: 0, voters: [] })) : null;
 
   try {
     const res = await fetch(`${WORKER_URL}/questions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: ref, category, text, wallet, txHash, tags, paymentAmount: 200000 }),
+      body: JSON.stringify({ id: ref, category, text, wallet, txHash, tags, paymentAmount: 200000, poll }),
     });
     if (!res.ok) {
       const err = await res.json();
@@ -436,13 +491,14 @@ document.getElementById('ask-form').addEventListener('submit', async function(e)
     // Add optimistically to local cache
     const newQ = { id: ref, alias: 'Anonymous#' + wallet.slice(-4).toUpperCase(), title: _titleLabel,
       category, text, tags, wallet, txHash, createdAt: Date.now() / 1000,
-      votes: 0, answers: [], voted: false, open: false, formOpen: false };
+      poll, votes: 0, answers: [], voted: false, open: false, formOpen: false };
     questions.unshift(newQ);
     renderBoard();
     document.getElementById('ask-form-section').style.display = 'none';
     const success = document.getElementById('ask-success');
     success.classList.add('visible');
     document.getElementById('ask-ref').textContent = 'REF: ' + ref;
+    if (typeof resetPollOptions === 'function') resetPollOptions();
   } catch(e) {
     alert('Failed to submit question: ' + e.message);
   }
