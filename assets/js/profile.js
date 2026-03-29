@@ -287,6 +287,8 @@ async function fetchQuestionStats(address) {
     const myQuestions = allQuestions.filter(q => q.wallet === address);
     let totalUpvotes = 0;
     const myAnswers = [];
+
+    // Count upvotes received on answers
     for (const q of allQuestions) {
       for (const a of q.answers || []) {
         if (a.wallet === address) {
@@ -295,6 +297,12 @@ async function fetchQuestionStats(address) {
         }
       }
     }
+
+    // Count upvotes received on own questions
+    for (const q of myQuestions) {
+      totalUpvotes += q.votes || 0;
+    }
+
     const topAnswers = myAnswers.filter(a => a.votes >= 3).length;
     return { myQuestions, myAnswers, totalUpvotes, topAnswers, allQuestions };
   } catch(e) {
