@@ -239,25 +239,32 @@ function setBoardSort(s) {
 function renderPoll(q, qi) {
   const poll = q.poll;
   const totalVotes = poll.reduce((s, o) => s + (o.votes || 0), 0);
-  const myVote = q.myPollVote || null; // index of voted option
-  return `<div class="poll-section" style="margin:10px 0;border:1px solid rgba(84,147,247,0.2);border-radius:10px;padding:12px;background:rgba(84,147,247,0.04);">
-    <div style="font-size:10px;color:var(--accent);letter-spacing:0.08em;margin-bottom:8px;">📊 COMMUNITY POLL</div>
-    ${poll.map((opt, oi) => {
-      const pct = totalVotes > 0 ? Math.round((opt.votes || 0) / totalVotes * 100) : 0;
-      const voted = myVote === oi;
-      return \`<div style="margin-bottom:6px;">
-        <button onclick="votePoll(\${qi},\${oi})" style="width:100%;text-align:left;padding:8px 12px;border-radius:8px;border:1px solid \${voted ? 'rgba(84,147,247,0.6)' : 'rgba(255,255,255,0.08)'};background:\${voted ? 'rgba(84,147,247,0.12)' : 'rgba(255,255,255,0.03)'};cursor:pointer;position:relative;overflow:hidden;">
-          <div style="position:absolute;left:0;top:0;height:100%;width:\${pct}%;background:rgba(84,147,247,0.08);border-radius:8px;transition:width 0.4s;"></div>
-          <div style="position:relative;display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:12px;color:\${voted ? 'var(--accent)' : 'var(--text)'};">\${opt.text}</span>
-            <span style="font-size:11px;color:var(--muted);">\${pct}% · \${opt.votes || 0}</span>
-          </div>
-        </button>
-      </div>\`;
-    }).join('')}
-    <div style="font-size:10px;color:var(--muted);margin-top:4px;">\${totalVotes} vote\${totalVotes !== 1 ? 's' : ''} total</div>
-  </div>`;
+  const myVote = q.myPollVote !== undefined ? q.myPollVote : null;
+
+  let optionsHtml = '';
+  for (let oi = 0; oi < poll.length; oi++) {
+    const opt = poll[oi];
+    const pct = totalVotes > 0 ? Math.round((opt.votes || 0) / totalVotes * 100) : 0;
+    const voted = myVote === oi;
+    const border = voted ? 'rgba(84,147,247,0.6)' : 'rgba(255,255,255,0.08)';
+    const bg = voted ? 'rgba(84,147,247,0.12)' : 'rgba(255,255,255,0.03)';
+    const textColor = voted ? 'var(--accent)' : 'var(--text)';
+    optionsHtml += '<div style="margin-bottom:6px;">' +
+      '<button onclick="votePoll(' + qi + ',' + oi + ')" style="width:100%;text-align:left;padding:8px 12px;border-radius:8px;border:1px solid ' + border + ';background:' + bg + ';cursor:pointer;position:relative;overflow:hidden;">' +
+      '<div style="position:absolute;left:0;top:0;height:100%;width:' + pct + '%;background:rgba(84,147,247,0.08);border-radius:8px;transition:width 0.4s;"></div>' +
+      '<div style="position:relative;display:flex;justify-content:space-between;align-items:center;">' +
+      '<span style="font-size:12px;color:' + textColor + ';">' + opt.text + '</span>' +
+      '<span style="font-size:11px;color:var(--muted);">' + pct + '% · ' + (opt.votes || 0) + '</span>' +
+      '</div></button></div>';
+  }
+
+  return '<div class="poll-section" style="margin:10px 0;border:1px solid rgba(84,147,247,0.2);border-radius:10px;padding:12px;background:rgba(84,147,247,0.04);">' +
+    '<div style="font-size:10px;color:var(--accent);letter-spacing:0.08em;margin-bottom:8px;">COMMUNITY POLL</div>' +
+    optionsHtml +
+    '<div style="font-size:10px;color:var(--muted);margin-top:4px;">' + totalVotes + ' vote' + (totalVotes !== 1 ? 's' : '') + ' total</div>' +
+    '</div>';
 }
+
 
 async function votePoll(qi, optionIdx) {
   if (!globalWalletAddress) { alert('Connect wallet to vote'); return; }
