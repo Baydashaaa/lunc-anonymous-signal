@@ -221,8 +221,14 @@ function getTopAnswerCount(walletAddress) {
 
 function getUserTitle(walletAddress) {
   if (!walletAddress) return null;
-  const qCount = questions.filter(q => q.wallet === walletAddress || q.fullAddr === walletAddress).length;
+  // Uses local questions array — for real stats use getUserTitleFromStats
+  const qCount = (typeof questions !== 'undefined' ? questions : [])
+    .filter(q => q.wallet === walletAddress || q.fullAddr === walletAddress).length;
   const upvotes = getTotalUpvotesReceived(walletAddress);
+  return getUserTitleFromStats(qCount, upvotes);
+}
+
+function getUserTitleFromStats(qCount, upvotes) {
   let current = null;
   for (const t of TITLES) {
     if (qCount >= t.questionsNeeded && upvotes >= t.upvotesNeeded) current = t;
@@ -270,6 +276,35 @@ function openProfile() {
   smoothScrollTop();
 }
 
+const WORKER_URL = 'https://terra-oracle-questions.vladislav-baydan.workers.dev';
+
+// ── Fetch question stats from worker ─────────────────────────
+async function fetchQuestionStats(address) {
+  try {
+    const res = await fetch(`${WORKER_URL}/questions`);
+    if (!res.ok) throw new Error('Worker error');
+    const data = await res.json();
+    const allQuestions = data.questions || [];
+
+    const myQuestions = allQuestions.filter(q => q.wallet === address);
+    let totalUpvotes = 0;
+    const myAnswers = [];
+    for (const q of allQuestions) {
+      for (const a of q.answers || []) {
+        if (a.wallet === address) {
+          myAnswers.push({ ...a, questionId: q.id, questionText: q.text });
+          totalUpvotes += a.votes || 0;
+        }
+      }
+    }
+    const topAnswers = myAnswers.filter(a => a.votes >= 3).length;
+    return { myQuestions, myAnswers, totalUpvotes, topAnswers, allQuestions };
+  } catch(e) {
+    console.warn('fetchQuestionStats failed:', e.message);
+    return { myQuestions: [], myAnswers: [], totalUpvotes: 0, topAnswers: 0, allQuestions: [] };
+  }
+}
+
 function renderProfilePage() {
   const address = globalWalletAddress;
   if (!address) return;
@@ -308,36 +343,41 @@ function renderProfilePage() {
   // Nickname input
   document.getElementById('profile-nickname-input').value = profile.nickname || '';
 
-  // Stats
-  const myQuestions = questions.filter(q => q.wallet === address || q.fullAddr === address);
-  const myAnswers = [];
-  let totalUpvotes = 0;
-  for (const q of questions) {
-    for (const a of q.answers) {
-      if (a.fullAddr === address || a.walletAddr === address) {
-        myAnswers.push({ ...a, questionId: q.id, questionText: q.text });
-        totalUpvotes += a.votes || 0;
-      }
-    }
-  }
-
-  document.getElementById('stat-questions').textContent = myQuestions.length;
-  document.getElementById('stat-answers').textContent = myAnswers.length;
-  document.getElementById('stat-upvotes').textContent = totalUpvotes;
-  document.getElementById('stat-top-answers').textContent = topCount;
+  // Stats — show loading state
+  document.getElementById('stat-questions').textContent = '…';
+  document.getElementById('stat-answers').textContent = '…';
+  document.getElementById('stat-upvotes').textContent = '…';
+  document.getElementById('stat-top-answers').textContent = '…';
   document.getElementById('stat-messages').textContent = '…';
 
-  // Message milestone progress — async on-chain fetch
-  fetchChatStats(address).then(stats => {
-    document.getElementById('stat-messages').textContent = stats.msgCount;
-    renderMessageProgress(stats);
+  // Load question stats from worker + chat stats from chain in parallel
+  Promise.all([
+    fetchQuestionStats(address),
+    fetchChatStats(address),
+  ]).then(([qStats, chatStats]) => {
+    const { myQuestions, myAnswers, totalUpvotes, topAnswers, allQuestions } = qStats;
+
+    document.getElementById('stat-questions').textContent = myQuestions.length;
+    document.getElementById('stat-answers').textContent = myAnswers.length;
+    document.getElementById('stat-upvotes').textContent = totalUpvotes;
+    document.getElementById('stat-top-answers').textContent = topAnswers;
+    document.getElementById('stat-messages').textContent = chatStats.msgCount;
+
+    // Update title badge with real title
+    const _qTitle = getUserTitleFromStats(myQuestions.length, totalUpvotes);
+    const titleEl = document.getElementById('profile-title-badge');
+    if (_qTitle) {
+      titleEl.innerHTML = `${_qTitle.name} <span style="font-size:10px;opacity:0.7;margin-left:6px;">${_qTitle.discountLabel}</span>`;
+      titleEl.style.color = _qTitle.color;
+    } else {
+      titleEl.textContent = 'No title yet — ask your first question!';
+      titleEl.style.color = 'var(--muted)';
+    }
+
+    renderMessageProgress(chatStats);
+    renderTitleProgress(myQuestions.length, totalUpvotes);
+    renderHistoryTab(currentHistoryTab || 'answers', myAnswers, myQuestions);
   });
-
-  // Title progress — now based on questions + upvotes
-  renderTitleProgress(myQuestions.length, totalUpvotes);
-
-  // History
-  renderHistoryTab('answers', myAnswers, myQuestions);
 }
 
 // ─── MESSAGE MILESTONE PROGRESS (on-chain stats) ─────────────
@@ -424,16 +464,9 @@ function switchHistoryTab(tab) {
   if (msgTabEl) msgTabEl.classList.toggle('active', tab === 'messages');
 
   const address = globalWalletAddress;
-  const myQuestions = questions.filter(q => q.wallet === address || q.fullAddr === address);
-  const myAnswers = [];
-  for (const q of questions) {
-    for (const a of q.answers) {
-      if (a.fullAddr === address || a.walletAddr === address) {
-        myAnswers.push({ ...a, questionId: q.id, questionText: q.text });
-      }
-    }
-  }
-  renderHistoryTab(tab, myAnswers, myQuestions);
+  fetchQuestionStats(address).then(({ myQuestions, myAnswers }) => {
+    renderHistoryTab(tab, myAnswers, myQuestions);
+  });
 }
 
 function renderHistoryTab(tab, myAnswers, myQuestions) {
