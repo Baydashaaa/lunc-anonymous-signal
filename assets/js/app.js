@@ -58,28 +58,48 @@ const DEMO_QUESTIONS = [
 ];
 
 // ─── QUESTIONS STORAGE ───────────────────────────────────────
-function loadQuestions() {
+const WORKER_URL = 'https://terra-oracle-questions.vladislav-baydan.workers.dev';
+
+// ── Worker-based questions storage ───────────────────────────
+// questions[] is the in-memory cache, synced from worker on load
+let questions = [];
+let _questionsLoaded = false;
+
+async function loadQuestionsFromWorker() {
   try {
-    const stored = JSON.parse(localStorage.getItem('oracle_questions') || 'null');
-    if (Array.isArray(stored) && stored.length > 0 && stored[0].id && stored[0].text) {
-      return stored.map(q => ({
-        answers: [], votes: 0, voted: false, open: false, formOpen: false,
-        tags: [], createdAt: Date.now(), ...q
-      }));
+    const res = await fetch(`${WORKER_URL}/questions`);
+    if (!res.ok) throw new Error('Worker error');
+    const data = await res.json();
+    questions = (data.questions || []).map(q => ({
+      answers: [], votes: 0, voted: false, open: false, formOpen: false,
+      tags: [], ...q,
+    }));
+    // Restore local voted state
+    const votedQ  = JSON.parse(localStorage.getItem('voted_questions') || '{}');
+    const votedA  = JSON.parse(localStorage.getItem('voted_answers') || '{}');
+    for (const q of questions) {
+      if (votedQ[q.id]) q.voted = true;
+      for (const a of q.answers) {
+        if (votedA[a.id]) a.voted = true;
+      }
     }
-  } catch(e) {}
-  const demo = [...DEMO_QUESTIONS];
-  saveQuestions(demo);
-  return demo;
+    _questionsLoaded = true;
+    renderBoard();
+  } catch(e) {
+    console.warn('Failed to load questions from worker:', e.message);
+    questions = [];
+    _questionsLoaded = true;
+    renderBoard();
+  }
 }
 
-function saveQuestions(qs) {
-  localStorage.setItem('oracle_questions', JSON.stringify(qs));
-}
-
-let questions = loadQuestions();
+// saveQuestions — no-op, worker handles persistence
+function saveQuestions(qs) { questions = qs; }
 let boardFilter = 'all';
 let boardSort = 'new';
+
+// Load questions from worker on startup
+loadQuestionsFromWorker();
 let boardSearch = '';
 
 // ─── WALLET SESSION RESTORE ───────────────────────────────────
@@ -116,7 +136,7 @@ function showPage(name, e) {
   const pg = document.getElementById('page-' + name);
   if (pg) pg.classList.add('active');
   if (e && e.target) e.target.classList.add('active');
-  if (name === 'board') renderBoard();
+  if (name === 'board') { if (!_questionsLoaded) loadQuestionsFromWorker(); else renderBoard(); }
   if (name === 'vote') { applyStoredVotes(); applyVoteStates(); renderVotes(); }
   if (name === 'chat') renderChatPage();
   if (name === 'bag')  renderOracleBag();
@@ -316,29 +336,64 @@ function checkAdminKey(qi) {
 function toggleAnswers(qi) { questions[qi].open = !questions[qi].open; renderBoard(); }
 function toggleAnswerForm(qi) { questions[qi].formOpen = !questions[qi].formOpen; questions[qi].open = true; renderBoard(); }
 
-function submitAnswer(qi) {
+async function submitAnswer(qi) {
   const text = document.getElementById('atext-' + qi).value.trim();
-  const key = document.getElementById('akey-' + qi).value;
+  const key  = document.getElementById('akey-' + qi)?.value || '';
   if (!text) { alert('Please write your answer first.'); return; }
   const isAdmin = key === ADMIN_KEY;
-  const alias = isAdmin ? 'Admin' : 'Anonymous#' + Math.floor(1000 + Math.random() * 9000);
-  questions[qi].answers.push({ alias, isAdmin, title: null, text, votes: 0, voted: false });
-  questions[qi].formOpen = false;
-  questions[qi].open = true;
-  saveQuestions(questions);
-  renderBoard();
+  if (!isAdmin && !globalWalletAddress) { alert('Connect wallet to answer'); return; }
+  const wallet = isAdmin ? 'admin' : globalWalletAddress;
+  const q = questions[qi];
+  try {
+    const res = await fetch(`${WORKER_URL}/answer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questionId: q.id, text, wallet }),
+    });
+    if (!res.ok) throw new Error('Failed to post answer');
+    const data = await res.json();
+    questions[qi].answers.push({
+      id: data.answerId,
+      alias: isAdmin ? 'Admin' : 'Anonymous#' + wallet.slice(-4).toUpperCase(),
+      isAdmin, wallet, text, votes: 0, voted: false,
+    });
+    questions[qi].formOpen = false;
+    questions[qi].open = true;
+    renderBoard();
+  } catch(e) {
+    alert('Failed to post answer: ' + e.message);
+  }
 }
 
-function voteQuestion(qi) {
+async function voteQuestion(qi) {
   if (questions[qi].voted) return;
+  if (!globalWalletAddress) { alert('Connect wallet to vote'); return; }
   questions[qi].votes++; questions[qi].voted = true;
-  saveQuestions(questions); renderBoard();
+  const votedQ = JSON.parse(localStorage.getItem('voted_questions') || '{}');
+  votedQ[questions[qi].id] = true;
+  localStorage.setItem('voted_questions', JSON.stringify(votedQ));
+  renderBoard();
+  // Note: question votes are local only (no wallet verification needed)
 }
 
-function voteAnswer(qi, ai) {
-  if (questions[qi].answers[ai].voted) return;
-  questions[qi].answers[ai].votes++; questions[qi].answers[ai].voted = true;
-  saveQuestions(questions); renderBoard();
+async function voteAnswer(qi, ai) {
+  const answer = questions[qi].answers[ai];
+  if (answer.voted) return;
+  if (!globalWalletAddress) { alert('Connect wallet to vote'); return; }
+  // Optimistic update
+  answer.votes++; answer.voted = true;
+  const votedA = JSON.parse(localStorage.getItem('voted_answers') || '{}');
+  votedA[answer.id] = true;
+  localStorage.setItem('voted_answers', JSON.stringify(votedA));
+  renderBoard();
+  // Persist to worker
+  try {
+    await fetch(`${WORKER_URL}/vote`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questionId: questions[qi].id, answerId: answer.id, wallet: globalWalletAddress }),
+    });
+  } catch(e) { console.warn('Vote sync failed:', e.message); }
 }
 
 // ─── ASK FORM ────────────────────────────────────────────────
@@ -358,25 +413,39 @@ document.getElementById('ask-form').addEventListener('submit', async function(e)
   btn.disabled = true;
   btn.innerHTML = 'Transmitting<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>';
   const formData = new FormData(this);
-  const category = formData.get('category') || '📝 Other';
+  const category = formData.get('category') || 'Other';
   const text = formData.get('message') || '';
   const txHash = document.getElementById('verified-tx-hidden').value;
   const wallet = document.getElementById('verified-wallet-hidden').value;
   const ref = 'LUNC-' + Date.now().toString(36).toUpperCase().slice(-7);
-  const alias = wallet ? ('Anonymous#' + Math.floor(1000 + Math.random() * 9000)) : 'Anonymous';
   const tagsRaw = document.getElementById('tags-hidden').value;
   const tags = tagsRaw ? tagsRaw.split(',').filter(Boolean) : [];
-  // Use real title from profile.js if available
   const _userTitle = (typeof getUserTitle === 'function' && wallet) ? getUserTitle(wallet) : null;
-  const _titleLabel = _userTitle ? _userTitle.name : '🌱 Seeker';
-  const newQ = { id: ref, alias, isAdmin: false, title: _titleLabel, category, text, tags, time: 'just now', createdAt: Date.now(), votes: 0, answers: [], voted: false, open: false, formOpen: false, txHash, wallet };
-  questions.unshift(newQ);
-  saveQuestions(questions);
-  try { await fetch(this.action, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } }); } catch(e) {}
-  document.getElementById('ask-form-section').style.display = 'none';
-  const success = document.getElementById('ask-success');
-  success.classList.add('visible');
-  document.getElementById('ask-ref').textContent = 'REF: ' + ref;
+  const _titleLabel = _userTitle ? _userTitle.name : 'Seeker';
+
+  try {
+    const res = await fetch(`${WORKER_URL}/questions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: ref, category, text, wallet, txHash, tags, paymentAmount: 200000 }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to submit');
+    }
+    // Add optimistically to local cache
+    const newQ = { id: ref, alias: 'Anonymous#' + wallet.slice(-4).toUpperCase(), title: _titleLabel,
+      category, text, tags, wallet, txHash, createdAt: Date.now() / 1000,
+      votes: 0, answers: [], voted: false, open: false, formOpen: false };
+    questions.unshift(newQ);
+    renderBoard();
+    document.getElementById('ask-form-section').style.display = 'none';
+    const success = document.getElementById('ask-success');
+    success.classList.add('visible');
+    document.getElementById('ask-ref').textContent = 'REF: ' + ref;
+  } catch(e) {
+    alert('Failed to submit question: ' + e.message);
+  }
   btn.disabled = false;
   btn.innerHTML = 'Transmit Question →';
 });
