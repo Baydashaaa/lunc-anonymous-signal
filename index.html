@@ -205,7 +205,24 @@
 
   <!-- Charts -->
   <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
-<style>body{min-height:100vh;display:flex;flex-direction:column;}footer,.site-footer{margin-top:auto;flex-shrink:0;}nav{flex-shrink:0;}.page{width:100%;}</style></head>
+<style>body{min-height:100vh;display:flex;flex-direction:column;}footer,.site-footer{margin-top:auto;flex-shrink:0;}nav{flex-shrink:0;}.page{width:100%;}</style>
+<style>
+@media (max-width: 768px), (hover: none) {
+  /* Disable heavy GPU effects on mobile */
+  .orb-1, .orb-2 { display: none !important; }
+  #bg-canvas { display: none !important; }
+  #cursor-energy { display: none !important; }
+  #nav-scanner-light { display: none !important; }
+  /* Disable blur filters that cause white flicker */
+  * { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  /* Disable heavy animations */
+  .orb-1, .orb-2, #nav-scanner-light { animation: none !important; }
+  /* Simple solid nav background instead of blur */
+  nav { background: rgba(3,7,15,0.98) !important; }
+  footer { background: rgba(4,10,20,0.98) !important; }
+}
+</style>
+</head>
 <body style="min-height:100vh;display:flex;flex-direction:column;">
 
 <canvas id="bg-canvas" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;pointer-events:none;"></canvas>
