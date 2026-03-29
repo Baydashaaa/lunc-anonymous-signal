@@ -1,42 +1,5 @@
 {
   "_schema": "1.0",
-  "_updated": "2026-03-23T20:50:19.545Z",
-  "questions": [
-    {
-      "id": "LUNC-EXAMPLE1",
-      "category": "🏛️ Governance",
-      "text": "Example: What validators plan to vote Yes on Prop #12345?",
-      "alias": "Anonymous#4821",
-      "walletHash": "sha256:3a7bd3e2...",
-      "txHash": "A1B2C3D4E5F6...",
-      "paymentAmount": 200000,
-      "createdAt": 1741737600,
-      "expiresAt": 1742342400,
-      "chosenAnswerId": null,
-      "status": "payout_failed_no_wallet",
-      "rewardPaidTx": null,
-      "rewardAmount": 100000,
-      "votes": 5,
-      "answers": [
-        {
-          "id": "ANS-001",
-          "walletHash": "sha256:9f2e1a4b...",
-          "alias": "Anonymous#7731",
-          "text": "Based on voting patterns, validators X, Y, Z historically support...",
-          "createdAt": 1741780000,
-          "votes": 12,
-          "rewardPaidTx": null
-        },
-        {
-          "id": "ANS-002",
-          "walletHash": "sha256:2c8f5d1a...",
-          "alias": "Anonymous#3309",
-          "text": "I'm a validator and planning to vote No because...",
-          "createdAt": 1741795000,
-          "votes": 3,
-          "rewardPaidTx": null
-        }
-      ]
-    }
-  ]
+  "_updated": "2026-03-29T00:00:00.000Z",
+  "questions": []
 }
