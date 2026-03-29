@@ -77,13 +77,16 @@ async function loadQuestionsFromWorker() {
       time: q.time || (q.createdAt ? new Date(q.createdAt * 1000).toLocaleDateString('en-US', {month:'short',day:'numeric'}) : 'unknown'),
       ...q,
     }));
-    // Restore local voted state
+    // Restore voted state — from worker data (wallet-based) + localStorage fallback
     const votedQ  = JSON.parse(localStorage.getItem('voted_questions') || '{}');
     const votedA  = JSON.parse(localStorage.getItem('voted_answers') || '{}');
     for (const q of questions) {
+      // Check if wallet already voted this question (on-chain in voters array)
       if (votedQ[q.id]) q.voted = true;
+      if (globalWalletAddress && q.voters && q.voters.includes(globalWalletAddress)) q.voted = true;
       for (const a of q.answers) {
         if (votedA[a.id]) a.voted = true;
+        if (globalWalletAddress && a.voters && a.voters.includes(globalWalletAddress)) a.voted = true;
       }
       // Restore poll vote
       if (q.poll && q.pollVoters && globalWalletAddress && q.pollVoters.includes(globalWalletAddress)) {
@@ -427,14 +430,37 @@ async function submitAnswer(qi) {
 }
 
 async function voteQuestion(qi) {
-  if (questions[qi].voted) return;
+  const q = questions[qi];
+  if (q.voted) return;
   if (!globalWalletAddress) { alert('Connect wallet to vote'); return; }
-  questions[qi].votes++; questions[qi].voted = true;
+
+  // Optimistic update
+  q.votes++; q.voted = true;
   const votedQ = JSON.parse(localStorage.getItem('voted_questions') || '{}');
-  votedQ[questions[qi].id] = true;
+  votedQ[q.id] = true;
   localStorage.setItem('voted_questions', JSON.stringify(votedQ));
   renderBoard();
-  // Note: question votes are local only (no wallet verification needed)
+
+  // Sync to worker
+  try {
+    const res = await fetch(`${WORKER_URL}/question-vote`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questionId: q.id, wallet: globalWalletAddress }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      if (err.error === 'Already voted') return; // already counted
+      if (err.error === 'Cannot vote your own question') {
+        // Revert
+        q.votes--; q.voted = false;
+        delete votedQ[q.id];
+        localStorage.setItem('voted_questions', JSON.stringify(votedQ));
+        renderBoard();
+        alert('You cannot vote your own question');
+      }
+    }
+  } catch(e) { console.warn('Vote sync failed:', e.message); }
 }
 
 async function voteAnswer(qi, ai) {
