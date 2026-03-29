@@ -534,15 +534,34 @@ async function connectKeplr() {
     const offlineSigner = window.keplr.getOfflineSigner('columbus-5');
     const accounts = await offlineSigner.getAccounts();
     connectedAddress = accounts[0].address;
-    // Update Pay button with discounted price if user has a title
-    const _title = (typeof getUserTitle === 'function') ? getUserTitle(accounts[0].address) : null;
-    const _discPct  = _title ? (_title.discount || 0) : 0;
-    const _discAmt  = Math.round(200000 * (_discPct / 100));
-    const _price    = 200000 - _discAmt;
-    const _btnEl    = document.getElementById('verify-btn');
-    if (_btnEl) {
-      const _disc = _discPct > 0 ? ` (${_discPct}% off)` : '';
-      _btnEl.textContent = `Pay ${_price.toLocaleString()} LUNC & Unlock →${_disc}`;
+    // Update Pay button — async fetch real title from worker
+    const _addr = accounts[0].address;
+    if (typeof fetchQuestionStats === 'function') {
+      fetchQuestionStats(_addr).then(stats => {
+        const { myQuestions, totalUpvotes } = stats;
+        const _title = (typeof getUserTitleFromStats === 'function')
+          ? getUserTitleFromStats(myQuestions.length, totalUpvotes)
+          : null;
+        const _discPct = _title ? (_title.discount || 0) : 0;
+        const _discAmt = Math.round(200000 * (_discPct / 100));
+        const _price   = 200000 - _discAmt;
+        const _btnEl   = document.getElementById('verify-btn');
+        if (_btnEl) {
+          const _disc = _discPct > 0 ? ` (${_discPct}% off)` : '';
+          _btnEl.textContent = `Pay ${_price.toLocaleString()} LUNC & Unlock →${_disc}`;
+        }
+      });
+    } else {
+      // Fallback to local questions if profile.js not loaded
+      const _title = (typeof getUserTitle === 'function') ? getUserTitle(_addr) : null;
+      const _discPct  = _title ? (_title.discount || 0) : 0;
+      const _discAmt  = Math.round(200000 * (_discPct / 100));
+      const _price    = 200000 - _discAmt;
+      const _btnEl    = document.getElementById('verify-btn');
+      if (_btnEl) {
+        const _disc = _discPct > 0 ? ` (${_discPct}% off)` : '';
+        _btnEl.textContent = `Pay ${_price.toLocaleString()} LUNC & Unlock →${_disc}`;
+      }
     }
     document.getElementById('connected-addr').textContent = connectedAddress.slice(0,10)+'...'+connectedAddress.slice(-4);
     document.getElementById('verified-wallet-hidden').value = connectedAddress;
@@ -688,10 +707,17 @@ async function autoPayAndUnlock() {
     const accounts = await window.keplr.getOfflineSigner('columbus-5').getAccounts();
     const sender = accounts[0].address;
 
-    // ── Apply title discount ───────────────────────────────────
-    // getUserTitle is defined in profile.js — falls back to base if not available
-    const userTitle    = (typeof getUserTitle === 'function') ? getUserTitle(sender) : null;
-    const discountPct  = userTitle ? (userTitle.discount || 0) : 0;
+    // ── Apply title discount — fetch real stats from worker ──────
+    let discountPct = 0;
+    if (typeof fetchQuestionStats === 'function') {
+      try {
+        const _stats = await fetchQuestionStats(sender);
+        const _t = (typeof getUserTitleFromStats === 'function')
+          ? getUserTitleFromStats(_stats.myQuestions.length, _stats.totalUpvotes)
+          : null;
+        discountPct = _t ? (_t.discount || 0) : 0;
+      } catch(e) {}
+    }
 
     // Discount is % of total 200,000 LUNC, subtracted from Treasury portion
     // Weekly Pool: always 100,000 LUNC (fixed)
