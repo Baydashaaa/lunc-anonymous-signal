@@ -7,16 +7,8 @@ function toggleRepNav(e) {
   e && e.stopPropagation();
   const dd  = document.getElementById('rep-dropdown');
   const btn = document.getElementById('rep-nav-btn');
-  if (!dd || !btn) return;
+  if (!dd) return;
   const isOpen = dd.classList.contains('open');
-  if (!isOpen) {
-    const rect = btn.getBoundingClientRect();
-    const ddW  = 200;
-    // Align left edge of dropdown to left edge of button, clamp to viewport
-    let left = rect.left;
-    left = Math.max(8, Math.min(left, window.innerWidth - ddW - 8));
-    dd.style.left = left + 'px';
-  }
   dd.classList.toggle('open');
   if (btn) btn.classList.toggle('active', !isOpen);
 }
