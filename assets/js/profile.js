@@ -24,39 +24,122 @@
   document.head.appendChild(style);
 })();
 
-// ─── TITLE SYSTEM ────────────────────────────────────────────
-// Reputation based on: questions asked + upvotes received on answers
-// Discount applies to question fee — pool always gets full 100K LUNC
-const TITLES = [
+// ─── RANK SYSTEM (Oracle Ascension) ──────────────────────────
+// Reputation = Action Score + Quality Score
+// Action:  Ask question +40 | Vote +15 | Chat msg +2 | Join draw +10
+// Quality: Upvote received on question/answer +10 | Answer activity +5
+// Discount applies to question fee — pool always gets full amount
+
+const RANKS = [
   {
-    name: '🌱 Seeker',
-    questionsNeeded: 1,  upvotesNeeded: 0,
-    color: '#66ffaa', bar: '#1ec864',
-    discount: 0,    questionPrice: 200000,
+    name: 'INITIATE',   icon: '◈',  minScore: 0,
+    color: '#6b82a8',   bar: '#4a5c7a',   glow: 'rgba(107,130,168,0.3)',
+    discount: 0,        questionPrice: 200000,
     discountLabel: 'No discount',
+    multiplier: 1.0,
   },
   {
-    name: '🔵 Validator',
-    questionsNeeded: 5,  upvotesNeeded: 10,
-    color: '#7eb8ff', bar: '#5493f7',
-    discount: 5,    questionPrice: 190000,
+    name: 'SEEKER',     icon: '🌱', minScore: 500,
+    color: '#66ffaa',   bar: '#1ec864',   glow: 'rgba(30,200,100,0.35)',
+    discount: 0,        questionPrice: 200000,
+    discountLabel: 'No discount',
+    multiplier: 1.0,
+  },
+  {
+    name: 'ADEPT',      icon: '🔵', minScore: 1500,
+    color: '#7eb8ff',   bar: '#5493f7',   glow: 'rgba(84,147,247,0.4)',
+    discount: 5,        questionPrice: 190000,
     discountLabel: '5% off — 190,000 LUNC',
+    multiplier: 1.2,
   },
   {
-    name: '⚡ Oracle',
-    questionsNeeded: 15, upvotesNeeded: 50,
-    color: '#ffd700', bar: '#f5c518',
-    discount: 12.5, questionPrice: 175000,
-    discountLabel: '12.5% off — 175,000 LUNC',
+    name: 'ANALYST',    icon: '🔮', minScore: 4000,
+    color: '#c084fc',   bar: '#a855f7',   glow: 'rgba(168,85,247,0.4)',
+    discount: 10,       questionPrice: 180000,
+    discountLabel: '10% off — 180,000 LUNC',
+    multiplier: 1.5,
   },
   {
-    name: '🔥 Terra Legend',
-    questionsNeeded: 30, upvotesNeeded: 150,
-    color: '#ff8844', bar: '#ff6600',
-    discount: 25,   questionPrice: 150000,
+    name: 'ORACLE',     icon: '⚡', minScore: 8000,
+    color: '#ffd700',   bar: '#f5c518',   glow: 'rgba(245,197,24,0.45)',
+    discount: 15,       questionPrice: 170000,
+    discountLabel: '15% off — 170,000 LUNC',
+    multiplier: 2.0,
+  },
+  {
+    name: 'ARCHON',     icon: '🔥', minScore: 15000,
+    color: '#ff8844',   bar: '#ff6600',   glow: 'rgba(255,102,0,0.45)',
+    discount: 20,       questionPrice: 160000,
+    discountLabel: '20% off — 160,000 LUNC',
+    multiplier: 2.5,
+  },
+  {
+    name: 'ASCENDED',   icon: '✦',  minScore: 30000,
+    color: '#00ffff',   bar: '#00d4ff',   glow: 'rgba(0,212,255,0.55)',
+    discount: 25,       questionPrice: 150000,
     discountLabel: '25% off — 150,000 LUNC',
+    multiplier: 3.0,
   },
 ];
+
+// Legacy alias so existing code using TITLES still works
+const TITLES = RANKS.filter(r => r.minScore > 0).map(r => ({
+  name: r.icon + ' ' + r.name,
+  questionsNeeded: 1, upvotesNeeded: 0,
+  color: r.color, bar: r.bar,
+  discount: r.discount, questionPrice: r.questionPrice,
+  discountLabel: r.discountLabel,
+}));
+
+// ── Reputation calculation ────────────────────────────────────
+// qStats: { myQuestions, myAnswers, totalUpvotes }
+// chatStats: { msgCount }
+function calcReputation(qStats, chatStats) {
+  const { myQuestions = [], myAnswers = [], totalUpvotes = 0 } = qStats;
+  const msgCount = chatStats?.msgCount || 0;
+
+  // Action Score
+  const actionScore =
+    myQuestions.length * 40 +   // Ask question
+    myAnswers.length  * 15 +    // Answer (proxy for vote action)
+    Math.min(msgCount, 20) * 2 + // Chat — first 20 msgs full reward
+    Math.max(0, msgCount - 20) * Math.round(2 * 0.2); // rest 20%
+
+  // Quality Score
+  const qualityScore = totalUpvotes * 10;
+
+  return actionScore + qualityScore;
+}
+
+// ── Get rank by reputation score ─────────────────────────────
+function getRank(score) {
+  let rank = RANKS[0];
+  for (const r of RANKS) {
+    if (score >= r.minScore) rank = r;
+  }
+  return rank;
+}
+
+// ── Get next rank ─────────────────────────────────────────────
+function getNextRank(score) {
+  for (const r of RANKS) {
+    if (score < r.minScore) return r;
+  }
+  return null; // already at max
+}
+
+// Legacy function so existing calls don't break
+function getUserTitleFromStats(qCount, upvotes) {
+  // approximate reputation from old stats
+  const approxScore = qCount * 40 + upvotes * 10;
+  const rank = getRank(approxScore);
+  return {
+    name: rank.icon + ' ' + rank.name,
+    color: rank.color, bar: rank.bar,
+    discount: rank.discount, questionPrice: rank.questionPrice,
+    discountLabel: rank.discountLabel,
+  };
+}
 
 // ── On-chain chat stats fetch ────────────────────────────────────────────────
 // Reads Treasury wallet txs for the connected wallet over last 7 days.
@@ -369,19 +452,23 @@ function renderProfilePage() {
     document.getElementById('stat-top-answers').textContent = topAnswers;
     document.getElementById('stat-messages').textContent = chatStats.msgCount;
 
-    // Update title badge with real title
-    const _qTitle = getUserTitleFromStats(myQuestions.length, totalUpvotes);
+    // Calculate reputation + rank
+    const reputation = calcReputation(qStats, chatStats);
+    const rank       = getRank(reputation);
+    const nextRank   = getNextRank(reputation);
+
+    // Update title badge → now shows rank
     const titleEl = document.getElementById('profile-title-badge');
-    if (_qTitle) {
-      titleEl.innerHTML = `${_qTitle.name} <span style="font-size:10px;opacity:0.7;margin-left:6px;">${_qTitle.discountLabel}</span>`;
-      titleEl.style.color = _qTitle.color;
-    } else {
-      titleEl.textContent = 'No title yet — ask your first question!';
-      titleEl.style.color = 'var(--muted)';
+    if (titleEl) {
+      titleEl.innerHTML = `<span style="color:${rank.color};text-shadow:0 0 12px ${rank.glow};">${rank.icon} ${rank.name}</span> <span style="font-size:10px;opacity:0.7;margin-left:6px;">${rank.discountLabel}</span>`;
+      titleEl.style.color = rank.color;
     }
 
+    // Render reputation block
+    renderReputationBlock(reputation, rank, nextRank);
+
     renderMessageProgress(chatStats);
-    renderTitleProgress(myQuestions.length, totalUpvotes);
+    renderRankProgress(reputation);
     renderHistoryTab(currentHistoryTab || 'answers', myAnswers, myQuestions);
   });
 }
@@ -426,38 +513,86 @@ function renderMessageProgress(stats) {
   `;
 }
 
-function renderTitleProgress(qCount, upvotes) {
+// ─── REPUTATION BLOCK ─────────────────────────────────────────
+function renderReputationBlock(reputation, rank, nextRank) {
+  const el = document.getElementById('reputation-block');
+  if (!el) return;
+
+  const pct = nextRank
+    ? Math.round(((reputation - rank.minScore) / (nextRank.minScore - rank.minScore)) * 100)
+    : 100;
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div>
+        <div style="font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Oracle Reputation</div>
+        <div style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:800;color:${rank.color};text-shadow:0 0 18px ${rank.glow};line-height:1;">
+          ${reputation.toLocaleString()}
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Current Rank</div>
+        <div style="font-size:18px;font-weight:800;letter-spacing:0.1em;color:${rank.color};text-shadow:0 0 14px ${rank.glow};">
+          ${rank.icon} ${rank.name}
+        </div>
+      </div>
+    </div>
+    ${nextRank ? `
+      <div style="margin-bottom:6px;display:flex;justify-content:space-between;font-size:10px;color:var(--muted);">
+        <span>Progress to <span style="color:${nextRank.color};font-weight:700;">${nextRank.icon} ${nextRank.name}</span></span>
+        <span style="color:${rank.color};">${pct}%</span>
+      </div>
+      <div style="background:rgba(255,255,255,0.06);border-radius:6px;height:8px;overflow:hidden;margin-bottom:6px;">
+        <div style="height:100%;border-radius:6px;width:${pct}%;background:linear-gradient(90deg,${rank.bar},${nextRank.bar});transition:width 0.8s ease;box-shadow:0 0 8px ${rank.glow};"></div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);">
+        ${reputation.toLocaleString()} / ${nextRank.minScore.toLocaleString()} REP · need <strong style="color:var(--text);">${(nextRank.minScore - reputation).toLocaleString()}</strong> more
+      </div>
+    ` : `
+      <div style="font-size:11px;color:${rank.color};text-shadow:0 0 10px ${rank.glow};font-weight:700;letter-spacing:0.08em;">
+        ✦ MAX RANK ACHIEVED — ASCENDED
+      </div>
+    `}
+  `;
+}
+
+// ─── RANK PROGRESS LIST ───────────────────────────────────────
+function renderRankProgress(reputation) {
   const el = document.getElementById('title-progress-list');
-  el.innerHTML = TITLES.map(t => {
-    const qPct  = Math.min(100, Math.round((qCount  / Math.max(t.questionsNeeded, 1)) * 100));
-    const uPct  = Math.min(100, Math.round((upvotes / Math.max(t.upvotesNeeded,  1)) * 100));
-    const achieved = qCount >= t.questionsNeeded && upvotes >= t.upvotesNeeded;
-    const overallPct = t.upvotesNeeded === 0 ? qPct : Math.round((qPct + uPct) / 2);
+  if (!el) return;
+
+  el.innerHTML = RANKS.map(r => {
+    const achieved = reputation >= r.minScore;
+    const isCurrent = getRank(reputation) === r;
+    const pct = r.minScore === 0 ? 100 : Math.min(100, Math.round((reputation / r.minScore) * 100));
+
     return `
-      <div class="title-row">
-        <div style="width:120px;font-size:12px;font-weight:700;color:${achieved ? t.color : 'var(--muted)'};">${t.name}</div>
+      <div class="title-row" style="${isCurrent ? `border-left:2px solid ${r.color};padding-left:10px;margin-left:-12px;` : ''}">
+        <div style="width:110px;font-size:11px;font-weight:700;color:${achieved ? r.color : 'var(--muted)'};
+          ${achieved ? `text-shadow:0 0 8px ${r.glow};` : ''}">
+          ${r.icon} ${r.name}
+          ${isCurrent ? '<span style="font-size:9px;opacity:0.7;"> ← you</span>' : ''}
+        </div>
         <div style="flex:1;">
           <div class="title-progress-bar" style="margin-bottom:3px;">
-            <div class="title-progress-fill" style="width:${overallPct}%;background:${achieved ? t.bar : 'rgba(255,255,255,0.15)'}"></div>
+            <div class="title-progress-fill" style="width:${pct}%;background:${achieved ? r.bar : 'rgba(255,255,255,0.12)'};
+              ${achieved ? `box-shadow:0 0 6px ${r.glow};` : ''}"></div>
           </div>
-          ${t.upvotesNeeded > 0 ? `
-            <div style="display:flex;gap:10px;">
-              <span style="font-size:9px;color:${qCount >= t.questionsNeeded ? t.color : 'var(--muted)'};">
-                ${qCount >= t.questionsNeeded ? '✓' : ''} ${Math.min(qCount, t.questionsNeeded)}/${t.questionsNeeded} questions
-              </span>
-              <span style="font-size:9px;color:${upvotes >= t.upvotesNeeded ? t.color : 'var(--muted)'};">
-                ${upvotes >= t.upvotesNeeded ? '✓' : ''} ${Math.min(upvotes, t.upvotesNeeded)}/${t.upvotesNeeded} upvotes
-              </span>
-            </div>` : `
-            <div style="font-size:9px;color:${qCount >= t.questionsNeeded ? t.color : 'var(--muted)'};">
-              ${qCount >= t.questionsNeeded ? '✓' : ''} ${Math.min(qCount, t.questionsNeeded)}/${t.questionsNeeded} questions
-            </div>`}
+          <div style="font-size:9px;color:var(--muted);">
+            ${r.minScore === 0 ? 'Starting rank' : r.minScore.toLocaleString() + ' REP'}
+          </div>
         </div>
-        <div style="font-size:10px;color:${achieved ? t.color : 'var(--muted)'};min-width:80px;text-align:right;">
-          ${achieved ? '✅ ' + t.discountLabel : t.discountLabel}
+        <div style="font-size:10px;color:${achieved ? r.color : 'var(--muted)'};min-width:80px;text-align:right;">
+          ${achieved ? '✅ ' : ''}${r.discountLabel}
         </div>
       </div>`;
   }).join('');
+}
+
+// Legacy — kept so old calls don't break
+function renderTitleProgress(qCount, upvotes) {
+  const approxScore = qCount * 40 + upvotes * 10;
+  renderRankProgress(approxScore);
 }
 
 let currentHistoryTab = 'answers';
