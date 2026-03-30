@@ -162,6 +162,9 @@ function buildScoreMap(allQuestions) {
 
 // Global score map — populated after questions load
 window._walletScores = {};
+
+// Legacy function so existing calls don't break
+function getUserTitleFromStats(qCount, upvotes) {
   // approximate reputation from old stats
   const approxScore = qCount * 40 + upvotes * 10;
   const rank = getRank(approxScore);
