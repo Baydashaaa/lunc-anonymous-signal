@@ -221,6 +221,26 @@
   nav { background: rgba(3,7,15,0.98) !important; }
   footer { background: rgba(4,10,20,0.98) !important; }
 }
+/* ── Reputation nav dropdown ── */
+.rep-nav-wrap { position:relative; }
+.rep-nav-btn { position:relative; }
+.rep-nav-dropdown {
+  display:none; position:absolute; top:calc(100% + 8px); left:50%;
+  transform:translateX(-50%);
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:10px; padding:6px; min-width:170px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.5);
+  z-index:300; animation:dropDown 0.15s ease;
+}
+.rep-nav-dropdown.open { display:block; }
+.rep-nav-dropdown button {
+  display:flex; align-items:center; gap:8px; width:100%;
+  background:none; border:none; color:var(--text);
+  font-family:'Exo 2',sans-serif; font-size:12px;
+  padding:9px 12px; border-radius:7px; cursor:pointer;
+  transition:background 0.15s; text-align:left;
+}
+.rep-nav-dropdown button:hover { background:rgba(84,147,247,0.08); color:var(--accent); }
 </style>
 </head>
 <body style="min-height:100vh;display:flex;flex-direction:column;">
@@ -279,6 +299,16 @@
  <button class="nav-tab nav-node" onclick="showPage('vote')" data-page="vote">Vote</button>
  <button class="nav-tab nav-node" onclick="showPage('about')" data-page="about">About</button>
  <button class="nav-tab nav-node" onclick="showPage('bag',event)" data-page="bag" style="color:#f4d03f;">My Bag</button>
+ <!-- Reputation dropdown -->
+ <div class="rep-nav-wrap" id="rep-nav-wrap">
+   <button class="nav-tab nav-node rep-nav-btn" id="rep-nav-btn" onclick="toggleRepNav(event)">
+     Reputation ▾
+   </button>
+   <div class="rep-nav-dropdown" id="rep-nav-dropdown">
+     <button onclick="showRepPage('leaderboard');closeRepNav()">🏆 Leaderboard</button>
+     <button onclick="showRepPage('how');closeRepNav()">📖 How it works</button>
+   </div>
+ </div>
  <svg class="nav-lines" id="nav-lines" style="display:none;"></svg>
  </div>
  <div class="wallet-btn-wrap" id="wallet-wrap">
@@ -388,6 +418,8 @@
  <button class="nav-tab" onclick="mobileNavGo('about')">ℹ️ About</button>
  <button class="nav-tab" onclick="mobileNavGo('bag')" style="color:#f4d03f;">My Bag</button>
  <button class="nav-tab" onclick="mobileNavGoFn('showPage_treasury')">💰 Treasury</button>
+ <button class="nav-tab" onclick="showRepPage('leaderboard');closeMobileMenu()">🏆 Leaderboard</button>
+ <button class="nav-tab" onclick="showRepPage('how');closeMobileMenu()">📖 How it works</button>
 
  <div style="width:100%;max-width:320px;margin-top:8px;display:flex;flex-direction:column;gap:8px;">
   <div class="wallet-btn-wrap" id="wallet-wrap-mobile" style="width:100%;">
@@ -1621,10 +1653,16 @@
 </footer>
 <!-- ═══ END FOOTER ═══ -->
 
+<!-- REPUTATION PAGE -->
+<div class="page" id="page-reputation" style="max-width:900px;margin:0 auto;padding:40px 20px 80px;">
+  <!-- filled by reputation.js -->
+</div>
+
   <!-- Логика -->
   <script src="assets/js/treasury.js"></script>
   <script src="assets/js/app.js"></script>
   <script src="assets/js/profile.js"></script>
+  <script src="assets/js/reputation.js"></script>
 <script>
 // ── Mobile navigation ──
 function toggleMobileNav() {
