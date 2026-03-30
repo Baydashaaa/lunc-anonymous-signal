@@ -621,9 +621,10 @@
     <div style="display:flex;flex-direction:column;gap:20px;width:300px;flex-shrink:0;">
 
       <!-- Oracle Board -->
-      <div onclick="showPage('board')" class="zk-module" style="flex:1;">
+      <div onclick="showPage('board')" class="zk-module" style="flex:1;position:relative;overflow:hidden;">
+        <div style="position:absolute;bottom:-10%;left:50%;transform:translateX(-50%);width:100%;padding-top:100%;background:url('board_v1_opt.png') center/contain no-repeat;opacity:0.18;pointer-events:none;z-index:0;"></div>
         <div class="zk-module-bar"></div>
-        <div class="zk-module-inner">
+        <div class="zk-module-inner" style="position:relative;z-index:1;">
           <div class="zk-module-tag">&#9672; ACTIVE MODULE</div>
           <div style="font-size:30px;margin-bottom:10px;">🔮</div>
           <div style="font-weight:700;font-size:16px;margin-bottom:8px;color:#fff;" class="zk-module-title">Oracle Board</div>
@@ -634,10 +635,9 @@
       </div>
 
       <!-- Governance Vote -->
-      <div onclick="showPage('vote')" class="zk-module" style="flex:1;--mod-c1:#A855F7;--mod-c2:#7B5CFF;position:relative;overflow:hidden;">
-        <div style="position:absolute;bottom:-10%;left:50%;transform:translateX(-50%);width:100%;padding-top:100%;background:url('vote_v2_opt.png') center/contain no-repeat;opacity:0.18;pointer-events:none;z-index:0;"></div>
+      <div onclick="showPage('vote')" class="zk-module" style="flex:1;--mod-c1:#A855F7;--mod-c2:#7B5CFF;">
         <div class="zk-module-bar"></div>
-        <div class="zk-module-inner" style="position:relative;z-index:1;">
+        <div class="zk-module-inner">
           <div class="zk-module-tag" style="color:rgba(168,85,247,0.65);">&#9670; ACTIVE MODULE</div>
           <div style="font-size:30px;margin-bottom:10px;">🗳️</div>
           <div style="font-weight:700;font-size:16px;margin-bottom:8px;color:#fff;" class="zk-module-title">Governance Vote</div>
