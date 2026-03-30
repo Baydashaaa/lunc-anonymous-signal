@@ -146,6 +146,7 @@ function showPage_treasury(e) {
   const pg = document.getElementById('page-treasury');
   if (pg) pg.classList.add('active');
   if (history.replaceState) history.replaceState(null,'','#treasury');
+  try { sessionStorage.setItem('currentPage', 'treasury'); } catch(e) {}
   if (typeof smoothScrollTop==='function') smoothScrollTop();
   loadTreasuryData();
   tStartCountdowns();
