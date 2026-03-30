@@ -154,6 +154,8 @@ function showPage(name, e) {
   if (name === 'bag')  renderOracleBag();
   // Clear URL hash when navigating away from treasury
   if (history.replaceState) history.replaceState(null, '', window.location.pathname);
+  // Save current page in sessionStorage (resets on tab close)
+  try { sessionStorage.setItem('currentPage', name); } catch(e) {}
   smoothScrollTop();
 }
 
@@ -190,9 +192,10 @@ function removeTag(tag) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Always start from home — clear any URL hash
+  // Restore last page from sessionStorage (only within same tab session)
+  const savedPage = (() => { try { return sessionStorage.getItem('currentPage'); } catch(e) { return null; } })();
   if (history.replaceState) history.replaceState(null, '', window.location.pathname);
-  showPage('home');
+  showPage(savedPage || 'home');
   const input = document.getElementById('tag-raw-input');
   if (!input) return;
   input.addEventListener('keydown', function(e) {
