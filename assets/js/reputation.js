@@ -5,23 +5,21 @@
 // ── Nav dropdown toggle ───────────────────────────────────────
 function toggleRepNav(e) {
   e && e.stopPropagation();
-  const mega = document.getElementById('rep-mega');
-  const btn  = document.getElementById('rep-nav-btn');
-  if (!mega) return;
-  const isOpen = mega.classList.contains('open');
-  mega.classList.toggle('open');
+  const dd  = document.getElementById('rep-dropdown');
+  const btn = document.getElementById('rep-nav-btn');
+  if (!dd) return;
+  const isOpen = dd.classList.contains('open');
+  dd.classList.toggle('open');
   if (btn) btn.classList.toggle('active', !isOpen);
 }
 function closeRepNav() {
-  const mega = document.getElementById('rep-mega');
-  const btn  = document.getElementById('rep-nav-btn');
-  if (mega) mega.classList.remove('open');
-  if (btn)  btn.classList.remove('active');
+  const dd  = document.getElementById('rep-dropdown');
+  const btn = document.getElementById('rep-nav-btn');
+  if (dd)  dd.classList.remove('open');
+  if (btn) btn.classList.remove('active');
 }
 document.addEventListener('click', (e) => {
-  if (!e.target.closest('#rep-nav-wrap') && !e.target.closest('#rep-mega')) {
-    closeRepNav();
-  }
+  if (!e.target.closest('#rep-nav-wrap')) closeRepNav();
 });
 
 // ── Show reputation page ──────────────────────────────────────
