@@ -355,6 +355,7 @@ function openProfile() {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('page-profile').classList.add('active');
+  try { sessionStorage.setItem('currentPage', 'profile'); } catch(e) {}
   renderProfilePage();
   smoothScrollTop();
 }
