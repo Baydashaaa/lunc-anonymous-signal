@@ -1,1523 +1,802 @@
-if (history.scrollRestoration) history.scrollRestoration = 'manual';
+// ─── PROFILE SYSTEM ──────────────────────────────────────────
 
-// Fast smooth scroll to top (300ms, ease-out)
-function smoothScrollTop() {
-  const start = window.scrollY;
-  if (start === 0) return;
-  const duration = 300;
-  const startTime = performance.now();
-  function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
-  function step(now) {
-    const elapsed = now - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-    window.scrollTo(0, start * (1 - easeOut(progress)));
-    if (progress < 1) requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
-}
-window.addEventListener('load', () => { window.scrollTo(0, 0); });
+// CSS стили для профиля — добавляются динамически
+(function injectProfileStyles() {
+  const style = document.createElement('style');
+  style.textContent = `
+    .wallet-profile-btn {
+      display:block;width:100%;text-align:left;
+      background:rgba(84,147,247,0.06);border:1px solid rgba(84,147,247,0.15);
+      color:var(--accent);font-family:'Exo 2',sans-serif;font-size:11px;font-weight:700;
+      letter-spacing:0.08em;padding:9px 14px;border-radius:8px;cursor:pointer;
+      margin-bottom:8px;transition:all 0.2s;
+    }
+    .wallet-profile-btn:hover { background:rgba(84,147,247,0.12); border-color:rgba(84,147,247,0.35); }
+    .title-row { display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border); }
+    .title-row:last-child { border-bottom:none; }
+    .title-progress-bar { flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden; }
+    .title-progress-fill { height:100%;border-radius:3px;transition:width 0.6s ease; }
+    .history-item { background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px; }
+    .history-item-meta { font-size:10px;color:var(--muted);margin-bottom:6px;display:flex;gap:10px;align-items:center; }
+    .history-item-text { font-size:12px;color:var(--text);line-height:1.7; }
+    .history-item-votes { font-size:11px;color:var(--green);margin-top:8px; }
+  `;
+  document.head.appendChild(style);
+})();
 
-// ─── ADMIN KEY ───────────────────────────────────────────────
-const ADMIN_KEY = 'TerraOracle#9X4K-2025';
+// ─── RANK SYSTEM (Oracle Ascension) ──────────────────────────
+// Reputation = Action Score + Quality Score
+// Action:  Ask question +40 | Vote +15 | Chat msg +2 | Join draw +10
+// Quality: Upvote received on question/answer +10 | Answer activity +5
+// Discount applies to question fee — pool always gets full amount
 
-// ─── DEMO QUESTIONS ───────────────────────────────────────────
-const DEMO_QUESTIONS = [
+const RANKS = [
   {
-    id: 'LUNC-A3F9K2B',
-    alias: 'Anonymous#4471',
-    isAdmin: false,
-    title: '🌱 Seeker',
-    category: '🗳️ Governance',
-    text: 'What is the plan for USTC re-peg after the SDK 0.53 upgrade? Has any formal proposal been submitted to the governance forum yet?',
-    tags: ['ustc','sdk053','governance'],
-    time: '34 min ago',
-    votes: 12,
-    answers: [
-      { alias: 'Anonymous#8821', isAdmin: false, title: '⚡ Oracle', text: 'No formal proposal yet, but several validators have discussed it in the bi-weekly call. The main blocker is liquidity depth — USTC needs at least $50M TVL before a peg mechanism is viable.', votes: 8, voted: false },
-      { alias: 'Admin', isAdmin: true, title: null, text: 'This is being tracked. A governance discussion thread will be opened within the next 2 weeks following the SDK upgrade completion. Stay tuned to the official Terra Classic channels.', votes: 24, voted: false },
-    ],
-    voted: false,
-    open: false,
-    formOpen: false,
+    name: 'INITIATE',   icon: '◈',  minScore: 0,
+    color: '#6b82a8',   bar: '#4a5c7a',   glow: 'rgba(107,130,168,0.3)',
+    discount: 0,        questionPrice: 200000,
+    discountLabel: 'No discount',
+    multiplier: 1.0,
   },
   {
-    id: 'LUNC-B7M2X1C',
-    alias: 'Anonymous#2209',
-    isAdmin: false,
-    title: null,
-    category: '⚙️ Validator Issue',
-    text: 'Is there a minimum self-delegation requirement for validators after MM 2.0 activates? Some validators seem to be running with very low self-stake.',
-    tags: ['validators','mm20','staking'],
-    time: '2 hrs ago',
-    votes: 7,
-    answers: [],
-    voted: false,
-    open: false,
-    formOpen: false,
+    name: 'SEEKER',     icon: '🌱', minScore: 500,
+    color: '#66ffaa',   bar: '#1ec864',   glow: 'rgba(30,200,100,0.35)',
+    discount: 0,        questionPrice: 200000,
+    discountLabel: 'No discount',
+    multiplier: 1.0,
+  },
+  {
+    name: 'ADEPT',      icon: '🔵', minScore: 1500,
+    color: '#7eb8ff',   bar: '#5493f7',   glow: 'rgba(84,147,247,0.4)',
+    discount: 5,        questionPrice: 190000,
+    discountLabel: '5% off — 190,000 LUNC',
+    multiplier: 1.2,
+  },
+  {
+    name: 'ANALYST',    icon: '🔮', minScore: 4000,
+    color: '#c084fc',   bar: '#a855f7',   glow: 'rgba(168,85,247,0.4)',
+    discount: 10,       questionPrice: 180000,
+    discountLabel: '10% off — 180,000 LUNC',
+    multiplier: 1.5,
+  },
+  {
+    name: 'ORACLE',     icon: '⚡', minScore: 8000,
+    color: '#ffd700',   bar: '#f5c518',   glow: 'rgba(245,197,24,0.45)',
+    discount: 15,       questionPrice: 170000,
+    discountLabel: '15% off — 170,000 LUNC',
+    multiplier: 2.0,
+  },
+  {
+    name: 'ARCHON',     icon: '🔥', minScore: 15000,
+    color: '#ff8844',   bar: '#ff6600',   glow: 'rgba(255,102,0,0.45)',
+    discount: 20,       questionPrice: 160000,
+    discountLabel: '20% off — 160,000 LUNC',
+    multiplier: 2.5,
+  },
+  {
+    name: 'ASCENDED',   icon: '✦',  minScore: 30000,
+    color: '#00ffff',   bar: '#00d4ff',   glow: 'rgba(0,212,255,0.55)',
+    discount: 25,       questionPrice: 150000,
+    discountLabel: '25% off — 150,000 LUNC',
+    multiplier: 3.0,
   },
 ];
 
-// ─── QUESTIONS STORAGE ───────────────────────────────────────
-const WORKER_URL = 'https://terra-oracle-questions.vladislav-baydan.workers.dev';
+// Legacy alias so existing code using TITLES still works
+const TITLES = RANKS.filter(r => r.minScore > 0).map(r => ({
+  name: r.icon + ' ' + r.name,
+  questionsNeeded: 1, upvotesNeeded: 0,
+  color: r.color, bar: r.bar,
+  discount: r.discount, questionPrice: r.questionPrice,
+  discountLabel: r.discountLabel,
+}));
 
-// ── Worker-based questions storage ───────────────────────────
-// questions[] is the in-memory cache, synced from worker on load
-let questions = [];
-let _questionsLoaded = false;
+// ── Reputation calculation ────────────────────────────────────
+// qStats: { myQuestions, myAnswers, totalUpvotes }
+// chatStats: { msgCount }
+function calcReputation(qStats, chatStats) {
+  const { myQuestions = [], myAnswers = [], totalUpvotes = 0 } = qStats;
+  const msgCount = chatStats?.msgCount || 0;
 
-async function loadQuestionsFromWorker() {
+  // Action Score
+  const actionScore =
+    myQuestions.length * 40 +   // Ask question
+    myAnswers.length  * 15 +    // Answer (proxy for vote action)
+    Math.min(msgCount, 20) * 2 + // Chat — first 20 msgs full reward
+    Math.max(0, msgCount - 20) * Math.round(2 * 0.2); // rest 20%
+
+  // Quality Score
+  const qualityScore = totalUpvotes * 10;
+
+  return actionScore + qualityScore;
+}
+
+// ── Get rank by reputation score ─────────────────────────────
+function getRank(score) {
+  let rank = RANKS[0];
+  for (const r of RANKS) {
+    if (score >= r.minScore) rank = r;
+  }
+  return rank;
+}
+
+// ── Get next rank ─────────────────────────────────────────────
+function getNextRank(score) {
+  for (const r of RANKS) {
+    if (score < r.minScore) return r;
+  }
+  return null; // already at max
+}
+
+// ── Get rank badge HTML ───────────────────────────────────────
+// score: reputation number | wallet: optional wallet address for cache
+function getRankBadgeHTML(score) {
+  if (score === undefined || score === null) return '';
+  const rank = getRank(score);
+  if (!rank) return '';
+  const isInitiate = rank.name === 'INITIATE';
+  return `<span style="display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;letter-spacing:0.08em;color:${rank.color};${isInitiate ? 'opacity:0.5;' : `text-shadow:0 0 6px ${rank.glow};`}background:rgba(0,0,0,0.2);border:1px solid ${rank.color}${isInitiate ? '55' : '88'};padding:1px 7px;border-radius:4px;">${rank.icon} ${rank.name}</span>`;
+}
+
+// Build a score map from allQuestions: wallet → {questions, answers, upvotes}
+function buildScoreMap(allQuestions) {
+  const map = {};
+  for (const q of allQuestions) {
+    if (!q.wallet) continue;
+    if (!map[q.wallet]) map[q.wallet] = { questions: 0, answers: 0, upvotes: 0 };
+    map[q.wallet].questions++;
+    map[q.wallet].upvotes += q.votes || 0;
+    for (const a of q.answers || []) {
+      if (!a.wallet) continue;
+      if (!map[a.wallet]) map[a.wallet] = { questions: 0, answers: 0, upvotes: 0 };
+      map[a.wallet].answers++;
+      map[a.wallet].upvotes += a.votes || 0;
+    }
+  }
+  // Convert to score
+  const scores = {};
+  for (const [w, s] of Object.entries(map)) {
+    scores[w] = s.questions * 40 + s.answers * 15 + s.upvotes * 10;
+  }
+  return scores;
+}
+
+// Global score map — populated after questions load
+window._walletScores = {};
+
+// Legacy function so existing calls don't break
+function getUserTitleFromStats(qCount, upvotes) {
+  // approximate reputation from old stats
+  const approxScore = qCount * 40 + upvotes * 10;
+  const rank = getRank(approxScore);
+  return {
+    name: rank.icon + ' ' + rank.name,
+    color: rank.color, bar: rank.bar,
+    discount: rank.discount, questionPrice: rank.questionPrice,
+    discountLabel: rank.discountLabel,
+  };
+}
+
+// ── On-chain chat stats fetch ────────────────────────────────────────────────
+// Reads Treasury wallet txs for the connected wallet over last 7 days.
+// Chat tx: 5,000 LUNC ±1% + non-empty memo → groups by UTC calendar day
+// Free entries: every 10 msgs/day = 1 entry, max 2/day
+// Also counts Q&A questions: each = +2 free entries
+const TREASURY_WALLET = 'terra1549z8zd9hkggzlwf0rcuszhc9rs9fxqfy2kagt';
+const PROFILE_LCD_NODES = [
+  'https://terra-classic-lcd.publicnode.com',
+  'https://lcd.terraclassic.community',
+];
+const PROFILE_FCD_NODES = [
+  'https://terra-classic-fcd.publicnode.com',
+  'https://fcd.terra-classic.hexxagon.io',
+];
+const CHAT_ULUNA    = 5000 * 1e6;
+const QA_ULUNA      = 200000 * 1e6;
+const TOLERANCE     = 0.01;
+
+async function fetchChatStats(address) {
+  if (!address) return { msgCount: 0, entriesEarned: 0, todayMsgs: 0, todayEntries: 0, days: {}, qaCount: 0 };
+
+  const cutoff = Math.floor(Date.now() / 1000) - 7 * 86400;
+  const days   = {};
+  let   qaCount = 0;
+
+  // FCD is primary — reliably indexes all tx types on columbus-5
+  const allNodes = [
+    { base: 'https://fcd.terra-classic.hexxagon.io',       type: 'fcd' },
+    { base: 'https://terra-classic-fcd.publicnode.com',    type: 'fcd' },
+    { base: 'https://terra-classic-lcd.publicnode.com',    type: 'lcd' },
+    { base: 'https://lcd.terraclassic.community',          type: 'lcd' },
+  ];
+
+  for (const { base, type } of allNodes) {
+    try {
+      let offset = 0, done = false, found = false;
+      while (!done) {
+        let url;
+        let data = null;
+        if (type === 'fcd') {
+          url = `${base}/v1/txs?account=${address}&limit=100&offset=${offset}`;
+          const res = await fetch(url, { headers: { 'Accept': 'application/json' }, signal: AbortSignal.timeout(10000) });
+          if (!res.ok) break;
+          data = await res.json();
+        } else {
+          url = `${base}/cosmos/tx/v1beta1/txs?events=transfer.sender=%27${address}%27&pagination.limit=50&order_by=2&pagination.offset=${offset}`;
+          const res = await fetch(url, { headers: { 'Accept': 'application/json' }, signal: AbortSignal.timeout(10000) });
+          if (!res.ok) break;
+          data = await res.json();
+        }
+        if (!data) break;
+
+        // FCD: flat txs[] each with tx.tx.value.memo + timestamp
+        // LCD: parallel txs[] (bodies) + tx_responses[] (metadata)
+        let _entries = [];
+        if (type === 'fcd') {
+          const fcdTxs = data.txs || [];
+          _entries = fcdTxs.map(tx => ({
+            ts:        Math.floor(new Date(tx.timestamp).getTime() / 1000),
+            memo:      tx.tx?.value?.memo || tx.tx?.body?.memo || '',
+            msgs:      tx.tx?.value?.msg  || tx.tx?.body?.messages || [],
+          }));
+        } else {
+          const _txBodies    = data.txs || [];
+          const _txResponses = data.tx_responses || [];
+          const _n = Math.max(_txBodies.length, _txResponses.length);
+          for (let i = 0; i < _n; i++) {
+            _entries.push({
+              ts:   Math.floor(new Date(_txResponses[i]?.timestamp || 0).getTime() / 1000),
+              memo: _txBodies[i]?.body?.memo || '',
+              msgs: _txBodies[i]?.body?.messages || [],
+            });
+          }
+        }
+        if (!_entries.length) break;
+
+        for (const _entry of _entries) {
+          const ts   = _entry.ts;
+          const memo = _entry.memo;
+          const msgs = _entry.msgs;
+          if (ts < cutoff) { done = true; break; }
+
+          for (const msg of msgs) {
+            const msgType  = msg['@type'] || msg.type || '';
+            if (!msgType.includes('MsgSend')) continue;
+            const val      = msg.value || msg;
+            const toAddr   = val.to_address   || '';
+            const fromAddr = val.from_address || '';
+            if (toAddr   !== TREASURY_WALLET) continue;
+            if (fromAddr !== address)         continue;
+
+            const coins = val.amount || [];
+            const lunc  = coins.find(c => c.denom === 'uluna');
+            if (!lunc) continue;
+            const amt = Number(lunc.amount);
+
+            // Chat: ~5,000 LUNC + non-empty memo
+            if (memo.trim().length > 0 &&
+                amt >= CHAT_ULUNA * (1 - TOLERANCE) &&
+                amt <= CHAT_ULUNA * (1 + TOLERANCE)) {
+              const day = new Date(_entry.ts * 1000).toISOString().slice(0, 10);
+              days[day] = (days[day] || 0) + 1;
+            }
+
+            // Q&A: ~200,000 LUNC
+            if (amt >= QA_ULUNA * (1 - TOLERANCE) &&
+                amt <= QA_ULUNA * (1 + TOLERANCE)) {
+              qaCount++;
+            }
+          }
+        }
+        if (_entries.length < 50) break;
+        offset += 50;
+      }
+      // If we got through without error, stop trying nodes
+      break;
+    } catch(e) {
+      console.warn('fetchChatStats node failed:', e.message);
+      continue;
+    }
+  }
+
+  const msgCount = Object.values(days).reduce((s, n) => s + n, 0);
+
+  let entriesEarned = qaCount * 2;
+  for (const cnt of Object.values(days)) {
+    entriesEarned += Math.min(Math.floor(cnt / 10), 2);
+  }
+
+  const todayKey     = new Date().toISOString().slice(0, 10);
+  const todayMsgs    = days[todayKey] || 0;
+  const todayEntries = Math.min(Math.floor(todayMsgs / 10), 2);
+
+  return { msgCount, entriesEarned, todayMsgs, todayEntries, days, qaCount };
+}
+
+// Count upvotes received on answers
+function getTotalUpvotesReceived(walletAddress) {
+  if (!walletAddress) return 0;
+  let total = 0;
+  for (const q of questions) {
+    for (const a of q.answers) {
+      if ((a.fullAddr === walletAddress || a.walletAddr === walletAddress) && a.votes > 0) {
+        total += a.votes;
+      }
+    }
+  }
+  return total;
+}
+
+function getTopAnswerCount(walletAddress) {
+  if (!walletAddress) return 0;
+  let count = 0;
+  for (const q of questions) {
+    for (const a of q.answers) {
+      if ((a.fullAddr === walletAddress || a.walletAddr === walletAddress) && a.votes >= 3) count++;
+    }
+  }
+  return count;
+}
+
+function getUserTitle(walletAddress) {
+  if (!walletAddress) return null;
+  // Uses local questions array — for real stats use getUserTitleFromStats
+  const qCount = (typeof questions !== 'undefined' ? questions : [])
+    .filter(q => q.wallet === walletAddress || q.fullAddr === walletAddress).length;
+  const upvotes = getTotalUpvotesReceived(walletAddress);
+  return getUserTitleFromStats(qCount, upvotes);
+}
+
+function getUserTitleFromStats(qCount, upvotes) {
+  let current = null;
+  for (const t of TITLES) {
+    if (qCount >= t.questionsNeeded && upvotes >= t.upvotesNeeded) current = t;
+  }
+  return current;
+}
+
+// getMessageCount — kept as no-op shim so app.js sendChatMessage doesn't break
+// Real stats come from fetchChatStats (on-chain)
+function getMessageCount(address) { return 0; }
+function incrementMessageCount(address) { return 0; }
+
+// ─── PROFILE DATA ─────────────────────────────────────────────
+function getProfileKey(address) { return 'profile_' + address; }
+
+function loadProfile(address) {
+  if (!address) return null;
+  try { return JSON.parse(localStorage.getItem(getProfileKey(address)) || 'null'); } catch(e) { return null; }
+}
+
+function saveProfileData(address, data) {
+  if (!address) return;
+  localStorage.setItem(getProfileKey(address), JSON.stringify(data));
+}
+
+function getProfileNickname(address) {
+  const p = loadProfile(address);
+  return p?.nickname || null;
+}
+
+function getDisplayName(address) {
+  if (!address) return 'Anonymous';
+  const nick = getProfileNickname(address);
+  if (nick) return nick;
+  return 'Anonymous#' + address.slice(-4).toUpperCase();
+}
+
+// ─── OPEN PROFILE PAGE ────────────────────────────────────────
+function openProfile() {
+  document.getElementById('wallet-dropdown').classList.remove('open');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-profile').classList.add('active');
+  try { sessionStorage.setItem('currentPage', 'profile'); } catch(e) {}
+  renderProfilePage();
+  smoothScrollTop();
+}
+
+// ── Fetch question stats from worker ─────────────────────────
+async function fetchQuestionStats(address) {
   try {
     const res = await fetch(`${WORKER_URL}/questions`);
     if (!res.ok) throw new Error('Worker error');
     const data = await res.json();
-    questions = (data.questions || []).map(q => ({
-      answers: [], votes: 0, voted: false, open: false, formOpen: false,
-      tags: [],
-      // Generate time from createdAt if not present
-      time: q.time || (q.createdAt ? (() => { const d = new Date(q.createdAt * 1000); return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear(); })() : 'unknown'),
-      ...q,
-    }));
-    // Restore voted state — from worker data (wallet-based) + localStorage fallback
-    const votedQ  = JSON.parse(localStorage.getItem('voted_questions') || '{}');
-    const votedA  = JSON.parse(localStorage.getItem('voted_answers') || '{}');
-    for (const q of questions) {
-      // Check if wallet already voted this question (on-chain in voters array)
-      if (votedQ[q.id]) q.voted = true;
-      if ((globalWalletAddress || connectedAddress) && q.voters && q.voters.includes(globalWalletAddress || connectedAddress)) q.voted = true;
-      for (const a of q.answers) {
-        if (votedA[a.id]) a.voted = true;
-        if ((globalWalletAddress || connectedAddress) && a.voters && a.voters.includes(globalWalletAddress || connectedAddress)) a.voted = true;
-      }
-      // Restore poll vote
-      if (q.poll && q.pollVoters && globalWalletAddress && q.pollVoters.includes(globalWalletAddress)) {
-        const votedPollKey = 'poll_vote_' + q.id;
-        const savedOpt = localStorage.getItem(votedPollKey);
-        q.myPollVote = savedOpt !== null ? parseInt(savedOpt) : null;
+    const allQuestions = data.questions || [];
+
+    const myQuestions = allQuestions.filter(q => q.wallet === address);
+    let totalUpvotes = 0;
+    const myAnswers = [];
+
+    // Count upvotes received on answers
+    for (const q of allQuestions) {
+      for (const a of q.answers || []) {
+        if (a.wallet === address) {
+          myAnswers.push({ ...a, questionId: q.id, questionText: q.text });
+          totalUpvotes += a.votes || 0;
+        }
       }
     }
-    _questionsLoaded = true;
-    // Build score map for rank badges
-    if (typeof buildScoreMap === 'function') window._walletScores = buildScoreMap(questions);
-    renderBoard();
+
+    // Count upvotes received on own questions
+    for (const q of myQuestions) {
+      totalUpvotes += q.votes || 0;
+    }
+
+    const topAnswers = myAnswers.filter(a => a.votes >= 3).length;
+    return { myQuestions, myAnswers, totalUpvotes, topAnswers, allQuestions };
   } catch(e) {
-    console.warn('Failed to load questions from worker:', e.message);
-    questions = [];
-    _questionsLoaded = true;
-    renderBoard();
+    console.warn('fetchQuestionStats failed:', e.message);
+    return { myQuestions: [], myAnswers: [], totalUpvotes: 0, topAnswers: 0, allQuestions: [] };
   }
 }
 
-// saveQuestions — no-op, worker handles persistence
-function saveQuestions(qs) { questions = qs; }
-let boardFilter = 'all';
-let boardSort = 'new';
+function renderProfilePage() {
+  const address = globalWalletAddress;
+  if (!address) return;
 
-// Load questions from worker on startup
-loadQuestionsFromWorker();
-let boardSearch = '';
+  const profile = loadProfile(address) || {};
+  const topCount = getTopAnswerCount(address);
+  // Wallet short
+  document.getElementById('profile-wallet-short').textContent = address.slice(0,12) + '...' + address.slice(-6);
 
-// ─── WALLET SESSION RESTORE ───────────────────────────────────
-async function restoreWalletSession() {
-  const saved = loadWalletSession();
-  if (!saved) return;
-  let attempts = 0;
-  while (!window.keplr && attempts < 30) {
-    await new Promise(r => setTimeout(r, 100));
-    attempts++;
+  // Display name
+  document.getElementById('profile-display-name').textContent = profile.nickname || ('Anonymous#' + address.slice(-4).toUpperCase());
+
+  // Title badge — show loading until real data arrives
+  const titleEl = document.getElementById('profile-title-badge');
+  if (titleEl) {
+    titleEl.textContent = '…';
+    titleEl.style.color = 'var(--muted)';
   }
-  if (!window.keplr) return;
-  try {
-    await window.keplr.enable('columbus-5');
-    const signer = window.keplr.getOfflineSigner('columbus-5');
-    const accounts = await signer.getAccounts();
-    if (accounts[0].address === saved) {
-      setWalletConnected(saved);
-    } else {
-      clearWalletSession();
-    }
-  } catch(e) { clearWalletSession(); }
-}
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', restoreWalletSession);
-} else {
-  restoreWalletSession();
-}
 
-// ─── NAVIGATION ───────────────────────────────────────────────
-function showPage(name, e) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  const pg = document.getElementById('page-' + name);
-  if (pg) pg.classList.add('active');
-  if (e && e.target) e.target.classList.add('active');
-  if (name === 'board') { if (!_questionsLoaded) loadQuestionsFromWorker(); else renderBoard(); }
-  if (name === 'vote') { applyStoredVotes(); applyVoteStates(); renderVotes(); }
-  if (name === 'chat') renderChatPage();
-  if (name === 'bag')  renderOracleBag();
-  // Clear URL hash when navigating away from treasury
-  if (history.replaceState) history.replaceState(null, '', window.location.pathname);
-  // Save current page in sessionStorage (resets on tab close)
-  try { sessionStorage.setItem('currentPage', name); } catch(e) {}
-  smoothScrollTop();
-}
-
-// ─── Treasury logic moved to assets/js/treasury.js ───────────
-
-// ─── HASHTAG LOGIC ────────────────────────────────────────────
-let currentTags = [];
-
-function renderTagPills() {
-  const pillsEl = document.getElementById('tag-pills');
-  if (!pillsEl) return;
-  pillsEl.innerHTML = currentTags.map(t =>
-    `<span class="tag-pill">#${t}<button onclick="removeTag('${t}')">✕</button></span>`
-  ).join('');
-  document.getElementById('tags-hidden').value = currentTags.join(',');
-}
-
-function addTag(raw) {
-  if (currentTags.length >= 5) return;
-  const tag = raw.replace(/[^a-zA-Z0-9]/g, '').toLowerCase().slice(0, 20);
-  if (!tag || currentTags.includes(tag)) return;
-  currentTags.push(tag);
-  renderTagPills();
-}
-
-function addTagSuggestion(tag) {
-  addTag(tag);
-  document.getElementById('tag-raw-input').focus();
-}
-
-function removeTag(tag) {
-  currentTags = currentTags.filter(t => t !== tag);
-  renderTagPills();
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  // Restore last page from sessionStorage (only within same tab session)
-  const savedPage = (() => { try { return sessionStorage.getItem('currentPage'); } catch(e) { return null; } })();
-  if (history.replaceState) history.replaceState(null, '', window.location.pathname);
-  if (savedPage === 'treasury') {
-    if (typeof showPage_treasury === 'function') showPage_treasury();
-  } else if (savedPage && savedPage.startsWith('reputation')) {
-    const tab = savedPage.split(':')[1] || 'leaderboard';
-    if (typeof showRepPage === 'function') showRepPage(tab);
-  } else if (savedPage === 'profile') {
-    if (typeof openProfile === 'function') openProfile();
+  // Avatar
+  const img = document.getElementById('profile-avatar-img');
+  const placeholder = document.getElementById('profile-avatar-placeholder');
+  if (profile.avatar) {
+    img.src = profile.avatar;
+    img.style.display = 'block';
+    placeholder.style.display = 'none';
   } else {
-    showPage(savedPage || 'home');
+    img.style.display = 'none';
+    placeholder.style.display = 'block';
   }
-  const input = document.getElementById('tag-raw-input');
-  if (!input) return;
-  input.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' || e.key === ',' || e.key === ' ') {
-      e.preventDefault();
-      addTag(this.value);
-      this.value = '';
-    } else if (e.key === 'Backspace' && this.value === '' && currentTags.length) {
-      currentTags.pop();
-      renderTagPills();
+
+  // Nickname input
+  document.getElementById('profile-nickname-input').value = profile.nickname || '';
+
+  // Stats — show loading state
+  document.getElementById('stat-questions').textContent = '…';
+  document.getElementById('stat-answers').textContent = '…';
+  document.getElementById('stat-upvotes').textContent = '…';
+  document.getElementById('stat-top-answers').textContent = '…';
+  document.getElementById('stat-messages').textContent = '…';
+
+  // Load question stats from worker + chat stats from chain in parallel
+  Promise.all([
+    fetchQuestionStats(address),
+    fetchChatStats(address),
+  ]).then(([qStats, chatStats]) => {
+    const { myQuestions, myAnswers, totalUpvotes, topAnswers, allQuestions } = qStats;
+
+    document.getElementById('stat-questions').textContent = myQuestions.length;
+    document.getElementById('stat-answers').textContent = myAnswers.length;
+    document.getElementById('stat-upvotes').textContent = totalUpvotes;
+    document.getElementById('stat-top-answers').textContent = topAnswers;
+    document.getElementById('stat-messages').textContent = chatStats.msgCount;
+
+    // Calculate reputation + rank
+    const reputation = calcReputation(qStats, chatStats);
+    const rank       = getRank(reputation);
+    const nextRank   = getNextRank(reputation);
+
+    // Update title badge → now shows rank
+    const titleEl = document.getElementById('profile-title-badge');
+    if (titleEl) {
+      titleEl.innerHTML = `<span style="color:${rank.color};text-shadow:0 0 12px ${rank.glow};">${rank.icon} ${rank.name}</span> <span style="font-size:10px;opacity:0.7;margin-left:6px;">${rank.discountLabel}</span>`;
+      titleEl.style.color = rank.color;
     }
+
+    // Render reputation block
+    renderReputationBlock(reputation, rank, nextRank);
+
+    renderMessageProgress(chatStats);
+    renderRankProgress(reputation);
+    renderHistoryTab(currentHistoryTab || 'answers', myAnswers, myQuestions);
   });
-  input.addEventListener('input', function() {
-    if (this.value.endsWith(',') || this.value.endsWith(' ')) {
-      addTag(this.value);
-      this.value = '';
-    }
-  });
-});
-
-// ─── FILTER & SORT ──────────────────────────────────────────
-function setBoardSearch(val) {
-  boardSearch = val.trim().toLowerCase();
-  document.getElementById('search-clear').style.display = boardSearch ? 'block' : 'none';
-  renderBoard();
 }
 
-function clearSearch() {
-  boardSearch = '';
-  document.getElementById('board-search').value = '';
-  document.getElementById('search-clear').style.display = 'none';
-  renderBoard();
-}
+// ─── MESSAGE MILESTONE PROGRESS (on-chain stats) ─────────────
+function renderMessageProgress(stats) {
+  const el = document.getElementById('message-milestone-section');
+  if (!el) return;
 
-function setBoardFilter(cat) {
-  boardFilter = cat;
-  document.querySelectorAll('[id^="filter-"]').forEach(b => b.classList.remove('active'));
-  const map = {'all':'filter-all','Governance':'filter-gov','Technical':'filter-tech','Validator Issue':'filter-val','Market':'filter-market','Community':'filter-comm','Security / Vulnerability':'filter-gov','Protocol Bug':'filter-tech','Proposal / Idea':'filter-gov','Fraud / Manipulation':'filter-gov','Other':'filter-all'};
-  if (map[cat]) document.getElementById(map[cat])?.classList.add('active');
-  renderBoard();
-}
+  const { msgCount, entriesEarned, todayMsgs, todayEntries } = stats;
 
-function setBoardSort(s) {
-  boardSort = s;
-  document.querySelectorAll('[id^="sort-"]').forEach(b => b.classList.remove('active'));
-  document.getElementById('sort-' + s)?.classList.add('active');
-  renderBoard();
-}
+  // Progress to next entry today: X/10 msgs
+  const todayProgress = todayMsgs % 10;
+  const pct = Math.round((todayProgress / 10) * 100);
 
-// ─── RENDER BOARD ────────────────────────────────────────────
-function renderPoll(q, qi) {
-  const poll = q.poll;
-  const totalVotes = poll.reduce((s, o) => s + (o.votes || 0), 0);
-  const myVote = q.myPollVote !== undefined ? q.myPollVote : null;
+  // Max daily entries info
+  const maxedToday = todayEntries >= 2;
 
-  let optionsHtml = '';
-  for (let oi = 0; oi < poll.length; oi++) {
-    const opt = poll[oi];
-    const pct = totalVotes > 0 ? Math.round((opt.votes || 0) / totalVotes * 100) : 0;
-    const voted = myVote === oi;
-    const border = voted ? 'rgba(84,147,247,0.6)' : 'rgba(255,255,255,0.08)';
-    const bg = voted ? 'rgba(84,147,247,0.12)' : 'rgba(255,255,255,0.03)';
-    const textColor = voted ? 'var(--accent)' : 'var(--text)';
-    optionsHtml += '<div style="margin-bottom:6px;">' +
-      '<button onclick="votePoll(' + qi + ',' + oi + ')" style="width:100%;text-align:left;padding:8px 12px;border-radius:8px;border:1px solid ' + border + ';background:' + bg + ';cursor:pointer;position:relative;overflow:hidden;">' +
-      '<div style="position:absolute;left:0;top:0;height:100%;width:' + pct + '%;background:rgba(84,147,247,0.08);border-radius:8px;transition:width 0.4s;"></div>' +
-      '<div style="position:relative;display:flex;justify-content:space-between;align-items:center;">' +
-      '<span style="font-size:12px;color:' + textColor + ';">' + opt.text + '</span>' +
-      '<span style="font-size:11px;color:var(--muted);">' + pct + '% · ' + (opt.votes || 0) + '</span>' +
-      '</div></button></div>';
-  }
-
-  return '<div class="poll-section" style="margin:10px 0;border:1px solid rgba(84,147,247,0.2);border-radius:10px;padding:12px;background:rgba(84,147,247,0.04);">' +
-    '<div style="font-size:10px;color:var(--accent);letter-spacing:0.08em;margin-bottom:8px;">COMMUNITY POLL</div>' +
-    optionsHtml +
-    '<div style="font-size:10px;color:var(--muted);margin-top:4px;">' + totalVotes + ' vote' + (totalVotes !== 1 ? 's' : '') + ' total</div>' +
-    '</div>';
-}
-
-
-async function votePoll(qi, optionIdx) {
-  if (!globalWalletAddress) { alert('Connect wallet to vote'); return; }
-  const q = questions[qi];
-  if (!q.poll) return;
-  if (q.myPollVote !== undefined && q.myPollVote !== null) return; // already voted
-
-  q.myPollVote = optionIdx;
-  q.poll[optionIdx].votes = (q.poll[optionIdx].votes || 0) + 1;
-  localStorage.setItem('poll_vote_' + q.id, String(optionIdx));
-  renderBoard();
-
-  try {
-    await fetch(`${WORKER_URL}/poll-vote`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ questionId: q.id, optionIdx, wallet: globalWalletAddress }),
-    });
-  } catch(e) { console.warn('Poll vote sync failed:', e.message); }
-}
-
-function renderBoard() {
-  const list = document.getElementById('questions-list');
-  const count = document.getElementById('board-count');
-
-  let filtered = boardFilter === 'all' ? [...questions] : questions.filter(q => q.category === boardFilter || q.category.includes(boardFilter.replace(/[🗳️⚙️📈🌍⚡]\s*/,'')));
-
-  if (boardSearch) {
-    const searchTag = boardSearch.startsWith('#') ? boardSearch.slice(1) : null;
-    filtered = filtered.filter(q =>
-      q.text.toLowerCase().includes(boardSearch) ||
-      q.category.toLowerCase().includes(boardSearch) ||
-      q.id.toLowerCase().includes(boardSearch) ||
-      (searchTag && q.tags && q.tags.some(t => t.toLowerCase() === searchTag.toLowerCase())) ||
-      (q.tags && q.tags.some(t => ('#'+t).includes(boardSearch) || t.includes(boardSearch))) ||
-      q.answers.some(a => a.text.toLowerCase().includes(boardSearch))
-    );
-  }
-
-  if (boardSort === 'hot') filtered.sort((a,b) => (b.votes + b.answers.length*2) - (a.votes + a.answers.length*2));
-  else if (boardSort === 'unanswered') filtered = filtered.filter(q => q.answers.length === 0);
-  else filtered.sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
-
-  count.textContent = filtered.length + ' open question' + (filtered.length !== 1 ? 's' : '');
-
-  if (filtered.length === 0) {
-    list.innerHTML = boardSearch
-      ? `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-text">No questions match "<strong>${boardSearch}</strong>".<br><span style="font-size:11px;opacity:0.6;">Try different keywords</span></div></div>`
-      : `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No questions here yet.<br>Be the first to ask!</div></div>`;
-    return;
-  }
-
-  list.innerHTML = filtered.map((q, qi) => {
-    const realQi = questions.indexOf(q);
-    return `
-    <div class="q-card" id="qcard-${qi}">
-      <div class="q-meta">
-        ${q.isAdmin ? `<span class="badge-admin">🛡️ Admin</span>` : `<span class="q-alias">${q.alias}</span>`}
-        ${!q.isAdmin && q.wallet && window._walletScores ? getRankBadgeHTML(window._walletScores[q.wallet] || 0) : (q.title && !q.isAdmin ? `<span class="badge-title">${q.title}</span>` : '')}
-        <span class="q-category">${q.category}</span>
-        <span class="q-ref" style="margin-left:auto;">${q.time}&nbsp;&nbsp;${q.id}</span>
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-size:11px;color:var(--muted);">💬 Chat messages → free Weekly lottery entries</span>
+      <span style="font-size:11px;color:var(--green);font-weight:700;">${entriesEarned} ${entriesEarned === 1 ? 'entry' : 'entries'} earned this week</span>
+    </div>
+    <div style="background:rgba(255,255,255,0.06);border-radius:4px;height:6px;margin-bottom:10px;overflow:hidden;">
+      <div style="height:100%;border-radius:4px;background:linear-gradient(90deg,#1ec864,#4ade80);width:${maxedToday ? 100 : pct}%;transition:width 0.6s ease;"></div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+      <div style="font-size:10px;padding:3px 10px;border-radius:20px;
+        background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--muted);">
+        Every 10 msgs/day = +1 entry · max 2/day
       </div>
-      ${q.tags && q.tags.length ? `<div class="q-tags">${q.tags.map(t => `<span class="q-tag ${boardSearch === '#'+t || boardSearch === t ? 'active-tag' : ''}" onclick="setBoardSearch('#${t}')">#${t}</span>`).join('')}</div>` : ''}
-      <div class="q-text">${boardSearch ? q.text.replace(new RegExp('(' + boardSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi'), '<mark style="background:rgba(84,147,247,0.25);color:var(--accent);border-radius:2px;padding:0 2px;">$1</mark>') : q.text}</div>
-      ${q.poll && q.poll.length >= 2 ? renderPoll(q, realQi) : ''}
-      <div class="q-footer">
-        <div class="q-votes">
-          <button class="vote-btn ${q.voted ? 'voted' : ''}" onclick="voteQuestion(${realQi})">👍 ${q.votes}</button>
-        </div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn btn-sm btn-answer" onclick="toggleAnswers(${realQi})">💬 ${q.answers.length} answer${q.answers.length !== 1 ? 's' : ''}</button>
-          <button class="btn btn-sm btn-answer" onclick="toggleAnswerForm(${realQi})">+ Answer</button>
+      ${maxedToday
+        ? `<div style="font-size:10px;padding:3px 10px;border-radius:20px;
+            background:rgba(30,200,100,0.12);border:1px solid rgba(30,200,100,0.35);color:#4ade80;">
+            ✓ Max entries today (${todayEntries}/2)
+           </div>`
+        : `<div style="font-size:10px;color:var(--muted);padding:3px 0;">
+            Today: ${todayProgress}/10 to next entry
+           </div>`
+      }
+    </div>
+  `;
+}
+
+// ─── REPUTATION BLOCK ─────────────────────────────────────────
+function renderReputationBlock(reputation, rank, nextRank) {
+  const el = document.getElementById('reputation-block');
+  if (!el) return;
+
+  const pct = nextRank
+    ? Math.round(((reputation - rank.minScore) / (nextRank.minScore - rank.minScore)) * 100)
+    : 100;
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div>
+        <div style="font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Oracle Reputation</div>
+        <div style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:800;color:${rank.color};text-shadow:0 0 18px ${rank.glow};line-height:1;">
+          ${reputation.toLocaleString()}
         </div>
       </div>
-      <div class="answers-section ${q.open ? 'open' : ''}" id="answers-${realQi}">
-        ${q.answers.length === 0 ? `<div style="font-size:12px;color:var(--muted);padding:8px 0;">No answers yet — be the first!</div>` : ''}
-        ${q.answers.map((a, ai) => `
-          <div class="answer-item ${a.isAdmin ? 'admin-answer' : ''}">
-            <div class="answer-meta">
-              ${a.isAdmin ? `<span class="badge-admin">🛡️ Admin</span>` : `<span class="q-alias">${a.alias}</span>`}
-              ${!a.isAdmin && a.wallet && window._walletScores ? getRankBadgeHTML(window._walletScores[a.wallet] || 0) : (a.title && !a.isAdmin ? `<span class="badge-title">${a.title}</span>` : '')}
-            </div>
-            <div class="answer-text">${a.text}</div>
-            <div class="answer-votes">
-              <button class="vote-btn ${a.voted ? 'voted' : ''}" onclick="voteAnswer(${realQi},${ai})">👍 ${a.votes}</button>
-            </div>
-          </div>
-        `).join('')}
-        <div class="answer-form ${q.formOpen ? 'open' : ''}" id="aform-${realQi}">
-          <div class="answer-form-title">Submit anonymous answer</div>
-          <div class="form-group">
-            <label>Your Answer</label>
-            <textarea id="atext-${realQi}" placeholder="Share your knowledge anonymously..." rows="4"></textarea>
-          </div>
-          <div class="form-group">
-            <label>Admin Key <span style="font-size:9px;color:var(--muted);text-transform:none">(optional — leave blank to answer anonymously)</span></label>
-            <div class="admin-key-wrap" id="akwrap-${realQi}">
-              <input type="text" id="akey-${realQi}" placeholder="Enter key to post as Admin..." oninput="checkAdminKey(${realQi})" style="-webkit-text-security:disc;text-security:disc;">
-              <span class="admin-key-hint" id="akeyhint-${realQi}">optional</span>
-            </div>
-          </div>
-          <div style="display:flex;gap:10px;align-items:center;margin-top:4px;">
-            <button class="btn btn-primary btn-sm" onclick="submitAnswer(${realQi})">Post Answer</button>
-            <span style="font-size:10px;color:var(--muted)" id="apreview-${realQi}">Will post as: Anonymous#????</span>
-          </div>
+      <div style="text-align:right;">
+        <div style="font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Current Rank</div>
+        <div style="font-size:18px;font-weight:800;letter-spacing:0.1em;color:${rank.color};text-shadow:0 0 14px ${rank.glow};">
+          ${rank.icon} ${rank.name}
         </div>
       </div>
     </div>
-  `; }).join('');
+    ${nextRank ? `
+      <div style="margin-bottom:6px;display:flex;justify-content:space-between;font-size:10px;color:var(--muted);">
+        <span>Progress to <span style="color:${nextRank.color};font-weight:700;">${nextRank.icon} ${nextRank.name}</span></span>
+        <span style="color:${rank.color};">${pct}%</span>
+      </div>
+      <div style="background:rgba(255,255,255,0.06);border-radius:6px;height:8px;overflow:hidden;margin-bottom:6px;">
+        <div style="height:100%;border-radius:6px;width:${pct}%;background:linear-gradient(90deg,${rank.bar},${nextRank.bar});transition:width 0.8s ease;box-shadow:0 0 8px ${rank.glow};"></div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);">
+        ${reputation.toLocaleString()} / ${nextRank.minScore.toLocaleString()} REP · need <strong style="color:var(--text);">${(nextRank.minScore - reputation).toLocaleString()}</strong> more
+      </div>
+    ` : `
+      <div style="font-size:11px;color:${rank.color};text-shadow:0 0 10px ${rank.glow};font-weight:700;letter-spacing:0.08em;">
+        ✦ MAX RANK ACHIEVED — ASCENDED
+      </div>
+    `}
+  `;
 }
 
-function checkAdminKey(qi) {
-  const key = document.getElementById('akey-' + qi).value;
-  const wrap = document.getElementById('akwrap-' + qi);
-  const hint = document.getElementById('akeyhint-' + qi);
-  const preview = document.getElementById('apreview-' + qi);
-  const isAdmin = key === ADMIN_KEY;
-  wrap.className = 'admin-key-wrap' + (key.length > 0 && isAdmin ? ' valid' : '');
-  hint.textContent = isAdmin ? '🛡️ Admin verified' : 'optional';
-  preview.innerHTML = isAdmin
-    ? 'Will post as: <span class="badge-admin" style="font-size:9px;padding:1px 7px;">🛡️ Admin</span>'
-    : 'Will post as: Anonymous#' + Math.floor(1000 + Math.random() * 9000);
+// ─── RANK PROGRESS LIST ───────────────────────────────────────
+function renderRankProgress(reputation) {
+  const el = document.getElementById('title-progress-list');
+  if (!el) return;
+
+  el.innerHTML = RANKS.map(r => {
+    const achieved = reputation >= r.minScore;
+    const isCurrent = getRank(reputation) === r;
+    const pct = r.minScore === 0 ? 100 : Math.min(100, Math.round((reputation / r.minScore) * 100));
+
+    return `
+      <div class="title-row" style="${isCurrent ? `border-left:2px solid ${r.color};padding-left:10px;margin-left:-12px;` : ''}">
+        <div style="width:110px;font-size:11px;font-weight:700;color:${r.color};opacity:${achieved ? 1 : 0.45};
+          ${achieved ? `text-shadow:0 0 8px ${r.glow};` : ''}">
+          ${r.icon} ${r.name}
+          ${isCurrent ? '<span style="font-size:9px;opacity:0.7;"> ← you</span>' : ''}
+        </div>
+        <div style="flex:1;">
+          <div class="title-progress-bar" style="margin-bottom:3px;">
+            <div class="title-progress-fill" style="width:${pct}%;background:${achieved ? r.bar : 'rgba(255,255,255,0.12)'};
+              ${achieved ? `box-shadow:0 0 6px ${r.glow};` : ''}"></div>
+          </div>
+          <div style="font-size:9px;color:var(--muted);">
+            ${r.minScore === 0 ? 'Starting rank' : r.minScore.toLocaleString() + ' REP'}
+          </div>
+        </div>
+        <div style="font-size:10px;color:${r.color};opacity:${achieved ? 1 : 0.45};min-width:80px;text-align:right;">
+          ${achieved ? '✅ ' : ''}${r.discountLabel}
+        </div>
+      </div>`;
+  }).join('');
 }
 
-function toggleAnswers(qi) { questions[qi].open = !questions[qi].open; renderBoard(); }
-function toggleAnswerForm(qi) { questions[qi].formOpen = !questions[qi].formOpen; questions[qi].open = true; renderBoard(); }
+// Legacy — kept so old calls don't break
+function renderTitleProgress(qCount, upvotes) {
+  const approxScore = qCount * 40 + upvotes * 10;
+  renderRankProgress(approxScore);
+}
 
-async function submitAnswer(qi) {
+let currentHistoryTab = 'answers';
+
+function switchHistoryTab(tab) {
+  currentHistoryTab = tab;
+  document.getElementById('history-tab-answers').classList.toggle('active', tab === 'answers');
+  document.getElementById('history-tab-questions').classList.toggle('active', tab === 'questions');
+  const msgTabEl = document.getElementById('history-tab-messages');
+  if (msgTabEl) msgTabEl.classList.toggle('active', tab === 'messages');
+
+  const address = globalWalletAddress;
+  fetchQuestionStats(address).then(({ myQuestions, myAnswers }) => {
+    renderHistoryTab(tab, myAnswers, myQuestions);
+  });
+}
+
+function renderHistoryTab(tab, myAnswers, myQuestions) {
+  const el = document.getElementById('profile-history-list');
+  if (tab === 'messages') {
+    el.innerHTML = `
+      <div class="history-item">
+        <div class="history-item-meta">
+          <span style="color:var(--green);">💬 DAO Chat Activity</span>
+          <span style="font-size:10px;color:var(--muted);">Last 7 days · on-chain</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;" id="chat-stats-grid">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;">
+            <div style="font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:800;color:var(--green);">…</div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">Messages sent</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;">
+            <div style="font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:800;color:#a78bfa;">…</div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">Free Weekly entries</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;" id="chat-stats-days"></div>
+        <div style="margin-top:14px;font-size:11px;color:var(--muted);line-height:1.6;">
+          Every <strong style="color:var(--text)">10 messages per day</strong> = 1 free Weekly Draw entry · max 2/day.
+          Messages cost <strong style="color:var(--text)">5,000 LUNC</strong> each and go to the Protocol Treasury.
+        </div>
+      </div>`;
+    // Async fill
+    fetchChatStats(globalWalletAddress).then(stats => {
+      const grid = document.getElementById('chat-stats-grid');
+      if (!grid) return;
+      grid.innerHTML = `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:800;color:var(--green);">${stats.msgCount}</div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">Messages sent</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:800;color:#a78bfa;">${stats.entriesEarned}</div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">Free Weekly entries</div>
+        </div>`;
+      // Per-day breakdown
+      const daysEl = document.getElementById('chat-stats-days');
+      if (daysEl && Object.keys(stats.days).length) {
+        const sorted = Object.entries(stats.days).sort((a,b) => b[0].localeCompare(a[0]));
+        daysEl.innerHTML = sorted.map(([day, cnt]) => {
+          const entries = Math.min(Math.floor(cnt / 10), 2);
+          const label   = new Date(day).toLocaleDateString([], {month:'short',day:'numeric'});
+          return `<div style="font-size:10px;padding:3px 10px;border-radius:20px;
+            background:${entries > 0 ? 'rgba(30,200,100,0.1)' : 'rgba(255,255,255,0.04)'};
+            border:1px solid ${entries > 0 ? 'rgba(30,200,100,0.3)' : 'var(--border)'};
+            color:${entries > 0 ? '#4ade80' : 'var(--muted)'};">
+            ${label}: ${cnt} msgs${entries > 0 ? ' · +'+entries+' entr'+(entries>1?'ies':'y') : ''}
+          </div>`;
+        }).join('');
+      }
+    });
+    return;
+  }
+  if (tab === 'answers') {
+    if (!myAnswers.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:30px;">No answers yet — go to the Board and share your knowledge!</div>'; return; }
+    el.innerHTML = myAnswers.map(a => `
+      <div class="history-item">
+        <div class="history-item-meta">
+          <span style="color:var(--accent);">💬 Answer</span>
+          <span>on question ${a.questionId}</span>
+          ${a.votes >= 3 ? '<span style="color:var(--gold);">⭐ Top Answer</span>' : ''}
+        </div>
+        <div class="history-item-text" style="font-size:11px;color:var(--muted);margin-bottom:6px;font-style:italic;">"${(a.questionText||'').slice(0,80)}..."</div>
+        <div class="history-item-text">${a.text.slice(0,200)}${a.text.length > 200 ? '...' : ''}</div>
+        <div class="history-item-votes">👍 ${a.votes || 0} upvotes</div>
+      </div>
+    `).join('');
+  } else {
+    if (!myQuestions.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:30px;">No questions yet — ask the community something!</div>'; return; }
+    el.innerHTML = myQuestions.map(q => `
+      <div class="history-item">
+        <div class="history-item-meta">
+          <span style="color:var(--accent);">🔮 Question</span>
+          <span>${q.category}</span>
+          <span>${q.time}</span>
+          <span class="q-ref">${q.id}</span>
+        </div>
+        <div class="history-item-text">${q.text.slice(0,200)}${q.text.length > 200 ? '...' : ''}</div>
+        <div class="history-item-votes">👍 ${q.votes || 0} votes · 💬 ${q.answers?.length || 0} answers</div>
+      </div>
+    `).join('');
+  }
+}
+
+// ─── EDIT PROFILE ─────────────────────────────────────────────
+function toggleProfileEdit() {
+  const form = document.getElementById('profile-edit-form');
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+function saveProfile() {
+  const address = globalWalletAddress;
+  if (!address) return;
+  const nickname = document.getElementById('profile-nickname-input').value.trim().slice(0, 24);
+  const existing = loadProfile(address) || {};
+  saveProfileData(address, { ...existing, nickname });
+
+  // Update display name in navbar wallet button
+  const short = address.slice(0,8) + '...' + address.slice(-4);
+  document.getElementById('wallet-btn-label').textContent = nickname || short;
+
+  toggleProfileEdit();
+  renderProfilePage();
+}
+
+// ─── AVATAR ───────────────────────────────────────────────────
+function triggerAvatarUpload() {
+  document.getElementById('avatar-upload').click();
+}
+
+function handleAvatarUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 500 * 1024) { alert('Image too large. Max 500KB.'); return; }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const address = globalWalletAddress;
+    if (!address) return;
+    const existing = loadProfile(address) || {};
+    saveProfileData(address, { ...existing, avatar: e.target.result });
+    renderProfilePage();
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeAvatar() {
+  const address = globalWalletAddress;
+  if (!address) return;
+  const existing = loadProfile(address) || {};
+  delete existing.avatar;
+  saveProfileData(address, existing);
+  renderProfilePage();
+}
+
+// ─── PATCH: показывать никнейм вместо Anonymous#xxxx ─────────
+// Переопределяем submitAnswer чтобы прикреплять walletAddr
+const _origSubmitAnswer = window.submitAnswer;
+window.submitAnswer = function(qi) {
   const text = document.getElementById('atext-' + qi).value.trim();
-  const key  = document.getElementById('akey-' + qi)?.value || '';
+  const key = document.getElementById('akey-' + qi).value;
   if (!text) { alert('Please write your answer first.'); return; }
   const isAdmin = key === ADMIN_KEY;
-  if (!isAdmin && !globalWalletAddress) { alert('Connect wallet to answer'); return; }
-  const wallet = isAdmin ? 'admin' : globalWalletAddress;
-  const q = questions[qi];
-  try {
-    const res = await fetch(`${WORKER_URL}/answer`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ questionId: q.id, text, wallet }),
-    });
-    if (!res.ok) throw new Error('Failed to post answer');
-    const data = await res.json();
-    questions[qi].answers.push({
-      id: data.answerId,
-      alias: isAdmin ? 'Admin' : 'Anonymous#' + wallet.slice(-4).toUpperCase(),
-      isAdmin, wallet, text, votes: 0, voted: false,
-    });
-    questions[qi].formOpen = false;
-    questions[qi].open = true;
-    renderBoard();
-  } catch(e) {
-    alert('Failed to post answer: ' + e.message);
-  }
-}
-
-async function voteQuestion(qi) {
-  const q = questions[qi];
-  if (q.voted) return;
-  const _wallet = globalWalletAddress || connectedAddress;
-  if (!_wallet) { alert('Connect wallet to vote'); return; }
-
-  // Optimistic update
-  q.votes++; q.voted = true;
-  const votedQ = JSON.parse(localStorage.getItem('voted_questions') || '{}');
-  votedQ[q.id] = true;
-  localStorage.setItem('voted_questions', JSON.stringify(votedQ));
+  const address = globalWalletAddress;
+  const nickname = address ? getProfileNickname(address) : null;
+  const alias = isAdmin ? 'Admin' : (nickname || ('Anonymous#' + Math.floor(1000 + Math.random() * 9000)));
+  questions[qi].answers.push({
+    alias, isAdmin, title: null, text, votes: 0, voted: false,
+    walletAddr: address || null
+  });
+  questions[qi].formOpen = false;
+  questions[qi].open = true;
+  saveQuestions(questions);
   renderBoard();
-
-  // Sync to worker
-  try {
-    const res = await fetch(`${WORKER_URL}/question-vote`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ questionId: q.id, wallet: _wallet }),
-    });
-    if (!res.ok) {
-      const err = await res.json();
-      if (err.error === 'Already voted') return; // already counted
-      if (err.error === 'Cannot vote your own question') {
-        // Revert
-        q.votes--; q.voted = false;
-        delete votedQ[q.id];
-        localStorage.setItem('voted_questions', JSON.stringify(votedQ));
-        renderBoard();
-        alert('You cannot vote your own question');
-      }
-    }
-  } catch(e) { console.warn('Vote sync failed:', e.message); }
-}
-
-async function voteAnswer(qi, ai) {
-  const answer = questions[qi].answers[ai];
-  if (answer.voted) return;
-  if (!globalWalletAddress) { alert('Connect wallet to vote'); return; }
-  // Optimistic update
-  answer.votes++; answer.voted = true;
-  const votedA = JSON.parse(localStorage.getItem('voted_answers') || '{}');
-  votedA[answer.id] = true;
-  localStorage.setItem('voted_answers', JSON.stringify(votedA));
-  renderBoard();
-  // Persist to worker
-  try {
-    await fetch(`${WORKER_URL}/vote`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ questionId: questions[qi].id, answerId: answer.id, wallet: globalWalletAddress }),
-    });
-  } catch(e) { console.warn('Vote sync failed:', e.message); }
-}
-
-// ─── ASK FORM ────────────────────────────────────────────────
-document.getElementById('ask-message').addEventListener('input', function() {
-  const max = 2000, len = this.value.length, remaining = max - len;
-  const pct = len / max;
-  const ring = document.getElementById('ask-ring');
-  document.getElementById('ask-count').textContent = remaining;
-  ring.style.strokeDashoffset = 87.96 - pct * 87.96;
-  ring.style.stroke = remaining <= 100 ? '#ff4444' : remaining <= 300 ? '#f5c518' : 'var(--accent)';
-  document.getElementById('ask-count').style.color = remaining <= 100 ? '#ff4444' : remaining <= 300 ? '#f5c518' : 'var(--muted)';
-});
-
-document.getElementById('ask-form').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  const btn = document.getElementById('ask-btn');
-  btn.disabled = true;
-  btn.innerHTML = 'Transmitting<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>';
-  const formData = new FormData(this);
-  const category = formData.get('category') || 'Other';
-  const text = formData.get('message') || '';
-  const txHash = document.getElementById('verified-tx-hidden').value;
-  const wallet = document.getElementById('verified-wallet-hidden').value;
-  const ref = 'LUNC-' + Date.now().toString(36).toUpperCase().slice(-7);
-  const tagsRaw = document.getElementById('tags-hidden').value;
-  const tags = tagsRaw ? tagsRaw.split(',').filter(Boolean) : [];
-  const _userTitle = (typeof getUserTitle === 'function' && wallet) ? getUserTitle(wallet) : null;
-  const _titleLabel = _userTitle ? _userTitle.name : 'Seeker';
-  // Poll options
-  const _pollRaw = document.getElementById('poll-options-hidden')?.value || '';
-  let pollOptions = [];
-  try { pollOptions = JSON.parse(_pollRaw).filter(o => o.trim()); } catch {}
-  const poll = pollOptions.length >= 2 ? pollOptions.map(o => ({ text: o, votes: 0, voters: [] })) : null;
-
-  try {
-    const res = await fetch(`${WORKER_URL}/questions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: ref, category, text, wallet, txHash, tags, paymentAmount: 200000, poll }),
-    });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Failed to submit');
-    }
-    // Add optimistically to local cache
-    const newQ = { id: ref, alias: 'Anonymous#' + wallet.slice(-4).toUpperCase(), title: _titleLabel,
-      category, text, tags, wallet, txHash, createdAt: Date.now() / 1000,
-      poll, votes: 0, answers: [], voted: false, open: false, formOpen: false };
-    questions.unshift(newQ);
-    renderBoard();
-    document.getElementById('ask-form-section').style.display = 'none';
-    const success = document.getElementById('ask-success');
-    success.classList.add('visible');
-    document.getElementById('ask-ref').textContent = 'REF: ' + ref;
-    if (typeof resetPollOptions === 'function') resetPollOptions();
-  } catch(e) {
-    alert('Failed to submit question: ' + e.message);
-  }
-  btn.disabled = false;
-  btn.innerHTML = 'Transmit Question →';
-});
-
-// ─── PROTOCOL WALLETS ─────────────────────────────────────────
-const ADMIN_WALLET    = 'terra15jt5a9ycsey4hd6nlqgqxccl9aprkmg2mxmfc6';
-const ORACLE_WALLET   = 'terra1549z8zd9hkggzlwf0rcuszhc9rs9fxqfy2kagt'; // Protocol Treasury wallet
-const LOTTERY_WALLET  = 'terra1p5l6q95kfl3hes7edy76tywav9f79n6xlkz6qz'; // Weekly Draw Pool
-const BURN_WALLET     = 'terra16m05j95p9qvq93cdtchjcpwgvny8f57vzdj06p';
-const PROTOCOL_WALLET = ADMIN_WALLET;
-const REQUIRED_LUNC   = 200000000000; // 200,000 LUNC in uLUNC
-let connectedAddress  = null;
-
-async function connectKeplr() {
-  const btn = document.getElementById('keplr-connect-btn');
-  if (!window.keplr) {
-    if (confirm('Keplr wallet not found. Install Keplr?')) window.open('https://www.keplr.app/', '_blank');
-    return;
-  }
-  try {
-    btn.textContent = 'Connecting...'; btn.disabled = true;
-    await window.keplr.enable('columbus-5');
-    const offlineSigner = window.keplr.getOfflineSigner('columbus-5');
-    const accounts = await offlineSigner.getAccounts();
-    connectedAddress = accounts[0].address;
-    // Update Pay button — async fetch real title from worker
-    const _addr = accounts[0].address;
-    if (typeof fetchQuestionStats === 'function') {
-      fetchQuestionStats(_addr).then(stats => {
-        const { myQuestions, totalUpvotes } = stats;
-        const _title = (typeof getUserTitleFromStats === 'function')
-          ? getUserTitleFromStats(myQuestions.length, totalUpvotes)
-          : null;
-        const _discPct = _title ? (_title.discount || 0) : 0;
-        const _discAmt = Math.round(200000 * (_discPct / 100));
-        const _price   = 200000 - _discAmt;
-        const _btnEl   = document.getElementById('verify-btn');
-        if (_btnEl) {
-          const _disc = _discPct > 0 ? ` (${_discPct}% off)` : '';
-          _btnEl.textContent = `Pay ${_price.toLocaleString()} LUNC & Unlock →${_disc}`;
-        }
-      });
-    } else {
-      // Fallback to local questions if profile.js not loaded
-      const _title = (typeof getUserTitle === 'function') ? getUserTitle(_addr) : null;
-      const _discPct  = _title ? (_title.discount || 0) : 0;
-      const _discAmt  = Math.round(200000 * (_discPct / 100));
-      const _price    = 200000 - _discAmt;
-      const _btnEl    = document.getElementById('verify-btn');
-      if (_btnEl) {
-        const _disc = _discPct > 0 ? ` (${_discPct}% off)` : '';
-        _btnEl.textContent = `Pay ${_price.toLocaleString()} LUNC & Unlock →${_disc}`;
-      }
-    }
-    document.getElementById('connected-addr').textContent = connectedAddress.slice(0,10)+'...'+connectedAddress.slice(-4);
-    document.getElementById('verified-wallet-hidden').value = connectedAddress;
-    // Refresh My Bag if open
-    if (document.getElementById('page-bag') &&
-        document.getElementById('page-bag').classList.contains('active')) {
-      renderOracleBag();
-    }
-    document.getElementById('keplr-disconnected').style.display = 'none';
-    document.getElementById('keplr-connected').style.display = 'block';
-    if (connectedAddress === ADMIN_WALLET) {
-      document.getElementById('verified-tx-hidden').value = 'ADMIN_BYPASS';
-      document.getElementById('keplr-connected').style.display = 'none';
-      document.getElementById('ask-form').style.display = 'block';
-      const notice = document.getElementById('tx-section');
-      notice.style.display = 'block';
-      notice.innerHTML = '<div style="background:rgba(245,197,24,0.08);border:1px solid rgba(245,197,24,0.25);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--gold);">🛡️ Admin wallet detected — payment bypassed</div>';
-    } else {
-      document.getElementById('tx-section').style.display = 'block';
-    }
-  } catch(e) {
-    btn.textContent = '🔑 Connect Keplr Wallet'; btn.disabled = false;
-    alert('Connection failed: ' + (e.message || e));
-  }
-}
-
-function disconnectKeplr() {
-  connectedAddress = null;
-  document.getElementById('keplr-disconnected').style.display = 'block';
-  document.getElementById('keplr-connected').style.display = 'none';
-  document.getElementById('tx-section').style.display = 'none';
-  document.getElementById('ask-form').style.display = 'none';
-  document.getElementById('tx-status').style.display = 'none';
-  document.getElementById('keplr-connect-btn').textContent = '🔑 Connect Keplr Wallet';
-  document.getElementById('keplr-connect-btn').disabled = false;
-}
-
-// ─── AMINO SIGNING HELPER (no cosmjs) ────────────────────────────────────────
-async function sendLuncDirect(fromAddr, toAddr, amountUluna, memo, chainId) {
-  const LCD   = 'https://terra-classic-lcd.publicnode.com';
-  const CHAIN = chainId || 'columbus-5';
-
-  // Get account info
-  const accRes  = await fetch(`${LCD}/cosmos/auth/v1beta1/accounts/${fromAddr}`);
-  const accData = await accRes.json();
-  const acct    = accData?.account || {};
-  const accountNumber = parseInt(acct.account_number || '0');
-  const sequence      = parseInt(acct.sequence || '0');
-
-  // Fee = gas + 0.5% tax
-  const gasLimit = 300000;
-  const gasFee   = Math.ceil(gasLimit * 28.325);
-  const taxFee   = Math.ceil(amountUluna * 0.005);
-  const totalFee = gasFee + taxFee;
-
-  // Protobuf helpers
-  function encodeVarint(n) { n=Number(n); const b=[]; while(n>127){b.push((n&0x7f)|0x80);n=Math.floor(n/128);}b.push(n&0x7f);return new Uint8Array(b); }
-  function encodeField(f,w,d){const t=encodeVarint((f<<3)|w);if(w===2){const l=encodeVarint(d.length);const o=new Uint8Array(t.length+l.length+d.length);o.set(t);o.set(l,t.length);o.set(d,t.length+l.length);return o;}return t;}
-  function concat(...a){const tot=a.reduce((s,x)=>s+x.length,0);const o=new Uint8Array(tot);let off=0;for(const x of a){o.set(x,off);off+=x.length;}return o;}
-  const enc = new TextEncoder();
-
-  // MsgSend
-  const coinP  = concat(encodeField(1,2,enc.encode('uluna')), encodeField(2,2,enc.encode(String(amountUluna))));
-  const msgSP  = concat(encodeField(1,2,enc.encode(fromAddr)), encodeField(2,2,enc.encode(toAddr)), encodeField(3,2,coinP));
-  const anyMsg = concat(encodeField(1,2,enc.encode('/cosmos.bank.v1beta1.MsgSend')), encodeField(2,2,msgSP));
-  const txBodyP = concat(encodeField(1,2,anyMsg), encodeField(2,2,enc.encode(memo)));
-
-  // Get pubkey from Keplr
-  const directSigner = window.keplr.getOfflineSigner(CHAIN);
-  const accounts = await directSigner.getAccounts();
-  const pubkeyB   = accounts[0].pubkey;
-  const pubkeyAny = concat(
-    encodeField(1,2,enc.encode('/cosmos.crypto.secp256k1.PubKey')),
-    encodeField(2,2,encodeField(1,2,pubkeyB))
-  );
-
-  // ModeInfo: SIGN_MODE_DIRECT = 1
-  const modeInfoP = encodeField(1,2,concat(encodeVarint((1<<3)|0), encodeVarint(1)));
-
-  // SignerInfo
-  const signerP = concat(
-    encodeField(1,2,pubkeyAny),
-    encodeField(2,2,modeInfoP),
-    encodeVarint((3<<3)|0), encodeVarint(sequence)
-  );
-
-  // Fee
-  const feeCoinP  = concat(encodeField(1,2,enc.encode('uluna')), encodeField(2,2,enc.encode(String(totalFee))));
-  const feeP      = concat(encodeField(1,2,feeCoinP), encodeVarint((2<<3)|0), encodeVarint(gasLimit));
-  const authInfoP = concat(encodeField(1,2,signerP), encodeField(2,2,feeP));
-
-  // Sign with signDirect
-  const { signed, signature } = await directSigner.signDirect(fromAddr, {
-    bodyBytes:     txBodyP,
-    authInfoBytes: authInfoP,
-    chainId:       CHAIN,
-    accountNumber: BigInt(accountNumber),
-  });
-
-  // Use signed bytes (Keplr may have modified them)
-  const finalBody     = signed.bodyBytes     || txBodyP;
-  const finalAuthInfo = signed.authInfoBytes || authInfoP;
-  const sigB          = Uint8Array.from(atob(signature.signature), c=>c.charCodeAt(0));
-  const txRawP        = concat(encodeField(1,2,finalBody), encodeField(2,2,finalAuthInfo), encodeField(3,2,sigB));
-  const txBase64      = btoa(String.fromCharCode(...txRawP));
-
-  const res  = await fetch(`${LCD}/cosmos/tx/v1beta1/txs`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tx_bytes: txBase64, mode: 'BROADCAST_MODE_SYNC' }),
-  });
-  const data   = await res.json();
-  const txHash = data?.tx_response?.txhash || data?.txhash;
-  const code   = data?.tx_response?.code ?? data?.code ?? 0;
-  if (code !== 0) throw new Error('TX failed: ' + (data?.tx_response?.raw_log || JSON.stringify(data)));
-
-  // Poll for confirmation — max 5 × 4s
-  for (let i = 0; i < 5; i++) {
-    await new Promise(r => setTimeout(r, 4000));
-    try {
-      const chk = await fetch(`${LCD}/cosmos/tx/v1beta1/txs/${txHash}`);
-      if (chk.ok) {
-        const chkData = await chk.json();
-        if (chkData?.tx_response?.txhash) {
-          if ((chkData.tx_response.code ?? 0) !== 0) throw new Error('TX failed on-chain: ' + chkData.tx_response.raw_log);
-          return txHash;
-        }
-      }
-    } catch(e) { if (e.message?.includes('TX failed')) throw e; }
-  }
-
-  if (code !== 0) throw new Error('TX failed: ' + (data?.tx_response?.raw_log || JSON.stringify(data)));
-  return txHash;
-}
-
-// ─── FIX 1: Ask — исправлена fee (200,000 LUNC payment) ──────
-async function autoPayAndUnlock() {
-  if (!connectedAddress) { alert('Connect wallet first!'); return; }
-  const btn = document.getElementById('verify-btn');
-  btn.textContent = '⏳ Opening Keplr...'; btn.disabled = true;
-  try {
-    await window.keplr.enable('columbus-5');
-    const accounts = await window.keplr.getOfflineSigner('columbus-5').getAccounts();
-    const sender = accounts[0].address;
-
-    // ── Apply title discount — fetch real stats from worker ──────
-    let discountPct = 0;
-    if (typeof fetchQuestionStats === 'function') {
-      try {
-        const _stats = await fetchQuestionStats(sender);
-        const _t = (typeof getUserTitleFromStats === 'function')
-          ? getUserTitleFromStats(_stats.myQuestions.length, _stats.totalUpvotes)
-          : null;
-        discountPct = _t ? (_t.discount || 0) : 0;
-      } catch(e) {}
-    }
-
-    // Discount is % of total 200,000 LUNC, subtracted from Treasury portion
-    // Weekly Pool: always 100,000 LUNC (fixed)
-    // Treasury: 100,000 - (200,000 × discount%)
-    const toWeekly    = 100000 * 1e6;                                          // always fixed
-    const discountAmt = Math.round(200000 * (discountPct / 100));              // e.g. 5% → 10,000
-    const toTreasury  = Math.round((100000 - discountAmt) * 1e6);              // e.g. 90,000 LUNC
-    const totalLunc   = 100000 + (100000 - discountAmt);                       // e.g. 190,000
-
-    const discountLabel = discountPct > 0
-      ? ` (${discountPct}% off — saved ${discountAmt.toLocaleString()} LUNC)`
-      : '';
-
-    // Send to Weekly Draw Pool first
-    const txHash1 = await sendLuncDirect(
-      sender, LOTTERY_WALLET, toWeekly,
-      'Terra Oracle Q&A — Weekly Pool', 'columbus-5'
-    );
-
-    // Send to Treasury (discounted amount)
-    const txHash2 = await sendLuncDirect(
-      sender, ORACLE_WALLET, toTreasury,
-      'Terra Oracle Q&A — Treasury', 'columbus-5'
-    );
-
-    // Store primary tx hash (Weekly Pool tx) for question record
-    document.getElementById('verified-tx-hidden').value = txHash1;
-    document.getElementById('verified-wallet-hidden').value = sender;
-
-    const luncPaid = totalLunc.toLocaleString();
-    showTxStatus('success', `✅ Payment confirmed! ${luncPaid} LUNC sent${discountLabel}. Form unlocked.`);
-    setTimeout(() => {
-      document.getElementById('tx-section').style.display = 'none';
-      document.getElementById('keplr-connected').style.display = 'none';
-      document.getElementById('ask-form').style.display = 'block';
-    }, 1200);
-  } catch(e) {
-    btn.textContent = 'Pay 200,000 LUNC & Unlock'; btn.disabled = false;
-    showTxStatus('error', '❌ ' + (e.message || 'Transaction cancelled.'));
-  }
-}
-
-async function verifyTX() {
-  const txHash = document.getElementById('tx-input').value.trim();
-  const btn = document.getElementById('verify-btn');
-  if (!txHash) { alert('Please enter a TX hash'); return; }
-  btn.textContent = 'Checking...'; btn.disabled = true;
-  document.getElementById('tx-status').style.display = 'none';
-  let txData = null;
-  try {
-    const res = await fetch(`https://terra-classic-lcd.publicnode.com/cosmos/tx/v1beta1/txs/${txHash}`);
-    if (res.ok) { txData = await res.json(); }
-  } catch(e) {}
-  btn.textContent = 'Verify'; btn.disabled = false;
-  if (!txData || txData.error) { showTxStatus('error', '❌ Transaction not found. Check the hash and try again.'); return; }
-  if (txData.code && txData.code !== 0) { showTxStatus('error', '❌ Transaction failed on-chain.'); return; }
-  const msgs = txData.tx?.value?.msg || txData.tx?.body?.messages || [];
-  let valid = false, foundAmount = 0;
-  for (const msg of msgs) {
-    const type = msg.type || msg['@type'] || '';
-    const val = msg.value || msg;
-    if (type.includes('MsgSend') || type.includes('bank')) {
-      const toAddr = val.to_address || val.toAddress;
-      const coins = val.amount || [];
-      const lunc = Array.isArray(coins) ? coins.find(c => c.denom === 'uluna') : (coins.denom === 'uluna' ? coins : null);
-      // Accept payment to Treasury OR Weekly Pool (split payment — either tx is valid proof)
-      const MIN_ACCEPTED = 150000 * 1e6; // 150,000 LUNC minimum (max discount = 25%)
-      if ((toAddr === ORACLE_WALLET || toAddr === LOTTERY_WALLET || toAddr === PROTOCOL_WALLET) && lunc) {
-        foundAmount += parseInt(lunc.amount);
-      }
-    }
-  }
-  const MIN_ACCEPTED = 100000 * 1e6; // at least the Weekly Pool portion
-  if (foundAmount < MIN_ACCEPTED) { showTxStatus('error', `❌ Invalid payment. Expected 100,000+ LUNC to Oracle wallets. Found: ${(foundAmount/1000000).toLocaleString()} LUNC.`); return; }
-  valid = true;
-  document.getElementById('verified-tx-hidden').value = txHash;
-  showTxStatus('success', '✅ Payment verified! 200,000 LUNC confirmed. Form unlocked.');
-  setTimeout(() => {
-    document.getElementById('tx-section').style.display = 'none';
-    document.getElementById('keplr-connected').style.display = 'none';
-    document.getElementById('ask-form').style.display = 'block';
-  }, 1200);
-}
-
-function showTxStatus(type, msg) {
-  const el = document.getElementById('tx-status');
-  el.style.display = 'block';
-  el.style.background = type === 'success' ? 'rgba(102,255,170,0.06)' : 'rgba(255,60,60,0.06)';
-  el.style.border = type === 'success' ? '1px solid rgba(102,255,170,0.25)' : '1px solid rgba(255,60,60,0.25)';
-  el.style.color = type === 'success' ? 'var(--green)' : '#ff6060';
-  el.textContent = msg;
-}
-
-// ─── WALLET CONNECT ───────────────────────────────────────────
-let globalWalletAddress = null;
-
-function saveWalletSession(address) {
-  localStorage.setItem('wallet_session', JSON.stringify({ address, expires: Date.now() + 24 * 60 * 60 * 1000 }));
-}
-function loadWalletSession() {
-  try {
-    const s = JSON.parse(localStorage.getItem('wallet_session') || 'null');
-    if (s && s.address && s.expires > Date.now()) return s.address;
-    localStorage.removeItem('wallet_session');
-  } catch(e) {}
-  return null;
-}
-function clearWalletSession() { localStorage.removeItem('wallet_session'); }
-
-window.toggleWalletDropdown = function() {
-  document.getElementById('wallet-dropdown').classList.toggle('open');
-}
-
-document.addEventListener('click', function(e) {
-  if (!document.getElementById('wallet-wrap').contains(e.target)) {
-    document.getElementById('wallet-dropdown').classList.remove('open');
-  }
-});
-
-window.connectWallet = async function(type) {
-  if (type === 'keplr-ext') {
-    if (!window.keplr) {
-      if (confirm('Keplr extension not found. Install Keplr?')) window.open('https://www.keplr.app/download', '_blank');
-      return;
-    }
-    try {
-      document.getElementById('wallet-btn-label').textContent = 'Connecting...';
-      await window.keplr.enable('columbus-5');
-      const signer = window.keplr.getOfflineSigner('columbus-5');
-      const accounts = await signer.getAccounts();
-      setWalletConnected(accounts[0].address);
-    } catch(e) {
-      document.getElementById('wallet-btn-label').textContent = 'Connect';
-      alert('Connection failed: ' + (e.message || e));
-    }
-  } else if (type === 'galaxy' || type === 'galaxy-mobile') {
-    const galaxy = window.galaxyStation || window.station;
-    if (!galaxy) {
-      if (confirm('Galaxy Station not found. Install Galaxy Station?')) window.open('https://station.hexxagon.io/', '_blank');
-      return;
-    }
-    try {
-      document.getElementById('wallet-btn-label').textContent = 'Connecting...';
-      const conn = await galaxy.connect();
-      const address = conn?.address || conn?.addresses?.mainnet || conn?.addresses?.['columbus-5'];
-      if (address) {
-        setWalletConnected(address);
-      } else {
-        throw new Error('No address returned');
-      }
-    } catch(e) {
-      document.getElementById('wallet-btn-label').textContent = 'Connect';
-      alert('Galaxy Station connection failed: ' + (e.message || e));
-    }
-  } else if (type === 'luncdash') {
-    const addr = prompt('Enter your Terra Classic wallet address (terra1...):');
-    if (addr && addr.startsWith('terra1') && addr.length > 20) {
-      setWalletConnected(addr.trim());
-    } else if (addr !== null) {
-      alert('Invalid Terra Classic address.');
-    }
-  } else if (type === 'keplr-mobile') {
-    alert('Keplr Mobile (WalletConnect) coming soon! Use Keplr Extension for now.');
-  }
-}
-
-function setWalletConnected(address) {
-  globalWalletAddress = address;
-  connectedAddress = address;
-  saveWalletSession(address);
-  const short = address.slice(0,8) + '...' + address.slice(-4);
-  document.getElementById('wallet-btn-label').textContent = short;
-  document.getElementById('wallet-main-btn').classList.add('connected');
-  document.getElementById('wallet-connected-addr').textContent = address;
-  document.getElementById('wallet-not-connected').style.display = 'none';
-  document.getElementById('wallet-connected-panel').style.display = 'block';
-  document.getElementById('wallet-dropdown').classList.remove('open');
-
-  // Синхронизируем CHAT страницу
-  const chatPrompt = document.getElementById('chat-page-connect-prompt');
-  const chatForm   = document.getElementById('chat-page-form');
-  const chatAddr   = document.getElementById('chat-page-addr');
-  if (chatPrompt) chatPrompt.style.display = 'none';
-  if (chatForm)   chatForm.style.display   = 'block';
-  if (chatAddr)   chatAddr.textContent     = address.slice(0,10)+'...'+address.slice(-4);
-
-  // Синхронизируем ASK страницу
-  const connAddrEl  = document.getElementById('connected-addr');
-  const verifiedWallet = document.getElementById('verified-wallet-hidden');
-  const keplrDisc   = document.getElementById('keplr-disconnected');
-  const keplrConn   = document.getElementById('keplr-connected');
-  if (connAddrEl)     connAddrEl.textContent  = address.slice(0,10)+'...'+address.slice(-4);
-  if (verifiedWallet) verifiedWallet.value    = address;
-  if (keplrDisc)      keplrDisc.style.display = 'none';
-  if (keplrConn)      keplrConn.style.display = 'block';
-  if (address !== ADMIN_WALLET) {
-    const txSection = document.getElementById('tx-section');
-    if (txSection) txSection.style.display = 'block';
-  } else {
-    const verifiedTx = document.getElementById('verified-tx-hidden');
-    const txSection  = document.getElementById('tx-section');
-    const askForm    = document.getElementById('ask-form');
-    if (verifiedTx) verifiedTx.value = 'ADMIN_BYPASS';
-    if (txSection)  { txSection.style.display = 'block'; txSection.innerHTML = '<div style="background:rgba(245,197,24,0.08);border:1px solid rgba(245,197,24,0.25);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--gold);">🛡️ Admin wallet detected — payment bypassed</div>'; }
-    if (askForm)    askForm.style.display = 'block';
-  }
-
-  if (window.keplrChatAddress !== undefined) {
-    keplrChatAddress = address;
-    const addrShort = address.slice(0,8) + '...' + address.slice(-4);
-    document.getElementById('keplr-chat-addr').textContent = addrShort;
-    document.getElementById('keplr-verified-bar').style.display = 'flex';
-    document.getElementById('mode-keplr').textContent = '🔑 ' + addrShort;
-    setMode('keplr');
-  }
-  // Обновляем My Bag при подключении кошелька
-  renderOracleBag();
-}
-
-window.openBagWalletPicker = function() {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  setTimeout(() => {
-    const dropdown = document.getElementById('wallet-dropdown');
-    if (dropdown) dropdown.classList.add('open');
-  }, 350);
-}
-
-window.disconnectWallet = function() {
-  globalWalletAddress = null;
-  connectedAddress = null;
-  clearWalletSession();
-  document.getElementById('wallet-btn-label').textContent = 'Connect';
-  document.getElementById('wallet-main-btn').classList.remove('connected');
-  document.getElementById('wallet-not-connected').style.display = 'block';
-  document.getElementById('wallet-connected-panel').style.display = 'none';
-  document.getElementById('wallet-dropdown').classList.remove('open');
-  const adminPanel = document.getElementById('admin-panel');
-  if (adminPanel) adminPanel.style.display = 'none';
-
-  // Сбрасываем ASK страницу
-  const keplrDisc = document.getElementById('keplr-disconnected');
-  const keplrConn = document.getElementById('keplr-connected');
-  const txSection = document.getElementById('tx-section');
-  const askForm   = document.getElementById('ask-form');
-  if (keplrDisc) keplrDisc.style.display = 'block';
-  if (keplrConn) keplrConn.style.display = 'none';
-  if (txSection) txSection.style.display = 'none';
-  if (askForm)   askForm.style.display   = 'none';
-
-  // Сбрасываем CHAT страницу
-  const chatPrompt = document.getElementById('chat-page-connect-prompt');
-  const chatForm   = document.getElementById('chat-page-form');
-  if (chatPrompt) chatPrompt.style.display = 'block';
-  if (chatForm)   chatForm.style.display   = 'none';
-
-  try { disconnectChatKeplr(); } catch(e) {}
-  renderOracleBag();
-}
-
-// ─── CHAT PAGE ────────────────────────────────────────────────
-document.getElementById('chat-page-input').addEventListener('input', function() {
-  const max = 256, len = this.value.length, remaining = max - len;
-  const pct = len / max;
-  const ring = document.getElementById('chat-ring');
-  const counter = document.getElementById('chat-page-count');
-  ring.style.strokeDashoffset = 87.96 - (pct * 87.96);
-  if (remaining <= 20) { ring.style.stroke = '#ff4444'; counter.style.color = '#ff4444'; }
-  else if (remaining <= 50) { ring.style.stroke = '#f5c518'; counter.style.color = '#f5c518'; }
-  else { ring.style.stroke = 'var(--accent)'; counter.style.color = 'var(--muted)'; }
-  counter.textContent = remaining;
-});
-
-// ─── FIX 2: Chat — исправлена fee (5,000 LUNC payment) ───────
-window.sendChatMessage = async function() {
-  const text = document.getElementById('chat-page-input').value.trim();
-  const statusEl = document.getElementById('chat-tx-status');
-  const btn = document.getElementById('chat-page-send-btn');
-  if (!text) { alert('Write a message first!'); return; }
-  if (!globalWalletAddress) { alert('Connect Keplr first!'); return; }
-  if (!window.keplr) { alert('Keplr not found!'); return; }
-  btn.textContent = '⏳ Waiting for Keplr...'; btn.disabled = true;
-  statusEl.style.display = 'none';
-  try {
-    await window.keplr.enable('columbus-5');
-    const accounts = await window.keplr.getOfflineSigner('columbus-5').getAccounts();
-    const sender = accounts[0].address;
-    const txHash = await sendLuncDirect(sender, ORACLE_WALLET, 5000000000, text.slice(0, 256), 'columbus-5');
-    const result = { transactionHash: txHash };
-    const short = sender.slice(0,8)+'...'+sender.slice(-4);
-    const stored = JSON.parse(localStorage.getItem('dao_chat_pending') || '[]');
-    stored.push({ text, author: short, fullAddr: sender, txHash: result.transactionHash, isVerified: true, timestamp: Date.now() });
-    localStorage.setItem('dao_chat_pending', JSON.stringify(stored));
-
-    // ── Track message count for Weekly lottery milestones ──────
-    if (typeof incrementMessageCount === 'function') {
-      const newCount = incrementMessageCount(sender);
-      // Check if user just hit a milestone — notify them
-      const milestones = [10, 25, 50, 100];
-      if (milestones.includes(newCount)) {
-        const entries = typeof getMsgMilestoneEntries === 'function' ? getMsgMilestoneEntries(newCount) : '';
-        setTimeout(() => {
-          statusEl.style.cssText = 'display:block;border-radius:8px;padding:10px 14px;font-size:12px;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.3);color:#a78bfa;margin-top:10px;';
-          statusEl.innerHTML = `🎉 Milestone reached! <strong>${newCount} messages</strong> — you earned a free Weekly Lottery entry! Total free entries: <strong>${entries}</strong>`;
-          setTimeout(() => { statusEl.style.display = 'none'; }, 8000);
-        }, 3000);
-      }
-    }
-    // ──────────────────────────────────────────────────────────
-
-    document.getElementById('chat-page-input').value = '';
-    document.getElementById('chat-page-count').textContent = '256';
-    document.getElementById('chat-ring').style.strokeDashoffset = '87.96';
-    document.getElementById('chat-ring').style.stroke = 'var(--accent)';
-    btn.textContent = 'Send Message →'; btn.disabled = false;
-    statusEl.style.cssText = 'display:block;border-radius:8px;padding:10px 14px;font-size:12px;background:rgba(102,255,170,0.06);border:1px solid rgba(102,255,170,0.25);color:var(--green);margin-top:10px;';
-    statusEl.innerHTML = '✅ Sent! <a href="https://finder.terra.money/classic/tx/' + result.transactionHash + '" target="_blank" style="color:var(--green);text-decoration:underline;">' + result.transactionHash.slice(0,16) + '...</a><br><span style="font-size:10px;opacity:0.7;">Message will appear after blockchain confirmation (~6s)</span>';
-    setTimeout(() => { loadChatFromChain(); }, 8000);
-    setTimeout(() => { statusEl.style.display = 'none'; }, 10000);
-  } catch(e) {
-    btn.textContent = 'Send Message →'; btn.disabled = false;
-    statusEl.style.cssText = 'display:block;border-radius:8px;padding:10px 14px;font-size:12px;background:rgba(255,60,60,0.06);border:1px solid rgba(255,60,60,0.25);color:#ff6060;margin-top:10px;';
-    statusEl.textContent = '❌ ' + (e.message || 'Transaction cancelled or failed.');
-  }
-}
-
-// ─── BLOCKCHAIN CHAT ──────────────────────────────────────────
-const CHAT_WALLET = ORACLE_WALLET;
-const CHAT_HISTORY_WALLET = ORACLE_WALLET;
-const CHAT_MIN_ULUNA = 5000000000;
-// FIX 4: два разных FCD узла для настоящего fallback
-const FCD_NODES = [
-  'https://terra-classic-lcd.publicnode.com',
-  'https://terra-classic-lcd.publicnode.com',
-];
-
-const CHAT_REACTIONS = ['🔥','👍','🚀','💎','❤️'];
-
-function getChatReactions() { try { return JSON.parse(localStorage.getItem('chat_reactions') || '{}'); } catch(e) { return {}; } }
-function saveChatReactions(r) { localStorage.setItem('chat_reactions', JSON.stringify(r)); }
-
-function toggleReaction(txHash, emoji) {
-  const all = getChatReactions();
-  const key = txHash + '_' + emoji;
-  const myReactions = JSON.parse(localStorage.getItem('my_chat_reactions') || '{}');
-  if (myReactions[key]) { all[key] = Math.max(0, (all[key] || 1) - 1); delete myReactions[key]; }
-  else { all[key] = (all[key] || 0) + 1; myReactions[key] = true; }
-  saveChatReactions(all);
-  localStorage.setItem('my_chat_reactions', JSON.stringify(myReactions));
-  const row = document.getElementById('reactions-' + txHash);
-  if (row) row.outerHTML = buildReactionsRow(txHash, all, myReactions);
-}
-
-function buildReactionsRow(txHash, all, myReactions) {
-  const counts = CHAT_REACTIONS.map(e => { const key = txHash+'_'+e; return { e, count: all[key]||0, mine: myReactions[key], key }; });
-  const active = counts.filter(r => r.count > 0);
-  return `<div id="reactions-${txHash}" class="chat-reactions-row">
-    ${active.map(r => `<button class="chat-reaction ${r.mine?'my-reaction':''}" onclick="toggleReaction('${txHash}','${r.e}')">${r.e} <span>${r.count}</span></button>`).join('')}
-    <div class="reaction-picker-wrap">
-      <button class="chat-reaction add-reaction-btn" title="Add reaction">＋</button>
-      <div class="reaction-picker">${CHAT_REACTIONS.map(e => `<button onclick="toggleReaction('${txHash}','${e}')">${e}</button>`).join('')}</div>
-    </div>
-  </div>`;
-}
-
-let cachedMsgs = [];
-
-function renderChatMessages(msgs) {
-  cachedMsgs = msgs;
-  const container = document.getElementById('chat-page-messages');
-  if (!msgs || msgs.length === 0) {
-    container.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:40px 20px;">No messages yet — be the first to speak!</div>';
-    return;
-  }
-  const all = getChatReactions();
-  const myReactions = JSON.parse(localStorage.getItem('my_chat_reactions') || '{}');
-  container.innerHTML = msgs.map(m => `
-    <div class="chat-page-msg verified-msg" id="msg-${m.txHash}">
-      <div class="chat-page-msg-header">
-        <span class="chat-page-msg-author" style="font-family:monospace;">${m.author}</span>
-        ${m.fullAddr && window._walletScores && typeof getRankBadgeHTML === 'function' ? getRankBadgeHTML(window._walletScores[m.fullAddr] || 0) : ''}
-        <span style="font-size:8px;background:rgba(102,255,170,0.15);color:var(--green);padding:1px 6px;border-radius:4px;">✓ ON-CHAIN</span>
-        ${m.amount ? `<span style="font-size:8px;color:var(--gold);background:rgba(245,197,24,0.1);padding:1px 6px;border-radius:4px;">${m.amount} LUNC</span>` : ''}
-        <span class="chat-page-msg-time"><a href="https://finder.terra.money/classic/tx/${m.txHash}" target="_blank" style="color:var(--muted);text-decoration:none;font-size:9px;">🔗 ${m.time}</a></span>
-      </div>
-      <div class="chat-page-msg-text">${m.text}</div>
-      ${buildReactionsRow(m.txHash, all, myReactions)}
-    </div>
-  `).join('');
-  container.scrollTop = container.scrollHeight;
-}
-
-async function loadChatFromChain() {
-  const container = document.getElementById('chat-page-messages');
-  if (!cachedMsgs.length) {
-    container.innerHTML = `<div style="text-align:center;padding:40px 20px;"><div style="font-size:22px;margin-bottom:10px;">⏳</div><div style="color:var(--muted);font-size:12px;">Loading messages from blockchain...</div></div>`;
-  }
-  let txList = null;
-  try {
-    const res = await fetch(`https://terra-classic-lcd.publicnode.com/cosmos/tx/v1beta1/txs?events=transfer.recipient=%27${CHAT_HISTORY_WALLET}%27&pagination.limit=50&order_by=2`);
-    if (res.ok) { txList = await res.json(); }
-  } catch(e) {}
-  if (!txList) {
-    if (!cachedMsgs.length) {
-      container.innerHTML = `<div style="text-align:center;padding:40px 20px;"><div style="font-size:22px;margin-bottom:10px;">⚠️</div><div style="color:var(--muted);font-size:12px;">Could not reach blockchain nodes</div><button onclick="loadChatFromChain()" style="margin-top:14px;background:rgba(84,147,247,0.1);border:1px solid rgba(84,147,247,0.25);color:var(--accent);border-radius:8px;padding:7px 16px;font-family:'Exo 2',sans-serif;font-size:11px;cursor:pointer;">↻ Retry now</button></div>`;
-    }
-    return;
-  }
-  // LCD v1beta1: txs[] = tx bodies, tx_responses[] = metadata (hash, timestamp)
-  // They are parallel arrays — same index = same transaction
-  const txBodies    = txList.txs || [];
-  const txResponses = txList.tx_responses || [];
-  if (!txBodies.length && !txResponses.length) {
-    if (!cachedMsgs.length) container.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:40px;">No messages yet — be the first!</div>';
-    return;
-  }
-  const msgs = [];
-  const count = Math.max(txBodies.length, txResponses.length);
-  for (let i = 0; i < count; i++) {
-    try {
-      const txBody = txBodies[i];        // has body.messages, body.memo
-      const txMeta = txResponses[i];     // has txhash, timestamp
-      const memo   = txBody?.body?.memo || '';
-      if (!memo || memo.trim() === '') continue;
-      const txMsgs = txBody?.body?.messages || [];
-      let sender = null, luncAmount = 0;
-      for (const msg of txMsgs) {
-        const type = msg['@type'] || msg.type || '';
-        const val  = msg.value || msg;
-        if (type.includes('MsgSend')) {
-          const to = val.to_address || '';
-          if (to === CHAT_WALLET) {
-            sender = val.from_address || null;
-            const coins = val.amount || [];
-            const lunc = Array.isArray(coins) ? coins.find(c => c.denom === 'uluna') : null;
-            luncAmount = lunc ? parseInt(lunc.amount) : 0;
-          }
-        }
-      }
-      if (!sender || luncAmount < CHAT_MIN_ULUNA) continue;
-      const short = sender.slice(0, 10) + '...' + sender.slice(-4);
-      const luncFormatted = (luncAmount / 1000000).toLocaleString(undefined, {maximumFractionDigits: 0});
-      const ts = txMeta?.timestamp ? new Date(txMeta.timestamp) : null;
-      const timeStr = ts ? ts.toLocaleDateString([], {month:'short',day:'numeric'}) + ' ' + ts.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
-      msgs.push({ author: short, fullAddr: sender, text: memo.slice(0, 256), amount: luncFormatted, txHash: txMeta?.txhash || '', time: timeStr, ts: ts ? ts.getTime() : 0 });
-    } catch(e) { continue; }
-  }
-  msgs.sort((a, b) => a.ts - b.ts);
-  renderChatMessages(msgs);
-}
-
-function renderChatPage() { loadChatFromChain(); }
-renderChatPage();
-setInterval(loadChatFromChain, 30000);
-
-const _origSetWallet = window.setWalletConnected;
-window.setWalletConnected = function(address) {
-  _origSetWallet(address);
-  document.getElementById('chat-page-connect-prompt').style.display = 'none';
-  document.getElementById('chat-page-form').style.display = 'block';
-  document.getElementById('chat-page-addr').textContent = address.slice(0,10)+'...'+address.slice(-4);
-  document.getElementById('vote-wallet-status').innerHTML = '<span style="font-size:11px;color:var(--green);">✓ ' + address.slice(0,8)+'...'+address.slice(-4) + '</span>';
-  const adminPanel = document.getElementById('admin-panel');
-  if (adminPanel) {
-    adminPanel.style.display = address === ADMIN_WALLET ? 'block' : 'none';
-    if (address === ADMIN_WALLET) { applyVoteStates(); updateAdminPanel(); }
-  }
-  applyStoredVotes(); applyVoteStates(); renderVotes();
-}
-
-// ─── VOTE PAGE ────────────────────────────────────────────────
-const LIQUIDITY_PAIRS = ['LUNC/USDT','LUNC/USTC','LUNC/ATOM','LUNC/BTC','LUNC/ETH','LUNC/BNB','LUNC/OSMO','LUNC/JUNO'];
-const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-
-function generateMonthlyLiquidityVote() {
-  const now = new Date();
-  const year = now.getFullYear(), month = now.getMonth(), day = now.getDate();
-  const openDate = new Date(year, month, 20, 0, 0, 0);
-  const closeDate = new Date(year, month, 25, 23, 59, 59);
-  let status, timerStr, displayMonth, displayYear;
-  if (day < 20) {
-    const ms = openDate - now;
-    status = 'upcoming'; timerStr = `Opens in ${Math.floor(ms/86400000)}d ${Math.floor((ms%86400000)/3600000)}h`;
-    displayMonth = MONTH_NAMES[month]; displayYear = year;
-  } else if (day <= 25) {
-    const ms = closeDate - now;
-    const d = Math.floor(ms/86400000), h = Math.floor((ms%86400000)/3600000), m = Math.floor((ms%3600000)/60000);
-    status = 'active'; timerStr = d > 0 ? `${d}d ${h}h remaining` : `${h}h ${m}m remaining`;
-    displayMonth = MONTH_NAMES[month]; displayYear = year;
-  } else {
-    const nm = month === 11 ? 0 : month + 1, ny = month === 11 ? year + 1 : year;
-    const nextOpen = new Date(ny, nm, 20, 0, 0, 0); const ms = nextOpen - now;
-    status = 'upcoming'; timerStr = `Opens in ${Math.floor(ms/86400000)}d ${Math.floor((ms%86400000)/3600000)}h`;
-    displayMonth = MONTH_NAMES[nm]; displayYear = ny;
-  }
-  const seed = year * 12 + month;
-  const pairs = [...LIQUIDITY_PAIRS];
-  for (let i = pairs.length - 1; i > 0; i--) { const j = (seed * 1103515245 + i * 12345) % (i + 1); [pairs[i], pairs[j]] = [pairs[j], pairs[i]]; }
-  const votePairs = pairs.slice(0, 4);
-  const voteKey = `monthly_liquidity_${year}_${month}`;
-  let savedVotes = null;
-  try { savedVotes = JSON.parse(localStorage.getItem(voteKey) || 'null'); } catch(e) {}
-  return {
-    id: 'monthly-liquidity', type: 'monthly', status, voteKey,
-    title: `Liquidity Pool Pairs — ${displayMonth} ${displayYear}`,
-    desc: status === 'active' ? `Which LUNC trading pair should receive liquidity incentives for ${displayMonth}? Voting is open 20–25 of each month.` : `Monthly liquidity vote for ${displayMonth} ${displayYear}. Voting opens on the 20th and closes on the 25th.`,
-    source: '🗓 Runs every month · 20th → 25th · Auto-generated',
-    timer: timerStr, totalVotes: savedVotes ? savedVotes.totalVotes : 0, quorum: 200,
-    options: votePairs.map((pair, i) => ({ label: pair, votes: savedVotes ? (savedVotes.options[i] || 0) : 0 })),
-    userVoted: null, isMonthlyLiquidity: true
-  };
-}
-
-const VOTES_DATA = [
-  { id: 'v1', type: 'weekly', status: 'active', title: 'Protocol Development Priority — Week 11', desc: 'What should the development team focus on this week?', source: 'Based on community chat discussions', timer: '3d 14h remaining', totalVotes: 234, quorum: 100, options: [{ label: 'SDK 0.53 upgrade testing & QA', votes: 112 }, { label: 'MM 2.0 activation preparation', votes: 78 }, { label: 'USTC re-peg research', votes: 44 }], userVoted: null },
-  generateMonthlyLiquidityVote(),
-  { id: 'v3', type: 'special', status: 'active', title: 'Terra Oracle — Reward Distribution Model', desc: 'Should we switch from "winner takes all" to top-3 distribution for Q&A rewards?', source: 'Proposal by community member · Terra Oracle governance', timer: '6d 2h remaining', totalVotes: 156, quorum: 100, options: [{ label: '70% winner + 30% voters', votes: 89 }, { label: 'Top-3 split (60/25/15)', votes: 41 }, { label: 'Keep current model', votes: 26 }], userVoted: null }
-];
-
-let currentVoteFilter = 'all';
-function filterVotes(type) { currentVoteFilter = type; document.querySelectorAll('.vote-tab').forEach(t => t.classList.remove('active')); event.target.classList.add('active'); renderVotes(); }
-
-function renderVotes() {
-  const list = document.getElementById('votes-list');
-  const filtered = currentVoteFilter === 'all' ? VOTES_DATA : VOTES_DATA.filter(v => v.type === currentVoteFilter);
-  if (filtered.length === 0) { list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px;font-size:12px;">No votes in this category yet.</div>'; return; }
-  list.innerHTML = filtered.map(v => {
-    const maxVotes = Math.max(...v.options.map(o => o.votes));
-    const pct = o => v.totalVotes > 0 ? Math.round((o.votes / v.totalVotes) * 100) : 0;
-    const quorumPct = Math.min(100, Math.round((v.totalVotes / v.quorum) * 100));
-    const typeClass = { weekly: 'vote-type-weekly', monthly: 'vote-type-monthly', special: 'vote-type-special' }[v.type];
-    const typeLabel = { weekly: '📅 Weekly', monthly: '🗓 Monthly', special: '⚡ Special' }[v.type];
-    return `<div class="vote-card" id="vcard-${v.id}">
-      <div class="vote-card-meta"><span class="vote-type-badge ${typeClass}">${typeLabel}</span><span class="vote-timer">⏱ ${v.timer}</span></div>
-      <div class="vote-card-title">${v.title}</div>
-      <div class="vote-desc" style="margin-top:8px;">${v.desc}</div>
-      <div class="vote-progress-wrap"><div class="vote-progress-bar-bg"><div class="vote-progress-bar-fill" style="width:${quorumPct}%"></div></div><div class="vote-progress-info"><span>Quorum: ${v.totalVotes} / ${v.quorum} votes</span><span>${quorumPct}%</span></div></div>
-      <div class="vote-options">${v.options.map((o, oi) => { const p = pct(o); const isWinner = o.votes === maxVotes && v.totalVotes > 0; const isSelected = v.userVoted === oi; return `<div class="vote-option ${isSelected?'selected':''} ${isWinner&&v.userVoted!==null?'winner':''}" onclick="castVote('${v.id}', ${oi})"><div class="vote-option-bar ${isWinner&&v.userVoted!==null?'winner-bar':''}" style="width:${v.userVoted!==null?p:0}%"></div><div class="vote-option-content"><div class="vote-option-radio"></div><div class="vote-option-label">${o.label}</div>${v.userVoted!==null?`<div class="vote-option-pct">${p}%</div>`:''}</div></div>`; }).join('')}</div>
-      <div class="vote-btn-row">${v.userVoted !== null ? `<span style="font-size:12px;color:var(--green);">✅ You voted</span>` : v.status === 'upcoming' ? `<span style="font-size:12px;color:var(--gold);">🗓 Voting opens on the 20th</span>` : `<button class="btn btn-primary" onclick="castVote('${v.id}', -1)" style="padding:10px 24px;font-size:11px;" ${!globalWalletAddress?'disabled':''}}>${globalWalletAddress?'Cast Vote':'🔑 Connect to Vote'}</button>`}<span style="font-size:11px;color:var(--muted);">${v.totalVotes} votes total</span></div>
-      <div class="vote-source">💬 ${v.source}</div>
-    </div>`;
-  }).join('');
-}
-
-const VOTE_STATE_KEY = 'admin_vote_states';
-function getVoteStates() { try { return JSON.parse(localStorage.getItem(VOTE_STATE_KEY) || '{}'); } catch(e) { return {}; } }
-function saveVoteState(voteId, state) { const states = getVoteStates(); states[voteId] = { ...states[voteId], ...state, updatedAt: Date.now() }; localStorage.setItem(VOTE_STATE_KEY, JSON.stringify(states)); }
-
-function applyVoteStates() {
-  const states = getVoteStates();
-  for (const vote of VOTES_DATA) {
-    const s = states[vote.id];
-    if (!s) continue;
-    if (s.status) vote.status = s.status;
-    if (s.startedAt) vote.startedAt = s.startedAt;
-    if (s.stoppedAt) vote.stoppedAt = s.stoppedAt;
-    if (s.pairs && vote.isMonthlyLiquidity) vote.options = s.pairs.map(p => ({ label: p, votes: vote.options.find(o => o.label === p)?.votes || 0 }));
-    if (s.status === 'active' && s.startedAt) {
-      const msLeft = (s.startedAt + 5*24*60*60*1000) - Date.now();
-      if (msLeft <= 0) { vote.status = 'closed'; vote.timer = 'Voting closed'; }
-      else { const d=Math.floor(msLeft/86400000),h=Math.floor((msLeft%86400000)/3600000),m=Math.floor((msLeft%3600000)/60000); vote.timer = d>0?`${d}d ${h}h remaining`:`${h}h ${m}m remaining`; }
-    } else if (s.status === 'stopped' || s.status === 'closed') { vote.timer = 'Voting closed'; }
-    else if (s.status === 'upcoming') { vote.timer = 'Not started yet'; }
-  }
-}
-
-window.adminStartVote = function(voteId) {
-  const vote = VOTES_DATA.find(v => v.id === voteId); if (!vote) return;
-  const pairs = voteId === 'monthly-liquidity' ? [document.getElementById('admin-pair-1')?.value||'LUNC/USDT',document.getElementById('admin-pair-2')?.value||'LUNC/USTC',document.getElementById('admin-pair-3')?.value||'LUNC/ATOM',document.getElementById('admin-pair-4')?.value||'LUNC/BTC'].filter(Boolean) : null;
-  const state = { status: 'active', startedAt: Date.now(), stoppedAt: null };
-  if (pairs) state.pairs = pairs;
-  saveVoteState(voteId, state); applyVoteStates(); updateAdminPanel(); applyStoredVotes(); renderVotes(); showAdminToast('▶ Vote started!', 'green');
-}
-window.adminStopVote = function(voteId) { saveVoteState(voteId, { status: 'stopped', stoppedAt: Date.now() }); applyVoteStates(); updateAdminPanel(); renderVotes(); showAdminToast('■ Vote stopped', 'red'); }
-window.adminToggleVote = function(voteId, newStatus) { if (newStatus === 'active') adminStartVote(voteId); else adminStopVote(voteId); }
-
-function updateAdminPanel() {
-  const panel = document.getElementById('admin-panel'); if (!panel || panel.style.display === 'none') return;
-  const monthly = VOTES_DATA.find(v => v.id === 'monthly-liquidity');
-  const statusEl = document.getElementById('admin-monthly-status');
-  if (statusEl && monthly) { const icons={active:'🟢',stopped:'🔴',upcoming:'🟡',closed:'⚫'}; statusEl.textContent = `Status: ${icons[monthly.status]||'⚪'} ${monthly.status.toUpperCase()} · Started: ${monthly.startedAt?new Date(monthly.startedAt).toLocaleDateString():'—'} · Timer: ${monthly.timer}`; }
-  const otherEl = document.getElementById('admin-other-votes');
-  if (otherEl) {
-    const states = getVoteStates(); const others = VOTES_DATA.filter(v => v.id !== 'monthly-liquidity');
-    if (!others.length) { otherEl.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:8px 0;">No other votes configured.</div>'; }
-    else { otherEl.innerHTML = others.map(v => { const s=states[v.id]?.status||v.status; const icons={active:'🟢',stopped:'🔴',upcoming:'🟡',closed:'⚫'}; return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);"><div><span style="font-size:12px;color:var(--text);">${v.title}</span><span style="font-size:10px;color:var(--muted);margin-left:8px;">${icons[s]||'⚪'} ${(s||'unknown').toUpperCase()}</span></div><div style="display:flex;gap:6px;"><button onclick="adminToggleVote('${v.id}','active')" style="font-size:10px;padding:5px 12px;border-radius:6px;border:1px solid rgba(102,255,170,0.3);background:rgba(102,255,170,0.08);color:var(--green);cursor:pointer;font-family:'Exo 2',sans-serif;font-weight:700;">▶</button><button onclick="adminToggleVote('${v.id}','stopped')" style="font-size:10px;padding:5px 12px;border-radius:6px;border:1px solid rgba(255,60,60,0.25);background:rgba(255,60,60,0.06);color:#ff6464;cursor:pointer;font-family:'Exo 2',sans-serif;font-weight:700;">■</button></div></div>`; }).join(''); }
-  }
-}
-
-function showAdminToast(msg, color) {
-  const toast = document.createElement('div');
-  toast.textContent = msg;
-  toast.style.cssText = `position:fixed;top:80px;right:20px;z-index:9999;padding:10px 18px;border-radius:8px;font-family:'Exo 2',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.05em;background:${color==='green'?'rgba(102,255,170,0.15)':'rgba(255,60,60,0.12)'};border:1px solid ${color==='green'?'rgba(102,255,170,0.4)':'rgba(255,60,60,0.3)'};color:${color==='green'?'var(--green)':'#ff6464'};`;
-  document.body.appendChild(toast); setTimeout(() => toast.remove(), 2500);
-}
-
-function getVoteStorageKey() { return globalWalletAddress ? 'votes_' + globalWalletAddress : null; }
-function loadVotesFromStorage() { const key = getVoteStorageKey(); if (!key) return {}; try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch(e) { return {}; } }
-function saveVoteToStorage(voteId, optionIdx) { const key = getVoteStorageKey(); if (!key) return; const votes = loadVotesFromStorage(); votes[voteId] = optionIdx; localStorage.setItem(key, JSON.stringify(votes)); }
-function applyStoredVotes() { const votes = loadVotesFromStorage(); for (const vote of VOTES_DATA) { vote.userVoted = votes[vote.id] !== undefined ? votes[vote.id] : null; } }
-
-function castVote(voteId, optionIdx) {
-  if (!globalWalletAddress) { alert('Connect Keplr wallet to vote!'); return; }
-  if (optionIdx === -1) return;
-  const vote = VOTES_DATA.find(v => v.id === voteId);
-  if (!vote || vote.userVoted !== null) return;
-  if (vote.status === 'upcoming') { alert('Voting is not open yet! Check back on the 20th.'); return; }
-  vote.options[optionIdx].votes++; vote.totalVotes++; vote.userVoted = optionIdx;
-  saveVoteToStorage(voteId, optionIdx);
-  if (vote.isMonthlyLiquidity && vote.voteKey) { try { localStorage.setItem(vote.voteKey, JSON.stringify({ totalVotes: vote.totalVotes, options: vote.options.map(o => o.votes) })); } catch(e) {} }
-  renderVotes();
-}
-
-
-// ── MY BAG (Terra Oracle) ─────────────────────────────────────────────────────
-function renderOracleBag() {
-  const wallet = globalWalletAddress || connectedAddress;
-  const notConn = document.getElementById('bag-not-connected-oracle');
-  const conn    = document.getElementById('bag-connected-oracle');
-  if (!notConn || !conn) return;
-
-  if (!wallet) {
-    notConn.style.display = 'block';
-    conn.style.display    = 'none';
-    return;
-  }
-  notConn.style.display = 'none';
-  conn.style.display    = 'block';
-
-  // Mock data — replace with real API from Paco later
-  const mockNFTs = [
-    { id: 47,  type: 'common',    entries: 1,  pool: 'daily',  inCurrentRound: true  },
-    { id: 12,  type: 'rare',      entries: 5,  pool: 'weekly', inCurrentRound: true  },
-    { id: 3,   type: 'legendary', entries: 10, pool: 'weekly', inCurrentRound: false },
-    { id: 88,  type: 'common',    entries: 1,  pool: 'daily',  inCurrentRound: false },
-  ];
-  const mockHistory = [
-    { round: 15, type: 'Daily',  nft: 'Common #31',    result: 'lost', prize: null },
-    { round: 13, type: 'Weekly', nft: 'Rare #08',      result: 'won',  prize: '45,000 LUNC' },
-    { round: 10, type: 'Daily',  nft: 'Common #22',    result: 'lost', prize: null },
-  ];
-
-  const el = id => document.getElementById(id);
-  const totalWon      = mockHistory.filter(h => h.result === 'won').length;
-  const dailyEntries  = mockNFTs.filter(n => n.inCurrentRound && n.pool === 'daily').reduce((s,n) => s + n.entries, 0);
-  const weeklyEntries = mockNFTs.filter(n => n.inCurrentRound && n.pool === 'weekly').reduce((s,n) => s + n.entries, 0);
-
-  if (el('o-bag-stat-nfts'))    el('o-bag-stat-nfts').textContent    = mockNFTs.length;
-  if (el('o-bag-stat-won'))     el('o-bag-stat-won').textContent     = totalWon;
-  if (el('o-bag-stat-daily'))   el('o-bag-stat-daily').textContent   = dailyEntries;
-  if (el('o-bag-stat-weekly'))  el('o-bag-stat-weekly').textContent  = weeklyEntries;
-  if (el('o-bag-count'))        el('o-bag-count').textContent        = mockNFTs.length;
-
-  window._oBagNFTs = mockNFTs;
-  const grid  = el('o-bag-grid');
-  const empty = el('o-bag-empty');
-  if (grid) {
-    if (!mockNFTs.length) {
-      if (empty) empty.style.display = 'block';
-      grid.style.display = 'none';
-    } else {
-      if (empty) empty.style.display = 'none';
-      grid.style.display = 'grid';
-      setTimeout(() => filterOracleBagNFTs('all'), 0);
-    }
-  }
-
-  const histTable = el('o-bag-hist-table');
-  const histEmpty = el('o-bag-hist-empty');
-  const histBody  = el('o-bag-hist-body');
-  if (histBody) {
-    if (!mockHistory.length) {
-      if (histTable) histTable.style.display = 'none';
-      if (histEmpty) histEmpty.style.display = 'block';
-    } else {
-      if (histEmpty) histEmpty.style.display = 'none';
-      if (histTable) histTable.style.display = 'table';
-      histBody.innerHTML = mockHistory.map(h => `
-        <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-          <td style="padding:12px 14px;color:var(--muted);">#${h.round}</td>
-          <td style="padding:12px 14px;">
-            <span style="font-size:9px;padding:2px 8px;border-radius:4px;
-              background:${h.type==='Daily'?'rgba(244,208,63,0.1)':'rgba(74,144,217,0.1)'};
-              color:${h.type==='Daily'?'#f4d03f':'#7eb8ff'};
-              border:1px solid ${h.type==='Daily'?'rgba(244,208,63,0.2)':'rgba(74,144,217,0.2)'};">
-              ${h.type}
-            </span>
-          </td>
-          <td style="padding:12px 14px;font-family:monospace;font-size:11px;color:#f4d03f;">${h.nft}</td>
-          <td style="padding:12px 14px;">
-            ${h.result==='won'
-              ? `<span style="color:#66ffaa;font-weight:700;">🏆 ${h.prize}</span>`
-              : `<span style="color:var(--muted);">—</span>`}
-          </td>
-        </tr>`).join('');
-    }
-  }
-}
-
-function filterOracleBagNFTs(filter) {
-  const nfts = window._oBagNFTs || [];
-  const el = id => document.getElementById(id);
-
-  ['all','common','rare','legendary','used'].forEach(f => {
-    const btn = el('o-bag-filter-' + f);
-    if (!btn) return;
-    const colors = {
-      all:       { active: 'rgba(244,208,63,0.12)', border: 'rgba(244,208,63,0.6)',   text: '#f4d03f'   },
-      common:    { active: 'rgba(180,190,210,0.1)', border: 'rgba(180,190,210,0.5)',  text: '#b0b8c8'   },
-      rare:      { active: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.5)',   text: '#60a5fa'   },
-      legendary: { active: 'rgba(251,146,60,0.1)',  border: 'rgba(251,146,60,0.5)',   text: '#fb923c'   },
-      used:      { active: 'rgba(255,255,255,0.08)', border: 'rgba(255,255,255,0.35)', text: '#e2e8f0'  },
-    };
-    const c = colors[f];
-    btn.style.background  = f === filter ? c.active : 'transparent';
-    btn.style.borderColor = f === filter ? c.border.replace('0.5','0.8') : c.border.replace('0.5','0.2');
-    btn.style.color       = c.text;
-    btn.style.opacity     = f === filter ? '1' : '0.6';
-    btn.style.fontWeight  = f === filter ? '700' : '400';
-  });
-
-  let filtered = nfts;
-  if (filter === 'used')      filtered = nfts.filter(n => !n.inCurrentRound);
-  else if (filter !== 'all')  filtered = nfts.filter(n => n.type === filter);
-
-  filtered = filtered.slice().sort((a, b) => {
-    if (a.inCurrentRound && !b.inCurrentRound) return -1;
-    if (!a.inCurrentRound && b.inCurrentRound) return 1;
-    return 0;
-  });
-
-  const grid = el('o-bag-grid');
-  if (!grid) return;
-
-  const cfgs = {
-    common:    { color:'#b0b8c8', glow:'rgba(180,190,210,0.3)', bg:'rgba(180,190,210,0.05)', label:'COMMON'    },
-    rare:      { color:'#60a5fa', glow:'rgba(96,165,250,0.35)', bg:'rgba(96,165,250,0.06)',  label:'RARE'       },
-    legendary: { color:'#fb923c', glow:'rgba(251,146,60,0.4)',  bg:'rgba(251,146,60,0.07)',  label:'LEGENDARY'  },
-  };
-
-  grid.innerHTML = filtered.map(nft => {
-    const c = cfgs[nft.type];
-    const pool = nft.pool === 'daily' ? 'Daily Pool' : 'Weekly Pool';
-    const opacity = nft.inCurrentRound ? '1' : '0.55';
-    const statusHtml = nft.inCurrentRound
-      ? `<div style="padding:8px;border-radius:8px;background:rgba(102,255,170,0.08);border:1px solid rgba(102,255,170,0.25);color:#66ffaa;font-size:11px;font-weight:600;text-align:center;">✅ In this round</div>`
-      : `<div style="padding:8px;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);color:var(--muted);font-size:11px;text-align:center;">✔ Round over</div>`;
-    return `<div style="background:${c.bg};border:1px solid ${c.glow};border-radius:16px;padding:22px 18px;text-align:center;
-        opacity:${opacity};box-shadow:0 0 18px ${c.glow};transition:transform 0.2s;"
-        onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
-      <div style="font-size:9px;letter-spacing:0.2em;color:${c.color};font-weight:700;margin-bottom:4px;">${c.label}</div>
-      <div style="font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;color:#fff;margin-bottom:4px;">#${nft.id}</div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">${nft.entries} ${nft.entries===1?'entry':'entries'}</div>
-      <div style="font-size:10px;color:var(--muted);margin-bottom:12px;">${pool}</div>
-      ${statusHtml}
-    </div>`;
-  }).join('');
-}
-
-
+};
