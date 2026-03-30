@@ -128,8 +128,40 @@ function getNextRank(score) {
   return null; // already at max
 }
 
-// Legacy function so existing calls don't break
-function getUserTitleFromStats(qCount, upvotes) {
+// ── Get rank badge HTML ───────────────────────────────────────
+// score: reputation number | wallet: optional wallet address for cache
+function getRankBadgeHTML(score) {
+  if (score === undefined || score === null) return '';
+  const rank = getRank(score);
+  if (!rank || rank.name === 'INITIATE') return ''; // don't show lowest rank
+  return `<span style="font-size:9px;font-weight:700;letter-spacing:0.06em;color:${rank.color};text-shadow:0 0 6px ${rank.glow};background:rgba(0,0,0,0.25);padding:1px 6px;border-radius:4px;">${rank.icon} ${rank.name}</span>`;
+}
+
+// Build a score map from allQuestions: wallet → {questions, answers, upvotes}
+function buildScoreMap(allQuestions) {
+  const map = {};
+  for (const q of allQuestions) {
+    if (!q.wallet) continue;
+    if (!map[q.wallet]) map[q.wallet] = { questions: 0, answers: 0, upvotes: 0 };
+    map[q.wallet].questions++;
+    map[q.wallet].upvotes += q.votes || 0;
+    for (const a of q.answers || []) {
+      if (!a.wallet) continue;
+      if (!map[a.wallet]) map[a.wallet] = { questions: 0, answers: 0, upvotes: 0 };
+      map[a.wallet].answers++;
+      map[a.wallet].upvotes += a.votes || 0;
+    }
+  }
+  // Convert to score
+  const scores = {};
+  for (const [w, s] of Object.entries(map)) {
+    scores[w] = s.questions * 40 + s.answers * 15 + s.upvotes * 10;
+  }
+  return scores;
+}
+
+// Global score map — populated after questions load
+window._walletScores = {};
   // approximate reputation from old stats
   const approxScore = qCount * 40 + upvotes * 10;
   const rank = getRank(approxScore);
