@@ -1,316 +1,2064 @@
-// ─── REPUTATION MODULE · terra-oracle ────────────────────────
-// Pages: leaderboard | how it works
-// Triggered by showRepPage(tab)
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>if (history.scrollRestoration) history.scrollRestoration = 'manual';</script>
+  <title>Terra Oracle · Anonymous Q&A Protocol</title>
 
-// ── Nav dropdown toggle ───────────────────────────────────────
-function toggleRepNav(e) {
-  e && e.stopPropagation();
-  const dd  = document.getElementById('rep-dropdown');
-  const btn = document.getElementById('rep-nav-btn');
-  if (!dd || !btn) return;
-  const isOpen = dd.classList.contains('open');
-  if (!isOpen) {
-    const rect = btn.getBoundingClientRect();
-    const ddW  = 200;
-    // Align left edge of dropdown to left edge of button, clamp to viewport
-    let left = rect.left;
-    left = Math.max(8, Math.min(left, window.innerWidth - ddW - 8));
-    dd.style.left = left + 'px';
+  <!-- Шрифты -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;500;600;700&family=Rajdhani:wght@500;600;700&family=Stalinist+One&family=Boldonse&display=swap" rel="stylesheet">
+
+  <!-- Стили -->
+  <link rel="stylesheet" href="assets/css/style.css">
+<style>
+/* ── WALLET PICKER GRID (oracle-draw style) ─────────────────── */
+#wallet-dropdown .wallet-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  padding: 0 4px;
+}
+#wallet-dropdown .wallet-grid-4 {
+  grid-template-columns: repeat(3, 1fr);
+}
+#wallet-dropdown .wallet-grid .wallet-option {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 10px 6px !important;
+  background: rgba(255,255,255,0.03) !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  border-radius: 12px !important;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  height: auto !important;
+  text-align: center;
+}
+#wallet-dropdown .wallet-grid .wallet-option:hover {
+  background: rgba(255,255,255,0.07) !important;
+  border-color: rgba(255,255,255,0.15) !important;
+}
+#wallet-dropdown .wallet-grid .wallet-option .wicon {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+#wallet-dropdown .wallet-grid .wallet-option .wicon img,
+#wallet-dropdown .wallet-grid .wallet-option .wicon svg {
+  width: 52px !important;
+  height: 52px !important;
+  border-radius: 14px;
+  display: block;
+}
+#wallet-dropdown .wallet-grid .wallet-option .wallet-option-name {
+  font-size: 11px !important;
+  color: #9FB0D0 !important;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+.wallet-picker-section-title {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #6B7AA6;
+  padding: 8px 4px 6px;
+}
+.wallet-picker-sep {
+  height: 1px;
+  background: rgba(255,255,255,0.06);
+  margin: 8px 0;
+}
+</style>
+
+<style>
+/* ── LOGO GLOW ANIMATION ─────────────────────────────────── */
+@keyframes logoGlow {
+  from { opacity:0.6; transform:translateY(-50%) scale(0.95); }
+  to   { opacity:1;   transform:translateY(-50%) scale(1.08); }
+}
+
+/* ── ENERGY FIELD ANIMATION ──────────────────────────────── */
+@keyframes energyBreathe {
+  0%   { opacity:0.6; transform:scale(1); }
+  50%  { opacity:1;   transform:scale(1.03); }
+  100% { opacity:0.7; transform:scale(0.98); }
+}
+
+/* ── CENTER LOGO PULSE ───────────────────────────────────── */
+@keyframes centerPulse {
+  0%,100% { opacity:0.2; transform:scale(1)    filter:blur(0px); }
+  50%     { opacity:0.32; transform:scale(1.04); filter:blur(1px); }
+}
+
+/* ── NAV SYSTEM (connected nodes) ───────────────────────── */
+.nav-system {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  position: relative;
+  padding: 0 4px;
+}
+
+.nav-node {
+  position: relative;
+  z-index: 1;
+  transition: color 0.2s, text-shadow 0.2s;
+}
+
+/* Connector line AFTER each node (except last) */
+.nav-node:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  right: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(100,70,220,0.3), rgba(100,70,220,0.15));
+  z-index: 0;
+  transition: background 0.3s;
+  pointer-events: none;
+}
+
+.nav-node:not(:last-child):hover::before {
+  background: linear-gradient(90deg, rgba(150,100,255,0.7), rgba(150,100,255,0.3));
+  box-shadow: 0 0 4px rgba(150,100,255,0.4);
+}
+
+/* Bottom glow line on active/hover */
+.nav-node::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 80%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(120,80,255,0.8), transparent);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border-radius: 1px;
+}
+
+.nav-node:hover::after,
+.nav-node.active::after {
+  transform: translateX(-50%) scaleX(1);
+  box-shadow: 0 0 6px rgba(120,80,255,0.6);
+}
+
+.nav-node:hover {
+  color: #c8b0ff !important;
+  text-shadow: 0 0 10px rgba(120,80,255,0.5);
+}
+
+.nav-node.active {
+  color: #c8b0ff !important;
+  text-shadow: 0 0 12px rgba(120,80,255,0.7);
+}
+
+/* ── GLASSMORPHISM BUTTONS ───────────────────────────────── */
+.glass-btn {
+  background: rgba(20,25,40,0.6) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  transition: all 0.25s ease !important;
+}
+
+/* Wallet button glass */
+.wallet-btn.glass-btn {
+  border: 1px solid rgba(123,92,255,0.4) !important;
+  box-shadow: 0 0 10px rgba(123,92,255,0.2), inset 0 0 10px rgba(123,92,255,0.08) !important;
+}
+.wallet-btn.glass-btn:hover,
+.wallet-btn.glass-btn.connected {
+  border-color: rgba(123,92,255,0.7) !important;
+  box-shadow: 0 0 16px rgba(123,92,255,0.4), inset 0 0 14px rgba(123,92,255,0.15) !important;
+}
+
+/* Treasury button glass - gold */
+.treasury-btn.glass-gold {
+  border: 1px solid rgba(232,200,64,0.4) !important;
+  box-shadow: 0 0 10px rgba(232,200,64,0.15), inset 0 0 10px rgba(232,200,64,0.06) !important;
+}
+.treasury-btn.glass-gold:hover {
+  border-color: rgba(232,200,64,0.7) !important;
+  box-shadow: 0 0 16px rgba(232,200,64,0.3), inset 0 0 14px rgba(232,200,64,0.12) !important;
+}
+
+/* Oracle Draw button glass - purple/electric */
+.lottery-btn.glass-orange {
+  border: 1px solid rgba(123,92,255,0.5) !important;
+  box-shadow: 0 0 12px rgba(123,92,255,0.3), inset 0 0 10px rgba(0,212,255,0.05) !important;
+}
+.lottery-btn.glass-orange:hover {
+  border-color: rgba(0,212,255,0.5) !important;
+  box-shadow: 0 0 20px rgba(123,92,255,0.45), 0 0 40px rgba(0,212,255,0.15), inset 0 0 14px rgba(0,212,255,0.08) !important;
+}
+</style>
+
+  <!-- Charts -->
+  <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+<style>body{min-height:100vh;display:flex;flex-direction:column;}footer,.site-footer{margin-top:auto;flex-shrink:0;}nav{flex-shrink:0;}.page{width:100%;}.page.active{display:block;}.page#page-reputation.active,.page#page-treasury.active{flex:1;min-height:calc(100vh - 80px);}</style>
+<style>
+@media (max-width: 768px), (hover: none) {
+  /* Disable heavy GPU effects on mobile */
+  .orb-1, .orb-2 { display: none !important; }
+  #bg-canvas { display: none !important; }
+  #cursor-energy { display: none !important; }
+  #nav-scanner-light { display: none !important; }
+  /* Disable blur filters that cause white flicker */
+  * { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  /* Disable heavy animations */
+  .orb-1, .orb-2, #nav-scanner-light { animation: none !important; }
+  /* Simple solid nav background instead of blur */
+  nav { background: rgba(3,7,15,0.98) !important; }
+  footer { background: rgba(4,10,20,0.98) !important; }
+}
+/* ── Reputation nav dropdown ── */
+.rep-nav-wrap { position:relative; }
+.rep-nav-btn.active { color:var(--accent) !important; border-color:rgba(84,147,247,0.4) !important; background:rgba(84,147,247,0.08) !important; }
+.rep-dropdown {
+  display:none; position:absolute; top:calc(100% + 10px); left:50%;
+  transform:translateX(-50%);
+  background:rgba(3,7,15,0.97); border:1px solid var(--border);
+  border-radius:10px; padding:6px; min-width:200px;
+  box-shadow:0 8px 28px rgba(0,0,0,0.5);
+  backdrop-filter:blur(12px);
+  z-index:400; animation:dropDown 0.15s ease;
+}
+.rep-dropdown.open { display:block; }
+.rep-dropdown button {
+  display:flex; align-items:center; gap:10px; width:100%;
+  background:none; border:none; color:var(--text);
+  font-family:'Exo 2',sans-serif; font-size:12px; font-weight:600;
+  padding:10px 12px; border-radius:7px; cursor:pointer;
+  transition:all 0.15s; text-align:left; letter-spacing:0.04em;
+}
+.rep-dropdown button:hover { background:rgba(84,147,247,0.08); color:var(--accent); }
+.rep-dropdown .rep-dd-desc { font-size:9px; color:var(--muted); display:block; font-weight:400; }
+</style>
+</head>
+<body style="min-height:100vh;display:flex;flex-direction:column;">
+
+<canvas id="bg-canvas" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;pointer-events:none;"></canvas>
+<!-- Parallax layer 3: energy cursor reactive -->
+<div id="cursor-energy" style="position:fixed;width:500px;height:500px;border-radius:50%;pointer-events:none;z-index:0;transition:transform 0.08s linear;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(123,92,255,0.07) 0%,rgba(0,212,255,0.04) 40%,transparent 70%);"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<!-- Energy field: breathing gradient -->
+<div id="energy-field" style="position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 80% 60% at 50% 0%, rgba(90,59,255,0.06) 0%, transparent 70%),
+             radial-gradient(ellipse 60% 40% at 100% 100%, rgba(0,212,255,0.04) 0%, transparent 60%);
+  animation:energyBreathe 8s ease-in-out infinite alternate;">
+</div>
+
+<!-- Noise overlay -->
+<div id="noise-overlay" style="position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0.03;
+  background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22><filter id=%22n%22><feTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%224%22 stitchTiles=%22stitch%22/><feColorMatrix type=%22saturate%22 values=%220%22/></filter><rect width=%22200%22 height=%22200%22 filter=%22url(%23n)%22 opacity=%221%22/></svg>');
+  background-size: 200px 200px;">
+</div>
+<nav>
+<!-- HUD scanner line -->
+<div id="nav-scanner" style="position:absolute;bottom:0;left:0;right:0;height:1px;overflow:hidden;pointer-events:none;">
+  <div id="nav-scanner-light" style="position:absolute;top:0;height:1px;width:120px;background:linear-gradient(90deg,transparent,rgba(0,212,255,0.9),rgba(123,92,255,0.6),transparent);animation:navScan 4s linear infinite;"></div>
+  <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(123,92,255,0.15),rgba(0,212,255,0.08),rgba(123,92,255,0.15));"></div>
+</div>
+ <div class="nav-logo" onclick="showPage('home')" style="cursor:pointer;position:relative;" title="Go to Home">
+ <!-- Radial glow behind logo -->
+ <div style="position:absolute;left:-10px;top:50%;transform:translateY(-50%);width:110px;height:110px;border-radius:50%;
+   background:radial-gradient(circle,rgba(120,60,255,0.35) 0%,rgba(60,100,255,0.2) 40%,transparent 70%);
+   pointer-events:none;animation:logoGlow 3s ease-in-out infinite alternate;"></div>
+ <div style="display:flex;align-items:center;gap:0px;position:relative;z-index:1;">
+ <img src="v1.gif"
+ style="height:100px;width:100px;object-fit:contain;flex-shrink:0;margin:-16px 0;mix-blend-mode:lighten;"
+ alt="Terra Oracle Classic">
+ <div style="position:absolute;left:45px;display:flex;flex-direction:column;justify-content:center;z-index:2;">
+ <div style="font-family:'Boldonse',sans-serif;font-weight:400;font-size:14px;
+ letter-spacing:0.06em;color:#fff;text-transform:uppercase;line-height:1.1;white-space:nowrap;
+ text-shadow:0 0 12px rgba(0,0,0,0.9),0 2px 6px rgba(0,0,0,0.8);">
+ Terra Oracle <span style="color:#7eb8ff;">Classic</span>
+ </div>
+ <div style="font-size:9px;color:var(--gold);letter-spacing:0.2em;margin-top:3px;opacity:0.95;white-space:nowrap;
+ font-family:'Exo 2',sans-serif;text-shadow:0 0 8px rgba(0,0,0,0.9);margin-left:40px;">
+ TCO · LUNC ECOSYSTEM
+ </div>
+ </div>
+ </div>
+ </div>
+ <div class="nav-tabs">
+ <div class="nav-system" id="nav-system">
+ <!-- Reputation dropdown — FIRST -->
+ <div class="rep-nav-wrap" id="rep-nav-wrap">
+   <button class="nav-tab nav-node rep-nav-btn" id="rep-nav-btn" onclick="toggleRepNav(event)">
+     Reputation
+   </button>
+   <div class="rep-dropdown" id="rep-dropdown">
+     <button onclick="showRepPage('leaderboard');closeRepNav()">
+       🏆 Leaderboard
+     </button>
+     <button onclick="showRepPage('how');closeRepNav()">
+       📖 How it Works
+     </button>
+   </div>
+ </div>
+ <button class="nav-tab nav-node" onclick="showPage('board')" data-page="board">Board</button>
+ <button class="nav-tab nav-node" onclick="showPage('ask')" data-page="ask">Ask</button>
+ <button class="nav-tab nav-node" onclick="showPage('chat')" data-page="chat">Chat</button>
+ <button class="nav-tab nav-node" onclick="showPage('vote')" data-page="vote">Vote</button>
+ <button class="nav-tab nav-node" onclick="showPage('about')" data-page="about">About</button>
+ <button class="nav-tab nav-node" onclick="showPage('bag',event)" data-page="bag" style="color:#f4d03f;">My Bag</button>
+ <svg class="nav-lines" id="nav-lines" style="display:none;"></svg>
+ </div>
+ <div class="wallet-btn-wrap" id="wallet-wrap">
+ <button class="wallet-btn glass-btn" id="wallet-main-btn" onclick="toggleWalletDropdown()">
+ <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+ <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 12h2"/><path d="M2 10V5a2 2 0 012-2h16a2 2 0 012 2v5"/>
+ </svg>
+ <span id="wallet-btn-label">Connect</span>
+ <span class="wallet-dot"></span>
+ </button>
+ <div class="wallet-dropdown" id="wallet-dropdown">
+ <div class="wallet-dropdown-title">Connect Wallet</div>
+ <div id="wallet-not-connected">
+ <div class="wallet-picker-section-title">Extension Wallets</div>
+ <div class="wallet-grid">
+ <button class="wallet-option" onclick="connectWallet('keplr-ext')">
+  <div class="wicon"><img src="data:image/png;base64,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" width="52" height="52" style="border-radius:14px;" /></div>
+  <div class="wallet-option-name">Keplr</div>
+ </button>
+ <button class="wallet-option" onclick="connectWallet('galaxy')">
+  <div class="wicon"><img src="https://docs.station.hexxagon.io/img/galaxy-station-logo.svg" width="52" height="52" style="border-radius:14px;display:block;"></div>
+  <div class="wallet-option-name">Galaxy</div>
+ </button>
+ </div>
+ <div class="wallet-picker-sep"></div>
+ <div class="wallet-picker-section-title">Mobile Wallets</div>
+ <div class="wallet-grid wallet-grid-4">
+ <button class="wallet-option" onclick="connectWallet('keplr-mobile')">
+  <div class="wicon"><img src="data:image/png;base64,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" width="52" height="52" style="border-radius:14px;" /></div>
+  <div class="wallet-option-name">Keplr</div>
+ </button>
+ <button class="wallet-option" onclick="connectWallet('galaxy-mobile')">
+  <div class="wicon"><img src="https://docs.station.hexxagon.io/img/galaxy-station-logo.svg" width="52" height="52" style="border-radius:14px;display:block;"></div>
+  <div class="wallet-option-name">Galaxy</div>
+ </button>
+ <button class="wallet-option" onclick="connectWallet('luncdash')">
+  <div class="wicon">
+  <svg viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:52px;height:52px;">
+  <rect width="52" height="52" rx="14" fill="#1a0e00"/>
+  <circle cx="26" cy="26" r="18" stroke="url(#lg_to2)" stroke-width="2.5" fill="none"/>
+  <circle cx="26" cy="26" r="13" fill="#0d0800"/>
+  <circle cx="26" cy="26" r="9" fill="#d4a017"/>
+  <circle cx="30" cy="23" r="7.5" fill="#1a0e00"/>
+  <circle cx="16" cy="16" r="1" fill="#f4c842" opacity="0.7"/>
+  <circle cx="38" cy="14" r="0.7" fill="#f4c842" opacity="0.5"/>
+  <circle cx="40" cy="36" r="0.8" fill="#f4c842" opacity="0.4"/>
+  <defs><linearGradient id="lg_to2" x1="8" y1="8" x2="44" y2="44"><stop stop-color="#f4c842"/><stop offset="1" stop-color="#c47d00"/></linearGradient></defs>
+  </svg>
+  </div>
+  <div class="wallet-option-name">Luncdash</div>
+ </button>
+ </div>
+ </div>
+<div id="wallet-connected-panel" style="display:none;">
+  <div class="wallet-connected-info" id="wallet-connected-addr"></div>
+  <button class="wallet-profile-btn" onclick="openProfile()">👤 My Profile</button>
+  <button class="wallet-disconnect" onclick="disconnectWallet()">✕ Disconnect</button>
+</div>
+ </div>
+ </div>
+ <button class="treasury-btn glass-btn glass-gold" onclick="showPage_treasury(event)">
+ 💰 Treasury
+ </button>
+
+ <a class="lottery-btn glass-btn glass-orange" href="https://baydashaaa.github.io/oracle-draw" target="_blank">
+ <svg width="16" height="16" viewBox="0 0 100 100" style="flex-shrink:0">
+ <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="4"/>
+ <circle cx="50" cy="50" r="8" fill="#fff" opacity="0.9"/>
+ <line x1="50" y1="4" x2="50" y2="96" stroke="rgba(255,255,255,0.35)" stroke-width="3"/>
+ <line x1="4" y1="50" x2="96" y2="50" stroke="rgba(255,255,255,0.35)" stroke-width="3"/>
+ <line x1="17" y1="17" x2="83" y2="83" stroke="rgba(255,255,255,0.35)" stroke-width="3"/>
+ <line x1="83" y1="17" x2="17" y2="83" stroke="rgba(255,255,255,0.35)" stroke-width="3"/>
+ <circle cx="50" cy="4" r="4" fill="#ffd700"/>
+ <circle cx="50" cy="96" r="4" fill="#ffd700"/>
+ <circle cx="4" cy="50" r="4" fill="#ffd700"/>
+ <circle cx="96" cy="50" r="4" fill="#ffd700"/>
+ <circle cx="17" cy="17" r="4" fill="#ffd700"/>
+ <circle cx="83" cy="83" r="4" fill="#ffd700"/>
+ <circle cx="83" cy="17" r="4" fill="#ffd700"/>
+ <circle cx="17" cy="83" r="4" fill="#ffd700"/>
+ <circle cx="50" cy="50" r="6" fill="#ffd700"/>
+ </svg>
+ Oracle Draw <svg width="14" height="14" viewBox="0 0 100 100" style="flex-shrink:0;margin:0 2px">
+ <rect x="5" y="25" width="90" height="50" rx="6" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.5)" stroke-width="3"/>
+ <circle cx="5" cy="50" r="8" fill="#cc2200"/>
+ <circle cx="95" cy="50" r="8" fill="#cc2200"/>
+ <line x1="30" y1="25" x2="30" y2="75" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-dasharray="4,3"/>
+ <line x1="70" y1="25" x2="70" y2="75" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-dasharray="4,3"/>
+ <circle cx="50" cy="42" r="5" fill="#ffd700"/>
+ <circle cx="50" cy="58" r="5" fill="#ffd700"/>
+ </svg> <span class="coming-soon">SOON</span>
+ </a>
+ </div>
+
+ <!-- Hamburger button (mobile only) -->
+ <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">
+  <span></span><span></span><span></span>
+ </button>
+</nav>
+
+
+<!-- Mobile navigation drawer -->
+<div class="nav-mobile-drawer" id="nav-mobile-drawer">
+ <button class="nav-tab" onclick="mobileNavGo('board')">📋 Board</button>
+ <button class="nav-tab" onclick="mobileNavGo('ask')">❓ Ask</button>
+ <button class="nav-tab" onclick="mobileNavGo('chat')">💬 Chat</button>
+ <button class="nav-tab" onclick="mobileNavGo('vote')">🗳️ Vote</button>
+ <button class="nav-tab" onclick="mobileNavGo('about')">ℹ️ About</button>
+ <button class="nav-tab" onclick="mobileNavGo('bag')" style="color:#f4d03f;">My Bag</button>
+ <button class="nav-tab" onclick="mobileNavGoFn('showPage_treasury')">💰 Treasury</button>
+ <button class="nav-tab" onclick="showRepPage('leaderboard');closeMobileMenu()">🏆 Leaderboard</button>
+ <button class="nav-tab" onclick="showRepPage('how');closeMobileMenu()">📖 How it works</button>
+
+ <div style="width:100%;max-width:320px;margin-top:8px;display:flex;flex-direction:column;gap:8px;">
+  <div class="wallet-btn-wrap" id="wallet-wrap-mobile" style="width:100%;">
+   <button class="wallet-btn" style="width:100%;justify-content:center;" onclick="toggleWalletDropdown();toggleMobileNav()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;">
+     <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 12h2"/><path d="M2 10V5a2 2 0 012-2h16a2 2 0 012 2v5"/>
+    </svg>
+    <span id="wallet-btn-label-mobile">Connect Wallet</span>
+   </button>
+  </div>
+  <a class="lottery-btn" href="https://baydashaaa.github.io/oracle-draw" target="_blank" style="width:100%;justify-content:center;text-decoration:none;">
+   🎰 Oracle Draw
+  </a>
+ </div>
+</div>
+<div class="page active" id="page-home" style="position:relative;max-width:100%;padding:0;">
+
+<!-- ══ MOBILE HERO ══ -->
+<div class="mobile-hero">
+
+  <!-- Фоновый логотип — за текстом, приглушён -->
+  <div class="mobile-hero-bg-logo">
+    <img src="logo.png" alt="">
+  </div>
+
+  <!-- Контент поверх -->
+  <div class="mobile-hero-content">
+    <div class="mobile-hero-eyebrow">Terra Classic Ecosystem</div>
+    <div class="mobile-hero-title">Terra <span class="oracle-word">Oracle</span></div>
+    <div class="mobile-hero-sub">Classic</div>
+    <div class="mobile-hero-tagline">The intelligence layer of Terra Classic</div>
+  </div>
+
+  <!-- Primary CTA -->
+  <button class="mobile-hero-cta-primary" onclick="showPage('about')">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+    About Protocol
+  </button>
+</div>
+
+<!-- ══ MOBILE HOME SECTIONS ══ -->
+<div class="mobile-home-sections">
+
+  <!-- MODULES label -->
+  <div class="mobile-section-label">Modules</div>
+
+  <!-- PRIMARY: Oracle Draw -->
+  <div onclick="window.open('https://baydashaaa.github.io/oracle-draw','_blank')" class="zk-module zk-module-star mobile-primary-card">
+    <div class="zk-star-shimmer"></div>
+    <div class="zk-module-bar zk-module-bar-fast"></div>
+    <div class="zk-module-inner" style="position:relative;z-index:2;">
+      <div class="zk-module-tag" style="color:rgba(0,212,255,0.9);">★ FEATURED MODULE · PRIMARY</div>
+      <div style="font-size:32px;margin-bottom:10px;">🎰</div>
+      <div style="font-weight:700;font-size:17px;margin-bottom:8px;color:#fff;" class="zk-module-title">Oracle Draw</div>
+      <div style="font-size:13px;color:#b4c8e8;line-height:1.65;" class="zk-module-desc">Two draws — Daily &amp; Weekly. Mint Oracle Mask NFTs to enter. On-chain verifiable draws on Terra Classic.</div>
+      <div style="margin-top:14px;font-size:12px;color:#00D4FF;letter-spacing:0.08em;font-weight:600;text-shadow:0 0 8px rgba(0,212,255,0.5);" class="zk-module-cta">Enter the draw →</div>
+      <div class="zk-module-dots"></div>
+    </div>
+  </div>
+
+  <!-- SECONDARY: 3 карточки в столбец -->
+  <div class="mobile-secondary-cards">
+    <div onclick="showPage('board')" class="zk-module mobile-card-row">
+      <div class="zk-module-bar"></div>
+      <div class="zk-module-inner">
+        <div class="mobile-card-row-inner">
+          <div class="mobile-card-icon">🔮</div>
+          <div class="mobile-card-text">
+            <div class="zk-module-tag">◈ Active</div>
+            <div class="zk-module-title" style="font-weight:700;font-size:15px;color:#fff;margin-bottom:4px;">Oracle Board</div>
+            <div class="zk-module-desc" style="font-size:11px;color:#8aaccc;line-height:1.5;">Ask questions about governance, validators &amp; market.</div>
+          </div>
+          <div class="mobile-card-cta" style="color:#7B5CFF;">Board →</div>
+        </div>
+      </div>
+    </div>
+    <div onclick="showPage('vote')" class="zk-module mobile-card-row" style="--mod-c1:#A855F7;--mod-c2:#7B5CFF;">
+      <div class="zk-module-bar"></div>
+      <div class="zk-module-inner">
+        <div class="mobile-card-row-inner">
+          <div class="mobile-card-icon">🗳️</div>
+          <div class="mobile-card-text">
+            <div class="zk-module-tag" style="color:rgba(168,85,247,0.65);">◆ Active</div>
+            <div class="zk-module-title" style="font-weight:700;font-size:15px;color:#fff;margin-bottom:4px;">Governance Vote</div>
+            <div class="zk-module-desc" style="font-size:11px;color:#8aaccc;line-height:1.5;">Vote on weekly and monthly proposals.</div>
+          </div>
+          <div class="mobile-card-cta" style="color:#A855F7;">Vote →</div>
+        </div>
+      </div>
+    </div>
+    <div onclick="showPage('chat')" class="zk-module mobile-card-row" style="--mod-c1:#00D4FF;--mod-c2:#7B5CFF;">
+      <div class="zk-module-bar"></div>
+      <div class="zk-module-inner">
+        <div class="mobile-card-row-inner">
+          <div class="mobile-card-icon">💬</div>
+          <div class="mobile-card-text">
+            <div class="zk-module-tag" style="color:rgba(0,212,255,0.65);">◎ Active</div>
+            <div class="zk-module-title" style="font-weight:700;font-size:15px;color:#fff;margin-bottom:4px;">DAO Chat</div>
+            <div class="zk-module-desc" style="font-size:11px;color:#8aaccc;line-height:1.5;">On-chain messages, forever on Terra Classic.</div>
+          </div>
+          <div class="mobile-card-cta" style="color:#00D4FF;">5K →</div>
+        </div>
+      </div>
+    </div>
+    <div onclick="showPage('ask')" class="zk-module mobile-card-row" style="--mod-c1:#00FFB0;--mod-c2:#7B5CFF;">
+      <div class="zk-module-bar"></div>
+      <div class="zk-module-inner">
+        <div class="mobile-card-row-inner">
+          <div class="mobile-card-icon">❓</div>
+          <div class="mobile-card-text">
+            <div class="zk-module-tag" style="color:rgba(0,255,176,0.65);">◈ Active</div>
+            <div class="zk-module-title" style="font-weight:700;font-size:15px;color:#fff;margin-bottom:4px;">Ask</div>
+            <div class="zk-module-desc" style="font-size:11px;color:#8aaccc;line-height:1.5;">Anonymous questions to the community.</div>
+          </div>
+          <div class="mobile-card-cta" style="color:#00FFB0;">200K →</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOKEN label -->
+  <div class="mobile-section-label">Token</div>
+
+  <!-- TCO Token block -->
+  <div class="mobile-tco-block">
+    <div class="mobile-tco-bar"></div>
+    <div class="mobile-tco-inner">
+      <div class="mobile-tco-header">
+        <div class="mobile-tco-icon">🪙</div>
+        <div class="mobile-tco-title-wrap">
+          <div class="name">TCO Token <span class="badge">Coming Soon</span></div>
+          <div class="sub">Terra Classic Oracle — native governance &amp; reward token</div>
+        </div>
+      </div>
+      <div class="mobile-tco-desc">TCO powers governance and rewards — earn by participating in Oracle.</div>
+      <div class="mobile-tco-grid">
+        <div class="mobile-tco-item"><div class="ico">🏛️</div><div class="lbl">Governance</div><div class="desc">Vote weight by TCO stake</div></div>
+        <div class="mobile-tco-item"><div class="ico">💎</div><div class="lbl">Rewards</div><div class="desc">Earned by participation</div></div>
+        <div class="mobile-tco-item"><div class="ico">🔥</div><div class="lbl">Deflationary</div><div class="desc">% burned on every action</div></div>
+        <div class="mobile-tco-item"><div class="ico">⛓️</div><div class="lbl">On-Chain</div><div class="desc">Terra Classic · columbus-5</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOW label -->
+  <div class="mobile-section-label">Protocol Flow</div>
+
+  <!-- Protocol Flow Accordion -->
+  <div class="mobile-flow-block">
+    <div class="mobile-flow-bar"></div>
+    <div class="mobile-flow-header">◈ Protocol Flow</div>
+
+    <!-- Accordion 1: Oracle Questions -->
+    <div class="mobile-accordion-item" id="acc-1">
+      <button class="mobile-accordion-trigger" onclick="toggleAccordion('acc-1')">
+        🔮 Oracle Questions
+        <span class="mobile-accordion-arrow">▼</span>
+      </button>
+      <div class="mobile-accordion-body">
+        <div class="mobile-accordion-content">
+          <div class="mobile-flow-amount">200,000 LUNC per question</div>
+          <div class="mobile-flow-pills-row">
+            <span class="mobile-flow-pill">🎰 50% → Weekly Pool</span>
+            <span class="mobile-flow-pill gold">🏛 50% → Treasury</span>
+            <span class="mobile-flow-pill green">🎟 +2 free Weekly entries</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accordion 2: Daily Draw -->
+    <div class="mobile-accordion-item" id="acc-2">
+      <button class="mobile-accordion-trigger" onclick="toggleAccordion('acc-2')">
+        🌙 Daily Draw · every day 20:00 UTC
+        <span class="mobile-accordion-arrow">▼</span>
+      </button>
+      <div class="mobile-accordion-body">
+        <div class="mobile-accordion-content">
+          <div class="mobile-flow-amount">NFT Mint → Daily Pool</div>
+          <div class="mobile-flow-pills-row">
+            <span class="mobile-flow-pill green">🥇 80% → 1 Winner</span>
+            <span class="mobile-flow-pill">🌱 10% → Seeds</span>
+            <span class="mobile-flow-pill gold">🏛 10% → Treasury</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accordion 3: Weekly Draw -->
+    <div class="mobile-accordion-item" id="acc-3">
+      <button class="mobile-accordion-trigger" onclick="toggleAccordion('acc-3')">
+        📅 Weekly Draw · every Monday 20:00 UTC
+        <span class="mobile-accordion-arrow">▼</span>
+      </button>
+      <div class="mobile-accordion-body">
+        <div class="mobile-accordion-content">
+          <div class="mobile-flow-amount">NFT Mint + Questions → Weekly Pool</div>
+          <div class="mobile-flow-pills-row">
+            <span class="mobile-flow-pill green">🥇 48% → 1st</span>
+            <span class="mobile-flow-pill blue">🥈 20% → 2nd</span>
+            <span class="mobile-flow-pill">🥉 12% → 3rd</span>
+            <span class="mobile-flow-pill">🌱 10% → Seeds</span>
+            <span class="mobile-flow-pill gold">🏛 10% → Treasury</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /.mobile-home-sections -->
+
+<!-- sticky bottom bar удалён -->
+
+ <!-- ══ HERO WRAPPER — фиксированная высота, всё абсолютное внутри ══ -->
+ <div id="hero-stage" style="position:relative;width:100%;min-height:620px;overflow:visible;isolation:isolate;">
+
+
+  <!-- Фоновый логотип — точно по центру stage -->
+  <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:2;">
+   <img src="logo.png" style="width:640px;height:640px;opacity:0.2;user-select:none;object-fit:contain;animation:centerPulse 6s ease-in-out infinite;">
+  </div>
+
+  <!-- КАРТОЧКИ + CENTER — единый flex-контейнер, текст по центру flex -->
+  <div style="position:relative;z-index:3;width:100%;min-height:620px;
+    display:flex;align-items:stretch;justify-content:space-between;
+    padding:32px 24px;box-sizing:border-box;gap:20px;max-width:1280px;margin:0 auto;">
+
+    <!-- CENTER TEXT — в потоке flex, занимает место между колонками -->
+
+    <!-- ЛЕВАЯ КОЛОНКА -->
+    <div style="display:flex;flex-direction:column;gap:20px;width:300px;flex-shrink:0;">
+
+      <!-- Oracle Board -->
+      <div onclick="showPage('board')" class="zk-module" style="flex:1;">
+        <div class="zk-module-bar"></div>
+        <div class="zk-module-inner">
+          <div class="zk-module-tag">&#9672; ACTIVE MODULE</div>
+          <div style="font-size:30px;margin-bottom:10px;">🔮</div>
+          <div style="font-weight:700;font-size:16px;margin-bottom:8px;color:#fff;" class="zk-module-title">Oracle Board</div>
+          <div style="font-size:13px;color:#8aaccc;line-height:1.75;" class="zk-module-desc">Ask questions about Terra Classic governance, validators and market. Get answers from the community.</div>
+          <div style="margin-top:16px;font-size:12px;color:#7B5CFF;letter-spacing:0.08em;font-weight:600;" class="zk-module-cta">200,000 LUNC per question →</div>
+          <div class="zk-module-dots"></div>
+        </div>
+      </div>
+
+      <!-- Governance Vote -->
+      <div onclick="showPage('vote')" class="zk-module" style="flex:1;--mod-c1:#A855F7;--mod-c2:#7B5CFF;">
+        <div class="zk-module-bar"></div>
+        <div class="zk-module-inner">
+          <div class="zk-module-tag" style="color:rgba(168,85,247,0.65);">&#9670; ACTIVE MODULE</div>
+          <div style="font-size:30px;margin-bottom:10px;">🗳️</div>
+          <div style="font-weight:700;font-size:16px;margin-bottom:8px;color:#fff;" class="zk-module-title">Governance Vote</div>
+          <div style="font-size:13px;color:#8aaccc;line-height:1.75;" class="zk-module-desc">Vote on weekly and monthly proposals. Liquidity pairs, development priorities, reward models.</div>
+          <div style="margin-top:16px;font-size:12px;color:#A855F7;letter-spacing:0.08em;font-weight:600;" class="zk-module-cta">Monthly draw: 20–25th →</div>
+          <div class="zk-module-dots"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ЦЕНТР — текст в потоке flex -->
+    <div style="flex:1;min-width:0;display:flex;align-items:center;justify-content:center;">
+      <div class="hero-center" style="text-align:center;display:flex;flex-direction:column;
+        align-items:center;width:360px;pointer-events:none;">
+
+        <div class="hero-eyebrow">Terra Classic Ecosystem</div>
+        <h1 class="hero-h1"><span class="hero-h1-terra">Terra</span> <span class="hero-h1-oracle">Oracle</span></h1>
+        <div class="hero-h1-sub">Classic</div>
+        <div class="hero-sub">The intelligence layer of Terra Classic</div>
+        <div class="hero-micro">
+          <span class="hero-micro-inner">Q&amp;A · Governance · Verifiable Draws</span><br>
+          <span class="hero-micro-muted">powered by LUNC</span>
+        </div>
+        <div class="hero-tco-pill" style="pointer-events:all;">
+          🪙 Future token: <strong style="letter-spacing:0.1em;">TCO</strong> · Terra Classic Oracle
+        </div>
+      </div>
+    </div>
+
+    <!-- ПРАВАЯ КОЛОНКА -->
+    <div style="display:flex;flex-direction:column;gap:20px;width:300px;flex-shrink:0;">
+
+      <!-- DAO Chat -->
+      <div onclick="showPage('chat')" class="zk-module" style="flex:1;--mod-c1:#00D4FF;--mod-c2:#7B5CFF;">
+        <div class="zk-module-bar"></div>
+        <div class="zk-module-inner">
+          <div class="zk-module-tag" style="color:rgba(0,212,255,0.65);">&#9678; ACTIVE MODULE</div>
+          <div style="font-size:30px;margin-bottom:10px;">💬</div>
+          <div style="font-weight:700;font-size:16px;margin-bottom:8px;color:#fff;" class="zk-module-title">DAO Chat</div>
+          <div style="font-size:13px;color:#8aaccc;line-height:1.75;" class="zk-module-desc">On-chain messages stored forever on Terra Classic blockchain. Every message costs 5,000 LUNC.</div>
+          <div style="margin-top:16px;font-size:12px;color:#00D4FF;letter-spacing:0.08em;font-weight:600;" class="zk-module-cta">5,000 LUNC per message →</div>
+          <div class="zk-module-dots"></div>
+        </div>
+      </div>
+
+      <!-- Oracle Draw STAR -->
+      <div onclick="window.open('https://baydashaaa.github.io/oracle-draw','_blank')" class="zk-module zk-module-star" style="flex:1;">
+        <div class="zk-star-shimmer"></div>
+        <div class="zk-module-bar zk-module-bar-fast"></div>
+        <div class="zk-module-inner" style="position:relative;z-index:2;">
+          <div class="zk-module-tag" style="color:rgba(0,212,255,0.8);">&#9733; FEATURED MODULE</div>
+          <div style="font-size:30px;margin-bottom:10px;">🎰</div>
+          <div style="font-weight:700;font-size:16px;margin-bottom:8px;color:#fff;" class="zk-module-title">Oracle Draw</div>
+          <div style="font-size:13px;color:#b4c8e8;line-height:1.75;" class="zk-module-desc">Two draws — Daily &amp; Weekly. Mint Oracle Mask NFTs to enter. On-chain verifiable draws on Terra Classic.</div>
+          <div style="margin-top:16px;font-size:12px;color:#00D4FF;letter-spacing:0.08em;font-weight:600;text-shadow:0 0 8px rgba(0,212,255,0.5);" class="zk-module-cta">Enter the draw →</div>
+          <div class="zk-module-dots"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+ </div>
+
+  <!-- Protocol sections below -->
+ <div style="max-width:720px;margin:0 auto;padding:16px 24px 80px;position:relative;z-index:1;">
+
+ <!-- ── TCO TOKEN ── -->
+ <div class="zk-module" style="margin-bottom:20px;--mod-c1:#E8C840;--mod-c2:#7B5CFF;">
+  <div class="zk-module-bar"></div>
+  <div class="zk-module-inner" style="padding:20px 22px;">
+   <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
+    <div style="width:36px;height:36px;border-radius:50%;background:rgba(232,200,64,0.12);border:1px solid rgba(232,200,64,0.3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🪙</div>
+    <div>
+     <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-weight:700;font-size:14px;color:#fff;">TCO Token</span>
+      <span style="font-size:8px;background:rgba(232,200,64,0.12);color:var(--gold);border:1px solid rgba(232,200,64,0.25);border-radius:6px;padding:2px 8px;letter-spacing:0.1em;text-transform:uppercase;">COMING SOON</span>
+     </div>
+     <div style="font-size:11px;color:var(--muted);margin-top:2px;">Terra Classic Oracle — native governance &amp; reward token</div>
+    </div>
+   </div>
+   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:14px 10px;text-align:center;">
+     <div style="font-size:20px;margin-bottom:6px;">🏛️</div>
+     <div style="font-size:11px;font-weight:700;color:#fff;margin-bottom:3px;">Governance</div>
+     <div style="font-size:10px;color:var(--muted);line-height:1.5;">Vote weight by TCO stake</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:14px 10px;text-align:center;">
+     <div style="font-size:20px;margin-bottom:6px;">💎</div>
+     <div style="font-size:11px;font-weight:700;color:#fff;margin-bottom:3px;">Rewards</div>
+     <div style="font-size:10px;color:var(--muted);line-height:1.5;">Earned by Oracle participation</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:14px 10px;text-align:center;">
+     <div style="font-size:20px;margin-bottom:6px;">🔥</div>
+     <div style="font-size:11px;font-weight:700;color:#fff;margin-bottom:3px;">Deflationary</div>
+     <div style="font-size:10px;color:var(--muted);line-height:1.5;">% burned on every activity</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:14px 10px;text-align:center;">
+     <div style="font-size:20px;margin-bottom:6px;">⛓️</div>
+     <div style="font-size:11px;font-weight:700;color:#fff;margin-bottom:3px;">On-Chain</div>
+     <div style="font-size:10px;color:var(--muted);line-height:1.5;">Terra Classic · columbus-5</div>
+    </div>
+   </div>
+  </div>
+ </div>
+
+ <!-- ── PROTOCOL FLOW ── -->
+ <div class="zk-module" style="--mod-c1:#7B5CFF;--mod-c2:#00D4FF;">
+  <div class="zk-module-bar"></div>
+  <div class="zk-module-inner" style="padding:20px 22px;">
+
+   <div style="font-size:9px;letter-spacing:0.22em;color:rgba(160,140,255,0.9);text-transform:uppercase;margin-bottom:20px;font-family:'Exo 2',sans-serif;">◈ Protocol Flow</div>
+
+   <!-- STREAM 1: Oracle Questions -->
+   <div style="margin-bottom:20px;">
+    <div style="font-size:8px;letter-spacing:0.18em;text-transform:uppercase;color:#a08fff;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+     <span style="width:5px;height:5px;border-radius:50%;background:var(--accent);display:inline-block;animation:dotPulse 2s infinite;"></span>
+     Oracle Questions
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+     <div style="background:rgba(123,92,255,0.1);border:1px solid rgba(123,92,255,0.25);border-radius:8px;padding:8px 14px;min-width:100px;">
+      <div style="font-size:13px;color:#ffffff;font-weight:700;letter-spacing:0.02em;">200,000 LUNC</div>
+      <div style="font-size:10px;color:rgba(160,180,210,0.7);margin-top:1px;">per question</div>
+     </div>
+     <span style="color:rgba(160,180,210,0.6);font-size:14px;">→</span>
+     <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <div style="background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.2);border-radius:8px;padding:6px 12px;font-size:11px;color:rgba(192,168,255,0.98);">🎰 <strong>50%</strong> → Weekly Prize Pool</div>
+      <div style="background:rgba(232,200,64,0.06);border:1px solid rgba(232,200,64,0.15);border-radius:8px;padding:6px 12px;font-size:11px;color:rgba(245,215,80,0.98);">🏛 <strong>50%</strong> → Protocol Treasury</div>
+      <div style="background:rgba(0,255,176,0.05);border:1px solid rgba(0,255,176,0.12);border-radius:8px;padding:6px 12px;font-size:11px;color:rgba(0,255,176,0.7);">🎟 <strong>+2</strong> free Weekly entries</div>
+     </div>
+    </div>
+   </div>
+
+   <div style="height:1px;background:rgba(255,255,255,0.04);margin-bottom:20px;"></div>
+
+   <!-- STREAM 2: Daily Draw -->
+   <div style="margin-bottom:20px;">
+    <div style="font-size:8px;letter-spacing:0.18em;text-transform:uppercase;color:#fbbf24;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+     <span style="width:5px;height:5px;border-radius:50%;background:#f59e0b;display:inline-block;animation:dotPulse 2s 0.3s infinite;"></span>
+     Daily Draw · every day 20:00 UTC
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+     <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:8px 14px;">
+      <div style="font-size:13px;color:#ffffff;font-weight:700;">NFT Mint</div>
+      <div style="font-size:10px;color:rgba(160,180,210,0.7);margin-top:1px;">Common / Rare / Legendary</div>
+     </div>
+     <span style="color:rgba(160,180,210,0.6);font-size:14px;">→</span>
+     <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.18);border-radius:8px;padding:6px 14px;font-size:12px;color:#fbbf24;font-weight:700;">Daily Pool</div>
+     <span style="color:rgba(160,180,210,0.6);font-size:14px;">→</span>
+     <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <div style="background:rgba(0,255,176,0.05);border:1px solid rgba(0,255,176,0.12);border-radius:8px;padding:6px 12px;font-size:11px;color:rgba(0,255,176,0.95);">🥇 <strong>80%</strong> → 1 Winner</div>
+      <div style="background:rgba(123,92,255,0.06);border:1px solid rgba(123,92,255,0.15);border-radius:8px;padding:6px 12px;font-size:11px;color:rgba(160,130,255,0.98);">🌱 <strong>10%</strong> → Seeds next round</div>
+      <div style="background:rgba(232,200,64,0.06);border:1px solid rgba(232,200,64,0.12);border-radius:8px;padding:6px 12px;font-size:11px;color:rgba(245,215,80,0.95);">🏛 <strong>10%</strong> → Treasury</div>
+     </div>
+    </div>
+   </div>
+
+   <div style="height:1px;background:rgba(255,255,255,0.04);margin-bottom:20px;"></div>
+
+   <!-- STREAM 3: Weekly Draw -->
+   <div>
+    <div style="font-size:8px;letter-spacing:0.18em;text-transform:uppercase;color:#c4b5fd;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+     <span style="width:5px;height:5px;border-radius:50%;background:#a78bfa;display:inline-block;animation:dotPulse 2s 0.6s infinite;"></span>
+     Weekly Draw · every Monday 20:00 UTC
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+     <div style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.22);border-radius:8px;padding:8px 14px;">
+      <div style="font-size:13px;color:#ffffff;font-weight:700;">NFT Mint + Questions</div>
+     </div>
+     <span style="color:rgba(160,180,210,0.6);font-size:14px;">→</span>
+     <div style="background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.2);border-radius:8px;padding:6px 14px;font-size:12px;color:#c4b5fd;font-weight:700;">Weekly Pool</div>
+     <span style="color:rgba(160,180,210,0.6);font-size:14px;">→</span>
+     <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <div style="background:rgba(0,255,176,0.05);border:1px solid rgba(0,255,176,0.12);border-radius:8px;padding:6px 12px;font-size:11px;color:rgba(0,255,176,0.98);">🥇 <strong>48%</strong> → 1st</div>
+      <div style="background:rgba(0,255,176,0.03);border:1px solid rgba(0,255,176,0.08);border-radius:8px;padding:6px 12px;font-size:11px;color:rgba(0,255,176,0.88);">🥈 <strong>20%</strong> → 2nd</div>
+      <div style="background:rgba(0,255,176,0.02);border:1px solid rgba(0,255,176,0.06);border-radius:8px;padding:6px 12px;font-size:11px;color:rgba(0,255,176,0.78);">🥉 <strong>12%</strong> → 3rd</div>
+      <div style="background:rgba(123,92,255,0.06);border:1px solid rgba(123,92,255,0.14);border-radius:8px;padding:6px 12px;font-size:11px;color:rgba(160,130,255,0.98);">🌱 <strong>10%</strong> → Seeds</div>
+      <div style="background:rgba(232,200,64,0.05);border:1px solid rgba(232,200,64,0.12);border-radius:8px;padding:6px 12px;font-size:11px;color:rgba(245,215,80,0.95);">🏛 <strong>10%</strong> → Treasury</div>
+     </div>
+    </div>
+   </div>
+
+  </div>
+ </div>
+
+ </div>
+</div>
+
+<div class="page" id="page-board" style="min-height:60vh;">
+ <div class="board-header">
+ <div>
+ <div class="board-title">Active Questions</div>
+ <div class="board-count" id="board-count">Loading...</div>
+ </div>
+ </div>
+ <div style="position:relative;margin-bottom:14px;">
+ <input type="text" id="board-search" placeholder="🔍 Search questions..."
+ oninput="setBoardSearch(this.value)"
+ style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;
+ color:var(--text);font-family:'Exo 2',sans-serif;font-size:13px;
+ padding:12px 16px 12px 40px;outline:none;transition:border-color 0.2s;box-sizing:border-box;">
+ <svg style="position:absolute;left:13px;top:50%;transform:translateY(-50%);opacity:0.35;pointer-events:none;"
+ width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+ <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+ </svg>
+ <button id="search-clear" onclick="clearSearch()"
+ style="display:none;position:absolute;right:12px;top:50%;transform:translateY(-50%);
+ background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;">✕</button>
+ </div>
+ <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+ <div style="display:flex;gap:6px;flex-wrap:wrap;">
+ <button class="vote-tab active" id="filter-all" onclick="setBoardFilter('all')">All</button>
+ <button class="vote-tab" id="filter-gov" onclick="setBoardFilter('Governance')">Gov</button>
+ <button class="vote-tab" id="filter-tech" onclick="setBoardFilter('Technical')">Tech</button>
+ <button class="vote-tab" id="filter-val" onclick="setBoardFilter('Validator Issue')">Validators</button>
+ <button class="vote-tab" id="filter-market" onclick="setBoardFilter('Market')">Market</button>
+ <button class="vote-tab" id="filter-comm" onclick="setBoardFilter('Community')">Community</button>
+ </div>
+ <div style="margin-left:auto;display:flex;gap:6px;">
+ <button class="vote-tab active" id="sort-new" onclick="setBoardSort('new')">🕐 New</button>
+ <button class="vote-tab" id="sort-hot" onclick="setBoardSort('hot')">🔥 Hot</button>
+ <button class="vote-tab" id="sort-unanswered" onclick="setBoardSort('unanswered')">❓ Unanswered</button>
+ </div>
+ </div>
+ <div id="questions-list"></div>
+</div>
+<div class="page" id="page-ask">
+ <div class="page-header">
+ <div class="tag">Submit Question</div>
+ <h1>Ask the <span>Community</span></h1>
+ <p class="subtitle">Stay anonymous · Get community answers</p>
+ </div>
+ <div class="card">
+ <div id="ask-form-section">
+ <div class="note">
+ 🔒 Your identity is never stored. Connect your wallet to verify your payment — wallet address will NOT be linked to your question.
+ </div>
+ <div id="keplr-section">
+ <div id="keplr-disconnected">
+ <div style="text-align:center;padding:4px 0 20px;">
+ <div style="font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;">Step 1 — Connect Wallet</div>
+ <button class="btn btn-primary btn-full" id="keplr-connect-btn" onclick="openBagWalletPicker()">
+ 🔑 Connect Wallet
+ </button>
+ <div style="margin-top:14px;padding:12px;background:rgba(84,147,247,0.04);border:1px solid rgba(84,147,247,0.1);border-radius:8px;">
+ <div style="font-size:10px;color:var(--muted);margin-bottom:8px;">Supported: Keplr · Galaxy Station · Luncdash</div>
+ </div>
+ </div>
+ </div>
+ <div id="keplr-connected" style="display:none;">
+ <div style="display:flex;align-items:center;gap:10px;background:rgba(102,255,170,0.05);border:1px solid rgba(102,255,170,0.2);border-radius:8px;padding:12px 14px;margin-bottom:20px;">
+ <span>✅</span>
+ <div>
+ <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--green);margin-bottom:2px;">Wallet Connected</div>
+ <div style="font-size:11px;color:var(--muted);font-family:monospace;" id="connected-addr">terra1...</div>
+ </div>
+ <button onclick="disconnectKeplr()" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;">✕</button>
+ </div>
+ </div>
+ </div>
+ <div id="tx-section" style="display:none;">
+ <div style="font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;text-align:center;">Step 2 — Verify Payment</div>
+ <div class="form-group">
+ <label>TX Hash</label>
+ <div style="display:flex;gap:8px;">
+ <input type="text" id="tx-input" style="display:none;" placeholder="Paste your 200,000 LUNC transaction hash..." style="flex:1;">
+ <button class="btn btn-primary" onclick="autoPayAndUnlock()" id="verify-btn" style="white-space:nowrap;padding:12px 16px;">Pay 200,000 LUNC & Unlock →</button>
+ </div>
+ </div>
+ <div id="tx-status" style="display:none;border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12px;line-height:1.6;"></div>
+ </div>
+ <form id="ask-form" action="https://formspree.io/f/maqpebee" method="POST" style="display:none;">
+ <input type="text" name="_gotcha" style="display:none">
+ <input type="hidden" name="_subject" value="[Terra Oracle] New Question Submitted">
+ <input type="hidden" name="tx_hash" id="verified-tx-hidden">
+ <input type="hidden" name="wallet" id="verified-wallet-hidden">
+ <div style="display:flex;align-items:center;gap:10px;background:rgba(102,255,170,0.05);border:1px solid rgba(102,255,170,0.2);border-radius:8px;padding:12px 14px;margin-bottom:20px;">
+ <span>🔓</span>
+ <div style="font-size:12px;color:var(--green);">Payment verified — form unlocked!</div>
+ </div>
+ <div class="form-group">
+ <label>Category</label>
+ <select name="category" required>
+ <option value="" disabled selected>Select category...</option>
+ <option>Security / Vulnerability</option>
+ <option>Protocol Bug</option>
+ <option>Governance</option>
+ <option>Proposal / Idea</option>
+ <option>Validator Issue</option>
+ <option>Community</option>
+ <option>Fraud / Manipulation</option>
+ <option>Other</option>
+ </select>
+ </div>
+ <div class="form-group">
+ <label>Your Question</label>
+ <textarea name="message" id="ask-message" placeholder="Ask anything about Terra Classic — governance, technical, community, market..." required maxlength="2000"></textarea>
+ <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:6px;">
+ <svg width="28" height="28" viewBox="0 0 36 36" style="transform:rotate(-90deg);flex-shrink:0;">
+ <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="3"/>
+ <circle id="ask-ring" cx="18" cy="18" r="14" fill="none" stroke="var(--accent)" stroke-width="3"
+ stroke-dasharray="87.96" stroke-dashoffset="87.96" stroke-linecap="round" style="transition:stroke-dashoffset 0.2s,stroke 0.2s;"/>
+ </svg>
+ <span style="font-size:10px;color:var(--muted);min-width:28px;text-align:right;" id="ask-count">2000</span>
+ </div>
+ </div>
+ <div class="form-group">
+ <label>Hashtags <span style="font-size:9px;color:var(--muted);text-transform:none">(optional · max 5 · press Enter or comma to add)</span></label>
+ <div class="tag-input-wrap" id="tag-input-wrap" onclick="document.getElementById('tag-raw-input').focus()">
+ <span id="tag-pills"></span>
+ <input type="text" class="tag-input" id="tag-raw-input" placeholder="#ustc #sdk053 #validators..."
+ maxlength="24" autocomplete="off">
+ </div>
+ <div class="tag-suggestions" id="tag-suggestions">
+ <span style="font-size:10px;color:var(--muted);margin-right:2px;">Popular:</span>
+ <span class="tag-suggestion" onclick="addTagSuggestion('ustc')">#ustc</span>
+ <span class="tag-suggestion" onclick="addTagSuggestion('sdk053')">#sdk053</span>
+ <span class="tag-suggestion" onclick="addTagSuggestion('validators')">#validators</span>
+ <span class="tag-suggestion" onclick="addTagSuggestion('lunc')">#lunc</span>
+ <span class="tag-suggestion" onclick="addTagSuggestion('governance')">#governance</span>
+ <span class="tag-suggestion" onclick="addTagSuggestion('mm20')">#mm20</span>
+ <span class="tag-suggestion" onclick="addTagSuggestion('defi')">#defi</span>
+ </div>
+ <input type="hidden" name="tags" id="tags-hidden">
+ </div>
+ <div class="form-group">
+ <label>Poll Options <span style="font-size:9px;color:var(--muted);text-transform:none">(optional · max 5 · community can vote)</span></label>
+ <div id="poll-options-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;"></div>
+ <button type="button" onclick="addPollOption()" id="add-poll-btn" style="font-size:11px;padding:6px 14px;border-radius:8px;border:1px dashed rgba(84,147,247,0.4);background:rgba(84,147,247,0.06);color:var(--accent);cursor:pointer;font-family:'Exo 2',sans-serif;">+ Add option</button>
+ <input type="hidden" id="poll-options-hidden" name="pollOptions">
+ </div>
+ <div class="form-group">
+ <label>Evidence / Links <span style="font-size:9px;color:var(--muted);text-transform:none">(optional)</span></label>
+ <input type="text" name="evidence" placeholder="https://finder.terra.money/classic/tx/...">
+ </div>
+ <div class="divider">Submit</div>
+ <button type="submit" class="btn btn-primary btn-full" id="ask-btn">Transmit Question →</button>
+ </form>
+ </div>
+ <div class="success-state" id="ask-success">
+ <div class="success-icon">📡</div>
+ <div class="success-title">Question Received</div>
+ <p class="success-text">Your anonymous question has been submitted.<br>It will appear on the board within <strong style="color:var(--accent)">1–3 minutes</strong>.</p>
+ <div class="success-ref" id="ask-ref">REF: loading...</div>
+ </div>
+ </div>
+ <div style="text-align:center;margin-top:24px;font-size:11px;color:var(--muted);line-height:1.8;">
+ Send LUNC to the protocol wallet before submitting.<br>
+ <span style="font-size:10px;font-family:monospace;color:var(--accent);word-break:break-all;">terra15jt5a9ycsey4hd6nlqgqxccl9aprkmg2mxmfc6</span>
+ </div>
+</div>
+<div class="page" id="page-chat">
+ <div class="page-header">
+ <div class="tag">Community Chat</div>
+ <h1>DAO <span>Chat</span></h1>
+ <p class="subtitle">Pay 5,000 LUNC · Speak to validators & developers · Shape governance</p>
+ </div>
+ <div class="chat-page-wrap">
+ <div class="note" style="margin-bottom:20px;">
+ Earn a free <strong style="color:var(--gold);white-space:nowrap;">Weekly Draw entry</strong> every <strong style="color:var(--accent);white-space:nowrap;">10 messages</strong>. Up to <strong style="color:var(--accent);white-space:nowrap;">2 entries per day</strong>. Fees are directed to the Protocol Treasury.
+ </div>
+ <div class="chat-page-messages" id="chat-page-messages">
+ <div style="text-align:center;color:var(--muted);font-size:12px;padding:20px;">Loading messages...</div>
+ </div>
+ <div class="chat-page-input-wrap">
+ <div id="chat-page-connect-prompt" style="text-align:center;padding:8px 0 16px;">
+ <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">Connect wallet to send messages · 5,000 LUNC per message</div>
+ <button class="btn btn-primary" onclick="openBagWalletPicker()" style="width:100%;">🔑 Connect Wallet to Chat</button>
+ </div>
+ <div id="chat-page-form" style="display:none;">
+ <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+ <span style="font-size:10px;color:var(--green);">✓ Connected:</span>
+ <span style="font-size:10px;font-family:monospace;color:var(--muted);" id="chat-page-addr"></span>
+ </div>
+ <textarea class="chat-page-textarea" id="chat-page-input" placeholder="Share your thoughts with validators and developers..." maxlength="256"></textarea>
+ <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:8px;">
+ <svg width="36" height="36" viewBox="0 0 36 36" style="transform:rotate(-90deg);flex-shrink:0;">
+ <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="3"/>
+ <circle id="chat-ring" cx="18" cy="18" r="14" fill="none" stroke="var(--accent)" stroke-width="3"
+ stroke-dasharray="87.96" stroke-dashoffset="87.96"
+ stroke-linecap="round" style="transition:stroke-dashoffset 0.2s,stroke 0.2s;"/>
+ </svg>
+ <span id="chat-page-count" style="font-size:11px;color:var(--muted);min-width:28px;text-align:right;">256</span>
+ </div>
+ <div class="chat-send-row">
+ <div class="chat-send-info">Cost: <strong>5,000 LUNC</strong> · Keplr will ask to confirm</div>
+ <button class="btn btn-primary" onclick="sendChatMessage()" id="chat-page-send-btn">Send Message →</button>
+ </div>
+ <div id="chat-tx-status" style="display:none;border-radius:8px;padding:10px 14px;font-size:12px;margin-top:10px;"></div>
+ </div>
+ </div>
+ </div>
+</div>
+<div class="page" id="page-vote">
+ <div class="page-header">
+ <div class="tag">Governance</div>
+ <h1>Community <span>Vote</span></h1>
+ <p class="subtitle">Connect wallet · Vote on proposals · Shape Terra Classic's future</p>
+ </div>
+ <div class="vote-header">
+ <div class="vote-tabs">
+ <button class="vote-tab active" onclick="filterVotes('all')">All</button>
+ <button class="vote-tab" onclick="filterVotes('weekly')">📅 Weekly</button>
+ <button class="vote-tab" onclick="filterVotes('monthly')">🗓 Monthly</button>
+ <button class="vote-tab" onclick="filterVotes('special')">⚡ Special</button>
+ </div>
+ <div style="font-size:11px;color:var(--muted);" id="vote-wallet-status">
+ <button class="btn btn-primary" style="padding:8px 16px;font-size:10px;" onclick="connectWallet('keplr-ext')">🔑 Connect to Vote</button>
+ </div>
+ </div>
+ <div id="admin-panel" style="display:none;margin-bottom:28px;">
+ <div style="background:rgba(245,197,24,0.04);border:1px solid rgba(245,197,24,0.2);border-radius:14px;padding:24px;">
+ <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+ <span style="font-size:16px;">🛡️</span>
+ <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;color:var(--gold);">Admin Control Panel</span>
+ <span style="font-size:9px;background:rgba(245,197,24,0.1);color:var(--gold);border:1px solid rgba(245,197,24,0.2);border-radius:10px;padding:2px 8px;letter-spacing:0.1em;">ADMIN ONLY</span>
+ </div>
+ <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:12px;">
+ <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+ <div>
+ <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;">🗓 Monthly Liquidity Vote</div>
+ <div style="font-size:11px;color:var(--muted);" id="admin-monthly-status">Status: checking...</div>
+ </div>
+ <div style="display:flex;gap:8px;">
+ <button onclick="adminStartVote('monthly-liquidity')"
+ id="admin-start-btn"
+ style="background:rgba(102,255,170,0.1);border:1px solid rgba(102,255,170,0.3);color:var(--green);
+ font-family:'Exo 2',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;
+ padding:9px 18px;border-radius:8px;cursor:pointer;transition:all 0.2s;">
+ ▶ START
+ </button>
+ <button onclick="adminStopVote('monthly-liquidity')"
+ id="admin-stop-btn"
+ style="background:rgba(255,60,60,0.08);border:1px solid rgba(255,60,60,0.25);color:#ff6464;
+ font-family:'Exo 2',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;
+ padding:9px 18px;border-radius:8px;cursor:pointer;transition:all 0.2s;">
+ ■ STOP
+ </button>
+ </div>
+ </div>
+ <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+ <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Override pairs for this vote:</div>
+ <div style="display:flex;gap:6px;flex-wrap:wrap;" id="admin-pairs-wrap">
+ <input type="text" id="admin-pair-1" placeholder="LUNC/USDT" value="LUNC/USDT"
+ style="background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);
+ font-family:'Exo 2',sans-serif;font-size:11px;padding:6px 10px;width:110px;outline:none;">
+ <input type="text" id="admin-pair-2" placeholder="LUNC/USTC" value="LUNC/USTC"
+ style="background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);
+ font-family:'Exo 2',sans-serif;font-size:11px;padding:6px 10px;width:110px;outline:none;">
+ <input type="text" id="admin-pair-3" placeholder="LUNC/ATOM" value="LUNC/ATOM"
+ style="background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);
+ font-family:'Exo 2',sans-serif;font-size:11px;padding:6px 10px;width:110px;outline:none;">
+ <input type="text" id="admin-pair-4" placeholder="LUNC/BTC" value="LUNC/BTC"
+ style="background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);
+ font-family:'Exo 2',sans-serif;font-size:11px;padding:6px 10px;width:110px;outline:none;">
+ </div>
+ </div>
+ </div>
+ <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:18px;">
+ <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;">⚡ Other Votes</div>
+ <div id="admin-other-votes"></div>
+ </div>
+ </div>
+ </div>
+ <div id="votes-list"></div>
+</div>
+<div class="page" id="page-treasury" style="max-width:900px;margin:0 auto;padding:40px 20px 80px;flex-grow:1;">
+
+  <!-- Header -->
+  <div style="text-align:center;margin-bottom:40px;">
+    <div style="font-size:10px;letter-spacing:0.25em;color:var(--gold);text-transform:uppercase;margin-bottom:10px;">Protocol Finance</div>
+    <h1 style="font-family:'Rajdhani',sans-serif;font-weight:800;font-size:clamp(28px,5vw,44px);margin:0 0 10px;">
+      Treasury <span style="color:var(--gold);">Dashboard</span>
+    </h1>
+    <p style="color:var(--muted);font-size:13px;margin:0;">Live on-chain balances · Terra Classic · columbus-5</p>
+  </div>
+
+  <!-- Total TVL + refresh -->
+  <div style="display:flex;align-items:center;justify-content:space-between;
+    background:rgba(245,197,24,0.04);border:1px solid rgba(245,197,24,0.15);
+    border-radius:14px;padding:20px 24px;margin-bottom:24px;">
+    <div>
+      <div style="font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Total Protocol TVL</div>
+      <div style="font-family:'Rajdhani',sans-serif;font-size:36px;font-weight:800;color:var(--gold);line-height:1;" id="t-total-tvl">—</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;" id="t-total-usd">—</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:9px;color:var(--muted);margin-bottom:6px;" id="t-last-updated">—</div>
+      <button onclick="loadTreasuryData()" id="t-refresh-btn"
+        style="background:rgba(84,147,247,0.08);border:1px solid rgba(84,147,247,0.2);
+        color:var(--accent);border-radius:8px;padding:8px 18px;
+        font-family:'Exo 2',sans-serif;font-size:11px;cursor:pointer;transition:all 0.2s;">
+        ↻ Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- 3 wallet cards -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:24px;">
+
+    <!-- Protocol Treasury -->
+    <div style="background:var(--surface);border:1px solid rgba(84,147,247,0.2);border-radius:14px;padding:22px;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#5493f7,transparent);"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+        <span style="font-size:16px;">🔮</span>
+        <span style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--text);">PROTOCOL TREASURY</span>
+        <span style="font-size:8px;background:rgba(84,147,247,0.1);color:var(--accent);border:1px solid rgba(84,147,247,0.15);border-radius:6px;padding:1px 7px;margin-left:auto;">Q&A · CHAT · DRAW</span>
+      </div>
+      <div style="font-family:'Rajdhani',sans-serif;font-size:30px;font-weight:800;color:var(--text);line-height:1;margin-bottom:4px;" id="t-oracle-bal">—</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:14px;" id="t-oracle-usd">Loading...</div>
+      <div style="font-size:9px;color:var(--muted);font-family:monospace;word-break:break-all;opacity:0.5;padding-top:12px;border-top:1px solid var(--border);">terra1549z8zd9hkggzlwf0rcuszhc9rs9fxqfy2kagt</div>
+    </div>
+
+    <!-- Daily Draw Pool -->
+    <div style="background:var(--surface);border:1px solid rgba(244,208,63,0.18);border-radius:14px;padding:22px;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#f4d03f,transparent);"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+        <span style="font-size:16px;">🌙</span>
+        <span style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--text);">DAILY DRAW POOL</span>
+        <span style="font-size:8px;background:rgba(244,208,63,0.08);color:#f4d03f;border:1px solid rgba(244,208,63,0.2);border-radius:6px;padding:1px 7px;margin-left:auto;" id="t-daily-countdown">—</span>
+      </div>
+      <div style="font-family:'Rajdhani',sans-serif;font-size:30px;font-weight:800;color:var(--text);line-height:1;margin-bottom:4px;" id="t-draw-bal">—</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:14px;" id="t-draw-usd">Loading...</div>
+      <div style="font-size:9px;color:var(--muted);font-family:monospace;word-break:break-all;opacity:0.5;padding-top:12px;border-top:1px solid var(--border);">terra1amp68zg7vph3nq84ummnfma4dz753ezxfqa9px</div>
+    </div>
+
+    <!-- Weekly Draw Pool -->
+    <div style="background:var(--surface);border:1px solid rgba(167,139,250,0.18);border-radius:14px;padding:22px;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#a78bfa,transparent);"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+        <span style="font-size:16px;">📅</span>
+        <span style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--text);">WEEKLY DRAW POOL</span>
+        <span style="font-size:8px;background:rgba(167,139,250,0.08);color:#a78bfa;border:1px solid rgba(167,139,250,0.2);border-radius:6px;padding:1px 7px;margin-left:auto;" id="t-weekly-countdown">—</span>
+      </div>
+      <div style="font-family:'Rajdhani',sans-serif;font-size:30px;font-weight:800;color:var(--text);line-height:1;margin-bottom:4px;" id="t-weekly-bal">—</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:14px;" id="t-weekly-usd">Loading...</div>
+      <div style="font-size:9px;color:var(--muted);font-family:monospace;word-break:break-all;opacity:0.5;padding-top:12px;border-top:1px solid var(--border);">terra1p5l6q95kfl3hes7edy76tywav9f79n6xlkz6qz</div>
+    </div>
+  </div>
+
+  <!-- Recent transactions -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);">Recent Transactions · Protocol Treasury</div>
+      <a href="https://finder.terraclassic.community/columbus-5/address/terra1549z8zd9hkggzlwf0rcuszhc9rs9fxqfy2kagt"
+        target="_blank" style="font-size:10px;color:var(--accent);text-decoration:none;opacity:0.7;">View all →</a>
+    </div>
+    <div id="t-recent-txs" style="font-size:12px;color:var(--muted);text-align:center;padding:20px;">Loading...</div>
+  </div>
+
+</div>
+<div class="page" id="page-about">
+ <div class="page-header">
+  <div class="tag">How it works</div>
+  <h1>Terra <span>Oracle</span></h1>
+  <p class="subtitle">Anonymous Q&amp;A on Terra Classic.<br>Ask anything. Answer freely. Earn reputation.</p>
+ </div>
+
+ <!-- HOW IT WORKS — STEPS -->
+ <div class="card" style="margin-bottom:16px;">
+  <div style="font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent);margin-bottom:20px;">Step by step</div>
+  <div style="display:flex;flex-direction:column;gap:0;">
+
+   <div style="display:flex;gap:16px;align-items:flex-start;padding-bottom:20px;border-bottom:1px solid rgba(30,51,88,0.5);">
+    <div style="width:36px;height:36px;border-radius:50%;background:rgba(84,147,247,0.12);border:1px solid rgba(84,147,247,0.3);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">🔗</div>
+    <div>
+     <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;">Connect your wallet</div>
+     <div style="font-size:12px;color:var(--muted);line-height:1.6;">Your identity stays anonymous - wallet address is never shown publicly.</div>
+    </div>
+   </div>
+
+   <div style="display:flex;gap:16px;align-items:flex-start;padding:20px 0;border-bottom:1px solid rgba(30,51,88,0.5);">
+    <div style="width:36px;height:36px;border-radius:50%;background:rgba(84,147,247,0.12);border:1px solid rgba(84,147,247,0.3);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">❓</div>
+    <div>
+     <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;">Ask a question - 200,000 LUNC</div>
+     <div style="font-size:12px;color:var(--muted);line-height:1.6;">Pay once to submit. Fee is split: 50% goes to the Weekly Draw prize pool, 50% to Protocol Treasury. Asking also gives you <span style="color:var(--accent);">+2 free Draw entries</span>.</div>
+    </div>
+   </div>
+
+   <div style="display:flex;gap:16px;align-items:flex-start;padding:20px 0;border-bottom:1px solid rgba(30,51,88,0.5);">
+    <div style="width:36px;height:36px;border-radius:50%;background:rgba(84,147,247,0.12);border:1px solid rgba(84,147,247,0.3);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">💬</div>
+    <div>
+     <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;">Anyone can answer - for free</div>
+     <div style="font-size:12px;color:var(--muted);line-height:1.6;">No payment needed to answer. Community upvotes the best answers. Top answerers build reputation over time.</div>
+    </div>
+   </div>
+
+   <div style="display:flex;gap:16px;align-items:flex-start;padding:20px 0;border-bottom:1px solid rgba(30,51,88,0.5);">
+    <div style="width:36px;height:36px;border-radius:50%;background:rgba(84,147,247,0.12);border:1px solid rgba(84,147,247,0.3);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">💰</div>
+    <div>
+     <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;">DAO Chat - 5,000 LUNC per message</div>
+     <div style="font-size:12px;color:var(--muted);line-height:1.6;">On-chain messages stored forever on Terra Classic. Every 10 messages per day earns <span style="color:var(--accent);">+1 free lottery entry</span> (max 2/day).</div>
+    </div>
+   </div>
+
+   <div style="display:flex;gap:16px;align-items:flex-start;padding-top:20px;">
+    <div style="width:36px;height:36px;border-radius:50%;background:rgba(123,92,255,0.12);border:1px solid rgba(123,92,255,0.3);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">🎰</div>
+    <div>
+     <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;">Oracle Draw - win the prize pool</div>
+     <div style="font-size:12px;color:var(--muted);line-height:1.6;">Prize pool draws happen daily at 20:00 UTC and weekly every Monday at 20:00 UTC. Earn free entries for the Weekly Draw through Q&A and Chat activity.</div>
+    </div>
+   </div>
+
+  </div>
+ </div>
+
+ <!-- FEE SPLIT -->
+ <div class="card" style="margin-bottom:16px;">
+  <div style="font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent);margin-bottom:16px;">Where fees go</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+   <div style="background:var(--surface2);border:1px solid rgba(123,92,255,0.2);border-radius:10px;padding:16px;text-align:center;">
+    <div style="font-size:24px;margin-bottom:6px;">🎰</div>
+    <div style="font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:800;color:var(--accent);line-height:1;">50%</div>
+    <div style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-top:4px;">Weekly Prize Pool</div>
+   </div>
+   <div style="background:var(--surface2);border:1px solid rgba(84,147,247,0.2);border-radius:10px;padding:16px;text-align:center;">
+    <div style="font-size:24px;margin-bottom:6px;">🔮</div>
+    <div style="font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:800;color:#60a5fa;line-height:1;">50%</div>
+    <div style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-top:4px;">Protocol Treasury</div>
+   </div>
+  </div>
+ </div>
+
+ <!-- TITLE SYSTEM -->
+ <div class="card" style="margin-bottom:16px;">
+  <div style="font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent);margin-bottom:14px;">Title System</div>
+  <p style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;font-family:'Rajdhani',sans-serif;">Earn reputation - anonymously</p>
+  <p style="font-size:12px;line-height:1.7;color:var(--muted);margin-bottom:16px;">Ask questions and get upvotes to unlock titles. Higher titles = lower question fees.</p>
+  <div style="display:flex;flex-direction:column;gap:0;">
+   <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(30,51,88,0.5);">
+    <span style="font-size:18px;">🌱</span>
+    <div style="flex:1;">
+     <div style="font-size:12px;font-weight:700;color:var(--text);">Seeker</div>
+     <div style="font-size:10px;color:var(--muted);">1 question asked</div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);text-align:right;">200K LUNC</div>
+   </div>
+   <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(30,51,88,0.5);">
+    <span style="font-size:18px;">🔵</span>
+    <div style="flex:1;">
+     <div style="font-size:12px;font-weight:700;color:var(--text);">Validator</div>
+     <div style="font-size:10px;color:var(--muted);">5 questions · 10 upvotes</div>
+    </div>
+    <div style="font-size:11px;color:var(--green);text-align:right;">−5% · 190K LUNC</div>
+   </div>
+   <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(30,51,88,0.5);">
+    <span style="font-size:18px;">⚡</span>
+    <div style="flex:1;">
+     <div style="font-size:12px;font-weight:700;color:var(--text);">Oracle</div>
+     <div style="font-size:10px;color:var(--muted);">15 questions · 50 upvotes</div>
+    </div>
+    <div style="font-size:11px;color:var(--green);text-align:right;">−12.5% · 175K LUNC</div>
+   </div>
+   <div style="display:flex;align-items:center;gap:12px;padding:10px 0;">
+    <span style="font-size:18px;">🔥</span>
+    <div style="flex:1;">
+     <div style="font-size:12px;font-weight:700;color:var(--text);">Terra Legend</div>
+     <div style="font-size:10px;color:var(--muted);">30 questions · 150 upvotes</div>
+    </div>
+    <div style="font-size:11px;color:var(--green);text-align:right;">−25% · 150K LUNC</div>
+   </div>
+  </div>
+ </div>
+
+ <!-- CTA -->
+ <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px;">
+  <button class="btn btn-primary" style="flex:1;min-width:140px;" onclick="showPage('board')">📋 View Board →</button>
+  <button class="btn btn-primary" style="flex:1;min-width:140px;border-color:rgba(123,92,255,0.4);color:#a78bfa;" onclick="showPage('ask')">❓ Ask a Question →</button>
+ </div>
+
+ <div style="padding:16px 0;border-top:1px solid var(--border);font-size:10px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+  <span>Built on Terra Classic · columbus-5 · All transactions on-chain</span>
+  <a href="https://github.com/Baydashaaa/terra-oracle" target="_blank" style="color:var(--accent);text-decoration:none;">View on GitHub →</a>
+ </div>
+</div>
+<!-- ─── PROFILE PAGE ─────────────────────────────────── -->
+<!-- Вставить перед <div class="site-footer"> -->
+<div class="page" id="page-profile">
+  <div class="page-header">
+    <div class="tag">Account</div>
+    <h1>My <span>Profile</span></h1>
+    <p class="subtitle">Your anonymous identity on Terra Oracle</p>
+  </div>
+
+  <!-- PROFILE CARD -->
+  <div class="card" style="margin-bottom:20px;">
+    <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+      <!-- Avatar -->
+      <div style="position:relative;flex-shrink:0;">
+        <div id="profile-avatar-wrap" onclick="triggerAvatarUpload()"
+          style="width:80px;height:80px;border-radius:50%;background:rgba(84,147,247,0.1);
+          border:2px solid rgba(84,147,247,0.3);cursor:pointer;overflow:hidden;
+          display:flex;align-items:center;justify-content:center;transition:border-color 0.2s;
+          position:relative;"
+          onmouseover="this.style.borderColor='rgba(84,147,247,0.7)'"
+          onmouseout="this.style.borderColor='rgba(84,147,247,0.3)'">
+          <img id="profile-avatar-img" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none;">
+          <span id="profile-avatar-placeholder" style="font-size:28px;color:var(--muted);">👤</span>
+          <div style="position:absolute;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;
+            justify-content:center;opacity:0;transition:opacity 0.2s;border-radius:50%;"
+            onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'">
+            <span style="font-size:11px;color:#fff;font-weight:600;">Edit</span>
+          </div>
+        </div>
+        <input type="file" id="avatar-upload" accept="image/*" style="display:none;" onchange="handleAvatarUpload(event)">
+        <div style="position:absolute;bottom:0;right:0;width:22px;height:22px;background:var(--accent);
+          border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;
+          font-size:11px;border:2px solid var(--bg);" onclick="triggerAvatarUpload()">✏️</div>
+      </div>
+
+      <!-- Name & Title -->
+      <div style="flex:1;min-width:200px;">
+        <div id="profile-display-name" style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:#fff;margin-bottom:4px;">—</div>
+        <div id="profile-title-badge" style="font-size:12px;color:var(--gold);margin-bottom:6px;"></div>
+        <div style="font-size:10px;font-family:monospace;color:var(--muted);" id="profile-wallet-short"></div>
+      </div>
+
+      <!-- Edit button -->
+      <button onclick="toggleProfileEdit()" id="profile-edit-btn"
+        style="background:rgba(84,147,247,0.08);border:1px solid rgba(84,147,247,0.25);
+        color:var(--accent);border-radius:8px;padding:9px 18px;font-family:'Exo 2',sans-serif;
+        font-size:11px;font-weight:700;letter-spacing:0.08em;cursor:pointer;transition:all 0.2s;">
+        ✏️ Edit Profile
+      </button>
+    </div>
+
+    <!-- Edit form -->
+    <div id="profile-edit-form" style="display:none;margin-top:20px;padding-top:20px;border-top:1px solid var(--border);">
+      <div class="form-group">
+        <label>Nickname <span style="font-size:9px;color:var(--muted);text-transform:none">(shown instead of Anonymous#xxxx)</span></label>
+        <input type="text" id="profile-nickname-input" placeholder="Enter your nickname..." maxlength="24"
+          style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+          color:var(--text);font-family:'Exo 2',sans-serif;font-size:13px;padding:10px 14px;
+          outline:none;width:100%;box-sizing:border-box;transition:border-color 0.2s;"
+          onfocus="this.style.borderColor='rgba(84,147,247,0.5)'"
+          onblur="this.style.borderColor='var(--border)'">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:4px;">
+        <button onclick="saveProfile()" class="btn btn-primary" style="padding:10px 20px;font-size:11px;">💾 Save</button>
+        <button onclick="toggleProfileEdit()" style="background:none;border:1px solid var(--border);color:var(--muted);
+          border-radius:8px;padding:10px 16px;font-family:'Exo 2',sans-serif;font-size:11px;cursor:pointer;">Cancel</button>
+        <button onclick="removeAvatar()" style="background:rgba(255,60,60,0.06);border:1px solid rgba(255,60,60,0.2);
+          color:#ff6060;border-radius:8px;padding:10px 16px;font-family:'Exo 2',sans-serif;font-size:11px;cursor:pointer;margin-left:auto;">🗑 Remove Avatar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px;">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center;">
+      <div style="font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:800;color:var(--accent);" id="stat-questions">0</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.1em;">Questions</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center;">
+      <div style="font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:800;color:var(--green);" id="stat-answers">0</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.1em;">Answers</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center;">
+      <div style="font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:800;color:var(--gold);" id="stat-upvotes">0</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.1em;">Upvotes</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center;">
+      <div style="font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:800;color:#ff6b6b;" id="stat-top-answers">0</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.1em;">Top Answers</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center;">
+      <div style="font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:800;color:#4ade80;" id="stat-messages">0</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.1em;">Messages</div>
+    </div>
+  </div>
+
+  <!-- MESSAGE MILESTONES -->
+  <div class="card" style="margin-bottom:20px;">
+    <div style="font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;">💬 Chat Activity → Weekly Draw Entries</div>
+    <div id="message-milestone-section">
+      <!-- filled by JS -->
+    </div>
+  </div>
+
+  <!-- REPUTATION BLOCK -->
+  <div class="card" style="margin-bottom:20px;" id="reputation-block">
+    <!-- filled by JS -->
+  </div>
+
+  <!-- RANK PROGRESS -->
+  <div class="card" style="margin-bottom:20px;">
+    <div style="font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Oracle Ascension</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:16px;">Earn REP through activity · Unlocks fee discounts &amp; rank multipliers</div>
+    <div style="display:flex;flex-direction:column;gap:10px;" id="title-progress-list">
+      <!-- filled by JS -->
+    </div>
+  </div>
+
+  <!-- HISTORY TABS -->
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+    <button class="vote-tab active" id="history-tab-answers" onclick="switchHistoryTab('answers')">💬 My Answers</button>
+    <button class="vote-tab" id="history-tab-questions" onclick="switchHistoryTab('questions')">🔮 My Questions</button>
+    <button class="vote-tab" id="history-tab-messages" onclick="switchHistoryTab('messages')">📨 My Messages</button>
+  </div>
+  <div id="profile-history-list">
+    <!-- filled by JS -->
+  </div>
+<div class="site-footer" style="max-width:760px;margin:0 auto;padding:0 24px 40px;">
+ <p>Terra Classic Community · Terra Oracle Protocol</p>
+ <p style="margin-top:4px;font-size:10px;opacity:0.5;">
+ <a href="https://www.terra-classic.io" target="_blank">terra-classic.io</a> ·
+ <a href="https://github.com/Baydashaaa/lunc-anonymous-signal" target="_blank">GitHub</a>
+ </p>
+</div>
+
+
+</div>
+<!-- ═══ MY BAG PAGE ═══ -->
+<div class="page" id="page-bag" style="padding:40px 20px 80px;max-width:900px;margin:0 auto;">
+
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:8px;">
+    <div style="font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:800;color:#f4d03f;letter-spacing:0.05em;">MY BAG</div>
+  </div>
+  <div style="height:1px;background:linear-gradient(90deg,rgba(244,208,63,0.4),transparent);margin-bottom:32px;"></div>
+
+  <!-- Not connected -->
+  <div id="bag-not-connected-oracle" style="text-align:center;padding:60px 20px;">
+    <div style="font-size:48px;margin-bottom:16px;">🔒</div>
+    <div style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:#f4d03f;margin-bottom:8px;">Connect your wallet</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:24px;">Connect to see your Oracle Mask NFTs and draw history</div>
+    <button onclick="openBagWalletPicker()"
+      style="padding:14px 36px;border-radius:12px;cursor:pointer;
+      font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;letter-spacing:0.08em;
+      background:linear-gradient(135deg,#8b0000,#cc1100);border:1px solid rgba(255,100,0,0.4);
+      color:#f4d03f;box-shadow:0 4px 20px rgba(139,0,0,0.4);">
+      Connect Wallet
+    </button>
+  </div>
+
+  <!-- Connected -->
+  <div id="bag-connected-oracle" style="display:none;">
+
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:40px;">
+      <div style="background:rgba(244,208,63,0.06);border:1px solid rgba(244,208,63,0.2);border-radius:14px;padding:20px;text-align:center;">
+        <div style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:800;color:#f4d03f;" id="o-bag-stat-nfts">0</div>
+        <div style="font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-top:4px;">NFTs owned</div>
+      </div>
+      <div style="background:rgba(102,255,170,0.05);border:1px solid rgba(102,255,170,0.15);border-radius:14px;padding:20px;text-align:center;">
+        <div style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:800;color:#66ffaa;" id="o-bag-stat-won">0</div>
+        <div style="font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-top:4px;">Total won</div>
+      </div>
+      <div style="background:rgba(212,160,23,0.05);border:1px solid rgba(212,160,23,0.2);border-radius:14px;padding:20px;text-align:center;">
+        <div style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:800;color:#f4d03f;" id="o-bag-stat-daily">0</div>
+        <div style="font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-top:4px;">Daily · this round</div>
+      </div>
+      <div style="background:rgba(74,144,217,0.05);border:1px solid rgba(74,144,217,0.2);border-radius:14px;padding:20px;text-align:center;">
+        <div style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:800;color:#7eb8ff;" id="o-bag-stat-weekly">0</div>
+        <div style="font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-top:4px;">Weekly · this round</div>
+      </div>
+    </div>
+
+    <!-- NFT Grid header -->
+    <div style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;letter-spacing:0.1em;color:rgba(244,208,63,0.7);margin-bottom:12px;display:flex;align-items:center;gap:10px;">
+      ORACLE MASK NFTs
+      <span id="o-bag-count" style="background:rgba(244,208,63,0.15);color:#f4d03f;border-radius:20px;padding:2px 10px;font-size:12px;">0</span>
+    </div>
+
+    <!-- Filter tabs -->
+    <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+      <button onclick="filterOracleBagNFTs('all')" id="o-bag-filter-all"
+        style="padding:6px 14px;border-radius:20px;border:1px solid rgba(244,208,63,0.5);
+        background:rgba(244,208,63,0.12);color:#f4d03f;cursor:pointer;font-size:11px;
+        letter-spacing:0.06em;font-family:'Rajdhani',sans-serif;font-weight:700;transition:all 0.2s;">All</button>
+      <button onclick="filterOracleBagNFTs('common')" id="o-bag-filter-common"
+        style="padding:6px 14px;border-radius:20px;border:1px solid rgba(180,190,210,0.2);
+        background:transparent;color:#b0b8c8;cursor:pointer;font-size:11px;
+        letter-spacing:0.06em;font-family:'Rajdhani',sans-serif;transition:all 0.2s;">Common</button>
+      <button onclick="filterOracleBagNFTs('rare')" id="o-bag-filter-rare"
+        style="padding:6px 14px;border-radius:20px;border:1px solid rgba(96,165,250,0.2);
+        background:transparent;color:#60a5fa;cursor:pointer;font-size:11px;
+        letter-spacing:0.06em;font-family:'Rajdhani',sans-serif;transition:all 0.2s;">Rare</button>
+      <button onclick="filterOracleBagNFTs('legendary')" id="o-bag-filter-legendary"
+        style="padding:6px 14px;border-radius:20px;border:1px solid rgba(251,146,60,0.2);
+        background:transparent;color:#fb923c;cursor:pointer;font-size:11px;
+        letter-spacing:0.06em;font-family:'Rajdhani',sans-serif;transition:all 0.2s;">Legendary</button>
+      <button onclick="filterOracleBagNFTs('used')" id="o-bag-filter-used"
+        style="padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.1);
+        background:transparent;color:#9ca3af;cursor:pointer;font-size:11px;
+        letter-spacing:0.06em;font-family:'Rajdhani',sans-serif;transition:all 0.2s;">Round over</button>
+    </div>
+
+    <!-- Empty -->
+    <div id="o-bag-empty" style="text-align:center;padding:48px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:16px;margin-bottom:32px;">
+      <div style="font-size:40px;margin-bottom:12px;">🎭</div>
+      <div style="font-size:14px;color:var(--muted);margin-bottom:6px;">No Oracle Mask NFTs yet</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:20px;">Visit Oracle Draw to mint your first NFT</div>
+      <a href="https://baydashaaa.github.io/oracle-draw/" target="_blank"
+        style="padding:12px 28px;border-radius:10px;border:1px solid rgba(244,208,63,0.4);
+        background:rgba(244,208,63,0.08);color:#f4d03f;text-decoration:none;
+        font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.08em;">
+        Go to Oracle Draw →
+      </a>
+    </div>
+
+    <!-- NFT Grid -->
+    <div id="o-bag-grid" style="display:none;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:40px;"></div>
+
+    <!-- History -->
+    <div style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;letter-spacing:0.1em;color:rgba(244,208,63,0.7);margin-bottom:16px;margin-top:8px;">
+      PARTICIPATION HISTORY
+    </div>
+    <div id="o-bag-hist-empty" style="text-align:center;padding:32px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:14px;">
+      <div style="font-size:13px;color:var(--muted);">No participation history yet</div>
+    </div>
+    <table id="o-bag-hist-table" style="display:none;width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr>
+          <th style="text-align:left;padding:10px 14px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid rgba(255,255,255,0.08);">Round</th>
+          <th style="text-align:left;padding:10px 14px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid rgba(255,255,255,0.08);">Type</th>
+          <th style="text-align:left;padding:10px 14px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid rgba(255,255,255,0.08);">NFT</th>
+          <th style="text-align:left;padding:10px 14px;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid rgba(255,255,255,0.08);">Result</th>
+        </tr>
+      </thead>
+      <tbody id="o-bag-hist-body"></tbody>
+    </table>
+
+  </div>
+</div>
+<!-- ═══ END MY BAG PAGE ═══ -->
+
+<!-- ═══ GLOBAL FOOTER ═══ -->
+<!-- REPUTATION PAGE -->
+<div class="page" id="page-reputation" style="max-width:900px;margin:0 auto;padding:40px 20px 80px;">
+  <!-- filled by reputation.js -->
+</div>
+
+<footer style="position:relative;z-index:2;border-top:1px solid rgba(255,255,255,0.06);background:rgba(4,10,20,0.85);backdrop-filter:blur(12px);padding:32px 24px 24px;margin-top:auto;flex-shrink:0;">
+  <div style="max-width:960px;margin:0 auto;">
+    <!-- Top row -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;margin-bottom:14px;">
+      <!-- Logo -->
+      <div style="display:flex;align-items:center;gap:4px;">
+        <img src="v1.gif" style="width:72px;height:72px;object-fit:contain;">
+        <div>
+          <div style="font-family:'Boldonse',sans-serif;font-size:16px;color:#fff;letter-spacing:0.04em;">Terra Oracle <span style="color:#7eb8ff;">Classic</span></div>
+          <div style="font-size:11px;color:var(--gold);letter-spacing:0.18em;margin-top:3px;">TCO · LUNC ECOSYSTEM</div>
+        </div>
+      </div>
+      <!-- Social links -->
+      <div style="display:flex;align-items:center;gap:10px;">
+        <!-- Telegram -->
+        <a href="#" title="Telegram — coming soon"
+          style="display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--muted);text-decoration:none;transition:all 0.2s;"
+          onmouseover="this.style.background='rgba(84,147,247,0.12)';this.style.borderColor='rgba(84,147,247,0.3)';this.style.color='#5493f7';"
+          onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.borderColor='rgba(255,255,255,0.08)';this.style.color='var(--muted)';">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-2.032 9.571c-.148.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.16 14.896l-2.95-.924c-.64-.203-.654-.64.136-.948l11.543-4.453c.537-.194 1.006.131.833.677z"/></svg>
+        </a>
+        <!-- X (Twitter) -->
+        <a href="#" title="X (Twitter) — coming soon"
+          style="display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--muted);text-decoration:none;transition:all 0.2s;"
+          onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.borderColor='rgba(255,255,255,0.2)';this.style.color='#fff';"
+          onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.borderColor='rgba(255,255,255,0.08)';this.style.color='var(--muted)';">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <!-- Docs -->
+        <a href="https://baydashaaa.github.io/terra-oracle-docs/" title="Documentation"
+          style="display:flex;align-items:center;gap:7px;padding:0 14px;height:38px;border-radius:10px;background:rgba(84,147,247,0.08);border:1px solid rgba(84,147,247,0.2);color:var(--accent);text-decoration:none;font-size:11px;font-weight:600;letter-spacing:0.06em;transition:all 0.2s;white-space:nowrap;"
+          onmouseover="this.style.background='rgba(84,147,247,0.15)';this.style.borderColor='rgba(84,147,247,0.4)';"
+          onmouseout="this.style.background='rgba(84,147,247,0.08)';this.style.borderColor='rgba(84,147,247,0.2)';">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          Docs
+        </a>
+        <!-- GitHub -->
+        <a href="https://github.com/Baydashaaa/terra-oracle" target="_blank" title="GitHub"
+          style="display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--muted);text-decoration:none;transition:all 0.2s;"
+          onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.borderColor='rgba(255,255,255,0.2)';this.style.color='#fff';"
+          onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.borderColor='rgba(255,255,255,0.08)';this.style.color='var(--muted)';">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
+        </a>
+      </div>
+    </div>
+    <!-- Bottom row -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.05);">
+      <div style="font-size:10px;color:var(--muted);">© 2026 Terra Oracle Classic · Built on Terra Classic · columbus-5</div>
+      <div style="display:flex;gap:16px;">
+        <a href="https://finder.terraclassic.community/columbus-5" target="_blank" style="font-size:10px;color:var(--muted);text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">Terra Finder →</a>
+        <a href="https://www.terra-classic.io" target="_blank" style="font-size:10px;color:var(--muted);text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">Terra Classic →</a>
+      </div>
+    </div>
+  </div>
+</footer>
+<!-- ═══ END FOOTER ═══ -->
+
+  <!-- Логика -->
+  <script src="assets/js/treasury.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/profile.js"></script>
+  <script src="assets/js/reputation.js"></script>
+<script>
+// ── Mobile navigation ──
+function toggleMobileNav() {
+  const drawer = document.getElementById('nav-mobile-drawer');
+  const btn = document.getElementById('nav-hamburger');
+  const isOpen = drawer.classList.toggle('open');
+  btn.classList.toggle('open', isOpen);
+  document.body.style.overflow = isOpen ? 'hidden' : '';
+}
+
+function mobileNavGo(page) {
+  showPage(page);
+  toggleMobileNav();
+}
+
+function mobileNavGoFn(fn) {
+  toggleMobileNav();
+  setTimeout(function() {
+    if (fn === 'showPage_treasury' && typeof showPage_treasury === 'function') {
+      showPage_treasury({target: document.createElement('button')});
+    }
+  }, 50);
+}
+
+// Close drawer on outside click
+document.addEventListener('click', function(e) {
+  const drawer = document.getElementById('nav-mobile-drawer');
+  const btn = document.getElementById('nav-hamburger');
+  if (drawer && drawer.classList.contains('open')) {
+    if (!drawer.contains(e.target) && !btn.contains(e.target)) {
+      drawer.classList.remove('open');
+      btn.classList.remove('open');
+      document.body.style.overflow = '';
+    }
   }
-  dd.classList.toggle('open');
-  if (btn) btn.classList.toggle('active', !isOpen);
-}
-function closeRepNav() {
-  const dd  = document.getElementById('rep-dropdown');
-  const btn = document.getElementById('rep-nav-btn');
-  if (dd)  dd.classList.remove('open');
-  if (btn) btn.classList.remove('active');
-}
-document.addEventListener('click', (e) => {
-  if (!e.target.closest('#rep-nav-wrap')) closeRepNav();
 });
 
-// ── Show reputation page ──────────────────────────────────────
-let _repCurrentTab = 'leaderboard';
-
-function showRepPage(tab) {
-  tab = tab || _repCurrentTab;
-  _repCurrentTab = tab;
-
-  // Hide all pages, show reputation
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  const pg = document.getElementById('page-reputation');
-  if (!pg) return;
-  pg.classList.add('active');
-  try { sessionStorage.setItem('currentPage', 'reputation:' + tab); } catch(e) {}
-  if (typeof smoothScrollTop === 'function') smoothScrollTop();
-
-  renderRepPage(tab);
+// Sync mobile wallet label with desktop
+const _origSetWalletConnectedMobile = window.setWalletConnected;
+if (typeof setWalletConnected !== 'undefined') {
+  const _prev = window.setWalletConnected;
+  window.setWalletConnected = function(address) {
+    _prev(address);
+    const mobileLabel = document.getElementById('wallet-btn-label-mobile');
+    if (mobileLabel) mobileLabel.textContent = address.slice(0,8)+'...'+address.slice(-4);
+  };
 }
+</script>
 
-function renderRepPage(tab) {
-  const pg = document.getElementById('page-reputation');
-  if (!pg) return;
-
-  pg.innerHTML = `
-    <div style="text-align:center;margin-bottom:36px;">
-      <div style="display:inline-block;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;
-        color:var(--accent);border:1px solid rgba(84,147,247,0.3);padding:4px 14px;border-radius:20px;
-        background:rgba(84,147,247,0.05);margin-bottom:14px;">ORACLE REPUTATION</div>
-      <h1 style="font-family:'Rajdhani',sans-serif;font-weight:800;font-size:clamp(26px,4vw,38px);color:#fff;margin-bottom:10px;">
-        ${tab === 'leaderboard' ? '🏆 Leaderboard' : '📖 How it Works'}
-      </h1>
-      <p style="font-size:12px;color:var(--muted);">
-        ${tab === 'leaderboard'
-          ? 'Top contributors ranked by Oracle Reputation score'
-          : 'Earn REP through activity · Unlock ranks, discounts & rewards'}
-      </p>
-    </div>
-
-    <!-- Tab switcher -->
-    <div style="display:flex;gap:8px;margin-bottom:28px;justify-content:center;">
-      <button onclick="showRepPage('leaderboard')" style="
-        background:${tab==='leaderboard' ? 'rgba(84,147,247,0.12)' : 'transparent'};
-        border:1px solid ${tab==='leaderboard' ? 'rgba(84,147,247,0.4)' : 'var(--border)'};
-        color:${tab==='leaderboard' ? 'var(--accent)' : 'var(--muted)'};
-        font-family:'Exo 2',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;
-        padding:8px 20px;border-radius:8px;cursor:pointer;transition:all 0.2s;">
-        🏆 Leaderboard
-      </button>
-      <button onclick="showRepPage('how')" style="
-        background:${tab==='how' ? 'rgba(84,147,247,0.12)' : 'transparent'};
-        border:1px solid ${tab==='how' ? 'rgba(84,147,247,0.4)' : 'var(--border)'};
-        color:${tab==='how' ? 'var(--accent)' : 'var(--muted)'};
-        font-family:'Exo 2',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;
-        padding:8px 20px;border-radius:8px;cursor:pointer;transition:all 0.2s;">
-        📖 How it Works
-      </button>
-    </div>
-
-    <div id="rep-tab-content">
-      ${tab === 'leaderboard' ? renderLeaderboardHTML() : renderHowItWorksHTML()}
-    </div>
-  `;
-
-  if (tab === 'leaderboard') loadLeaderboard();
+<style>
+/* ── Animated orbs ─────────────────────────────── */
+@keyframes orbFloat1 {
+  0%   { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(60px, -80px) scale(1.08); }
+  66%  { transform: translate(-40px, 40px) scale(0.95); }
+  100% { transform: translate(0, 0) scale(1); }
 }
-
-// ── LEADERBOARD ───────────────────────────────────────────────
-function renderLeaderboardHTML() {
-  return `
-    <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
-      <button onclick="switchLeaderboardPeriod('weekly')" id="lb-btn-weekly" style="
-        background:rgba(84,147,247,0.12);border:1px solid rgba(84,147,247,0.4);
-        color:var(--accent);font-family:'Exo 2',sans-serif;font-size:10px;font-weight:700;
-        letter-spacing:0.1em;padding:6px 16px;border-radius:6px;cursor:pointer;">
-        📅 Weekly
-      </button>
-      <button onclick="switchLeaderboardPeriod('alltime')" id="lb-btn-alltime" style="
-        background:transparent;border:1px solid var(--border);
-        color:var(--muted);font-family:'Exo 2',sans-serif;font-size:10px;font-weight:700;
-        letter-spacing:0.1em;padding:6px 16px;border-radius:6px;cursor:pointer;">
-        🔥 All Time
-      </button>
-    </div>
-    <div id="leaderboard-list">
-      <div style="text-align:center;padding:40px;color:var(--muted);font-size:12px;">Loading...</div>
-    </div>
-  `;
+@keyframes orbFloat2 {
+  0%   { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(-70px, 60px) scale(1.05); }
+  66%  { transform: translate(50px, -30px) scale(0.92); }
+  100% { transform: translate(0, 0) scale(1); }
 }
+.orb-1 { animation: orbFloat1 18s ease-in-out infinite; }
+.orb-2 { animation: orbFloat2 22s ease-in-out infinite; }
+</style>
 
-let _lbPeriod = 'weekly';
+<script>
+/* ── Starfield canvas ──────────────────────────── */
+(function() {
+  const canvas = document.getElementById('bg-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
 
-function switchLeaderboardPeriod(period) {
-  _lbPeriod = period;
-  const weekly  = document.getElementById('lb-btn-weekly');
-  const alltime = document.getElementById('lb-btn-alltime');
-  if (weekly) {
-    const active = 'background:rgba(84,147,247,0.12);border:1px solid rgba(84,147,247,0.4);color:var(--accent);';
-    const inactive = 'background:transparent;border:1px solid var(--border);color:var(--muted);';
-    weekly.style.cssText  += period === 'weekly'  ? active : inactive;
-    alltime.style.cssText += period === 'alltime' ? active : inactive;
+  let W, H, stars, nebulas;
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
   }
-  loadLeaderboard();
+
+  function initStars() {
+    // Regular stars
+    stars = Array.from({ length: 180 }, () => ({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r: Math.random() * 1.2 + 0.2,
+      speed: Math.random() * 0.12 + 0.02,
+      opacity: Math.random() * 0.6 + 0.2,
+      twinkleSpeed: Math.random() * 0.008 + 0.003,
+      twinkleDir: Math.random() > 0.5 ? 1 : -1,
+      // colour: mostly white, some blue-tinted, a few gold
+      hue: Math.random() < 0.15 ? 'gold' : Math.random() < 0.25 ? 'blue' : 'white',
+    }));
+
+    // Soft nebula blobs
+    nebulas = Array.from({ length: 4 }, (_, i) => ({
+      x: [0.15, 0.85, 0.3, 0.7][i] * W,
+      y: [0.2,  0.15, 0.8, 0.75][i] * H,
+      r: (Math.random() * 180 + 160),
+      color: i % 2 === 0
+        ? 'rgba(84,147,247,0.045)'
+        : 'rgba(167,100,250,0.035)',
+      driftX: (Math.random() - 0.5) * 0.15,
+      driftY: (Math.random() - 0.5) * 0.10,
+    }));
+  }
+
+  let frame = 0;
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    frame++;
+
+    // Nebula blobs
+    nebulas.forEach(n => {
+      n.x += n.driftX;
+      n.y += n.driftY;
+      if (n.x < -n.r || n.x > W + n.r) n.driftX *= -1;
+      if (n.y < -n.r || n.y > H + n.r) n.driftY *= -1;
+      const g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r);
+      g.addColorStop(0, n.color);
+      g.addColorStop(1, 'transparent');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Stars
+    stars.forEach(s => {
+      // gentle drift downward
+      s.y += s.speed;
+      if (s.y > H + 2) { s.y = -2; s.x = Math.random() * W; }
+
+      // twinkle
+      s.opacity += s.twinkleSpeed * s.twinkleDir;
+      if (s.opacity > 0.85 || s.opacity < 0.1) s.twinkleDir *= -1;
+
+      let color;
+      if (s.hue === 'gold')  color = `rgba(245,197,24,${s.opacity})`;
+      else if (s.hue === 'blue') color = `rgba(130,180,255,${s.opacity})`;
+      else color = `rgba(220,230,255,${s.opacity})`;
+
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+    });
+
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', () => { resize(); initStars(); });
+  resize();
+  initStars();
+  draw();
+})();
+
+window.openBagWalletPicker = function() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  setTimeout(() => {
+    const dropdown = document.getElementById('wallet-dropdown');
+    if (dropdown) dropdown.classList.add('open');
+  }, 350);
+};
+
+/* ── NAV CONNECTOR LINES ─────────────────────────────────── */
+function drawNavLines() {
+  // Lines handled via CSS ::before pseudo-elements
 }
 
-async function loadLeaderboard() {
-  const el = document.getElementById('leaderboard-list');
-  if (!el) return;
-  el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:12px;">Loading contributors...</div>';
+// Mark active nav node
+function _wrapShowPage() {
+  if (typeof window.showPage !== 'function') return;
+  const _orig = window.showPage;
+  window.showPage = function(name, e) {
+    _orig(name, e);
+    document.querySelectorAll('.nav-node').forEach(function(n) {
+      n.classList.toggle('active', n.dataset.page === name);
+    });
+  };
+}
+// Try immediately, fallback to DOMContentLoaded and load
+_wrapShowPage();
+document.addEventListener('DOMContentLoaded', _wrapShowPage);
+window.addEventListener('load', _wrapShowPage);
 
-  try {
-    // Fetch all questions from worker
-    const WORKER_URL = typeof window.WORKER_URL !== 'undefined'
-      ? window.WORKER_URL
-      : 'https://terra-oracle-questions.vladislav-baydan.workers.dev';
+window.addEventListener('load', () => { setTimeout(drawNavLines, 100); });
+window.addEventListener('resize', drawNavLines);
+</script>
 
-    const res = await fetch(`${WORKER_URL}/questions`);
-    if (!res.ok) throw new Error('Worker error');
-    const data = await res.json();
-    const allQuestions = data.questions || [];
+<script>
+/* ══════════════════════════════════════════════════════════
+   PARALLAX + CURSOR ENERGY
+   ══════════════════════════════════════════════════════════ */
+(function() {
+  const cursorEnergy = document.getElementById('cursor-energy');
+  const energyField  = document.getElementById('energy-field');
+  let mx = window.innerWidth / 2, my = window.innerHeight / 2;
+  let cx = mx, cy = my;
 
-    // Build per-wallet stats
-    const wallets = {};
-    const cutoff = _lbPeriod === 'weekly'
-      ? Math.floor(Date.now() / 1000) - 7 * 86400
-      : 0;
+  document.addEventListener('mousemove', e => {
+    mx = e.clientX;
+    my = e.clientY;
+  });
 
-    for (const q of allQuestions) {
-      if (q.createdAt < cutoff) continue;
-      if (!q.wallet) continue;
-      if (!wallets[q.wallet]) wallets[q.wallet] = { wallet: q.wallet, alias: q.alias || ('Anonymous#' + q.wallet.slice(-4).toUpperCase()), questions: 0, answers: 0, upvotes: 0 };
-      wallets[q.wallet].questions++;
-      wallets[q.wallet].upvotes += q.votes || 0;
-
-      for (const a of q.answers || []) {
-        if (!a.wallet) continue;
-        if (!wallets[a.wallet]) wallets[a.wallet] = { wallet: a.wallet, alias: a.alias || ('Anonymous#' + a.wallet.slice(-4).toUpperCase()), questions: 0, answers: 0, upvotes: 0 };
-        wallets[a.wallet].answers++;
-        wallets[a.wallet].upvotes += a.votes || 0;
-      }
+  // Smooth cursor follow
+  function tick() {
+    cx += (mx - cx) * 0.07;
+    cy += (my - cy) * 0.07;
+    if (cursorEnergy) {
+      cursorEnergy.style.left = cx + 'px';
+      cursorEnergy.style.top  = cy + 'px';
     }
 
-    // Calculate REP score for each
-    const ranked = Object.values(wallets).map(w => {
-      const score = w.questions * 40 + w.answers * 15 + w.upvotes * 10;
-      const rank  = typeof getRank === 'function' ? getRank(score) : { name: 'INITIATE', icon: '◈', color: '#6b82a8', glow: 'rgba(107,130,168,0.3)' };
-      return { ...w, score, rank };
-    }).sort((a, b) => b.score - a.score).slice(0, 50);
-
-    if (!ranked.length) {
-      el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:12px;">No contributors yet — be the first!</div>';
-      return;
+    // Layer 2 parallax: energy field shifts gently with mouse
+    if (energyField) {
+      const ox = (mx / window.innerWidth  - 0.5) * 18;
+      const oy = (my / window.innerHeight - 0.5) * 12;
+      energyField.style.transform = `translate(${ox}px,${oy}px)`;
     }
 
-    const myWallet = typeof globalWalletAddress !== 'undefined' ? globalWalletAddress : null;
-
-    el.innerHTML = ranked.map((w, i) => {
-      const isMe = myWallet && w.wallet === myWallet;
-      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
-      return `
-        <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;
-          background:${isMe ? 'rgba(84,147,247,0.07)' : 'var(--surface)'};
-          border:1px solid ${isMe ? 'rgba(84,147,247,0.3)' : 'var(--border)'};
-          border-radius:10px;margin-bottom:8px;transition:all 0.2s;"
-          onmouseover="this.style.borderColor='rgba(84,147,247,0.25)'"
-          onmouseout="this.style.borderColor='${isMe ? 'rgba(84,147,247,0.3)' : 'var(--border)'}'">
-          <div style="font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:800;
-            color:${i < 3 ? '#fff' : 'var(--muted)'};min-width:32px;text-align:center;">
-            ${medal}
-          </div>
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
-              <span style="font-size:12px;font-weight:700;color:${isMe ? 'var(--accent)' : 'var(--text)'};
-                white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                ${w.alias}${isMe ? ' <span style="color:var(--accent);font-size:10px;">(you)</span>' : ''}
-              </span>
-              <span style="font-size:10px;font-weight:700;color:${w.rank.color};
-                text-shadow:0 0 8px ${w.rank.glow};white-space:nowrap;">
-                ${w.rank.icon} ${w.rank.name}
-              </span>
-            </div>
-            <div style="display:flex;gap:12px;font-size:10px;color:var(--muted);">
-              <span>❓ ${w.questions} questions</span>
-              <span>💬 ${w.answers} answers</span>
-              <span>👍 ${w.upvotes} upvotes</span>
-            </div>
-          </div>
-          <div style="text-align:right;flex-shrink:0;">
-            <div style="font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:800;
-              color:${w.rank.color};text-shadow:0 0 10px ${w.rank.glow};">
-              ${w.score.toLocaleString()}
-            </div>
-            <div style="font-size:9px;color:var(--muted);letter-spacing:0.08em;">REP</div>
-          </div>
-        </div>`;
-    }).join('');
-
-  } catch(e) {
-    const el2 = document.getElementById('leaderboard-list');
-    if (el2) el2.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:12px;">Could not load leaderboard</div>';
+    // Layer 1 parallax: bg-canvas orbs shift very slightly
+    const orb1 = document.querySelector('.orb-1');
+    const orb2 = document.querySelector('.orb-2');
+    if (orb1) {
+      const ox1 = (mx / window.innerWidth  - 0.5) * 30;
+      const oy1 = (my / window.innerHeight - 0.5) * 20;
+      orb1.style.transform = `translate(${ox1}px,${oy1}px)`;
+    }
+    if (orb2) {
+      const ox2 = (mx / window.innerWidth  - 0.5) * -20;
+      const oy2 = (my / window.innerHeight - 0.5) * -14;
+      orb2.style.transform = `translate(${ox2}px,${oy2}px)`;
+    }
+    requestAnimationFrame(tick);
   }
+  tick();
+})();
+
+/* ══════════════════════════════════════════════════════════
+   ENERGY CAPSULE BUTTONS — hover sweep
+   ══════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.btn-primary, .lottery-btn, .treasury-btn').forEach(btn => {
+    btn.addEventListener('mouseenter', () => {
+      btn.style.setProperty('--sweep', '0');
+    });
+  });
+});
+</script>
+
+
+
+<script>
+/* ── incrementMessageCount + getMsgMilestoneEntries
+   Called by app.js after every successful chat TX.
+   Every 10 messages → +1 Weekly Draw entry, max 2 per day.        ──── */
+(function() {
+  const KEY_MSGS  = 'tco_msg_count';      // total messages by wallet
+  const KEY_DATE  = 'tco_entry_date';     // YYYY-MM-DD of last entry award
+  const KEY_TODAY = 'tco_entries_today';  // entries earned today (max 2)
+  const MAX_DAY   = 2;
+  const PER_MSGS  = 10;                   // messages per entry
+
+  function todayStr() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  /* Returns entries earned today, resets if new day */
+  function entriesToday() {
+    if (localStorage.getItem(KEY_DATE) !== todayStr()) {
+      localStorage.setItem(KEY_DATE, todayStr());
+      localStorage.setItem(KEY_TODAY, '0');
+    }
+    return parseInt(localStorage.getItem(KEY_TODAY) || '0', 10);
+  }
+
+  /* Increment per-wallet message count, return new total */
+  window.incrementMessageCount = function(walletAddr) {
+    const key = KEY_MSGS + '_' + (walletAddr || 'anon');
+    const n = parseInt(localStorage.getItem(key) || '0', 10) + 1;
+    localStorage.setItem(key, String(n));
+    return n;
+  };
+
+  /* Called by app.js after every 10th chat message.
+     No on-chain tx needed — GitHub Action reads chat history
+     directly and updates free-entries.json automatically.
+     We just track locally for UI display.                         */
+  window.getMsgMilestoneEntries = function(msgCount) {
+    if (msgCount % PER_MSGS !== 0) return '';
+    const today = entriesToday();
+    if (today >= MAX_DAY) {
+      console.info('[TerraOracle] Daily entry limit reached (' + MAX_DAY + '/day)');
+      return 'limit reached (max ' + MAX_DAY + '/day)';
+    }
+    const newToday = today + 1;
+    localStorage.setItem(KEY_TODAY, String(newToday));
+    localStorage.setItem(KEY_DATE, todayStr());
+    /* Record locally for profile display */
+    const entries = JSON.parse(localStorage.getItem('tco_free_entries') || '[]');
+    entries.push({ date: todayStr(), msgCount, earnedAt: new Date().toISOString() });
+    localStorage.setItem('tco_free_entries', JSON.stringify(entries));
+    console.info('[TerraOracle] Entry recorded locally. GitHub Action will sync to Oracle Draw within 1h.');
+    return String(newToday);
+  };
+})();
+</script>
+
+<script>
+// ── POLL OPTIONS ──────────────────────────────────────────────
+let pollOptions = [];
+
+function addPollOption() {
+  if (pollOptions.length >= 5) return;
+  const idx = pollOptions.length;
+  pollOptions.push('');
+  renderPollOptions();
+  // Focus new input
+  setTimeout(() => {
+    const inp = document.getElementById('poll-opt-' + idx);
+    if (inp) inp.focus();
+  }, 50);
 }
 
-// ── HOW IT WORKS ──────────────────────────────────────────────
-function renderHowItWorksHTML() {
-  const ranks = typeof RANKS !== 'undefined' ? RANKS : [];
-
-  return `
-    <!-- What is REP -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:16px;">
-      <div style="font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">What is Oracle Reputation?</div>
-      <p style="font-size:13px;color:var(--text);line-height:1.8;margin-bottom:16px;">
-        Oracle Reputation (REP) measures your contribution to the Terra Oracle protocol.
-        It is <strong style="color:var(--accent);">not a balance</strong> — it reflects your
-        <strong style="color:var(--text);">activity, quality, and consistency</strong>.
-      </p>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
-        ${[
-          ['❓', 'Ask a question', '+40 REP', 'var(--accent)'],
-          ['💬', 'Answer (community)', '+15 REP', '#66ffaa'],
-          ['👍', 'Upvote received', '+10 REP', '#ffd700'],
-          ['🗨️', 'Chat message', '+2 REP', '#c084fc'],
-        ].map(([icon, label, rep, color]) => `
-          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;">
-            <div style="font-size:22px;margin-bottom:6px;">${icon}</div>
-            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">${label}</div>
-            <div style="font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:800;color:${color};">${rep}</div>
-          </div>
-        `).join('')}
-      </div>
-      <div style="margin-top:12px;font-size:11px;color:var(--muted);padding:10px 14px;
-        background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid var(--border);">
-        ⚠️ Anti-abuse: first 20 chat messages/day earn full reward · votes capped at 20/day
-      </div>
-    </div>
-
-    <!-- Rank system -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:16px;">
-      <div style="font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;">Oracle Ascension — 7 Ranks</div>
-      <div style="display:flex;flex-direction:column;gap:8px;">
-        ${ranks.map(r => `
-          <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;
-            background:var(--surface2);border:1px solid var(--border);border-radius:10px;">
-            <div style="font-size:16px;font-weight:800;color:${r.color};
-              text-shadow:0 0 10px ${r.glow};min-width:120px;letter-spacing:0.06em;">
-              ${r.icon} ${r.name}
-            </div>
-            <div style="flex:1;">
-              <div style="height:5px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
-                <div style="height:100%;width:100%;background:${r.bar};
-                  box-shadow:0 0 6px ${r.glow};border-radius:3px;opacity:0.7;"></div>
-              </div>
-            </div>
-            <div style="font-size:11px;color:var(--muted);min-width:80px;text-align:right;">
-              ${r.minScore === 0 ? 'Starting' : r.minScore.toLocaleString() + ' REP'}
-            </div>
-            <div style="font-size:10px;color:${r.color};min-width:120px;text-align:right;
-              opacity:${r.discount > 0 ? 1 : 0.4};">
-              ${r.discountLabel}
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-
-    <!-- Weekly rewards -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;">
-      <div style="font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Weekly Reward Pool</div>
-      <p style="font-size:13px;color:var(--text);line-height:1.8;margin-bottom:16px;">
-        ~20% of Treasury weekly rewards are distributed to the <strong style="color:var(--accent);">top 20% contributors</strong>
-        proportional to their REP score. Higher rank multiplies your share.
-      </p>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
-        ${ranks.filter(r => r.multiplier > 1).map(r => `
-          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;">
-            <div style="font-size:12px;font-weight:700;color:${r.color};margin-bottom:4px;">${r.icon} ${r.name}</div>
-            <div style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:800;color:${r.color};
-              text-shadow:0 0 10px ${r.glow};">×${r.multiplier}</div>
-            <div style="font-size:9px;color:var(--muted);margin-top:2px;">reward multiplier</div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  `;
+function removePollOption(idx) {
+  pollOptions.splice(idx, 1);
+  renderPollOptions();
 }
+
+function renderPollOptions() {
+  const list = document.getElementById('poll-options-list');
+  const btn  = document.getElementById('add-poll-btn');
+  if (!list) return;
+  list.innerHTML = pollOptions.map((opt, i) => `
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input type="text" id="poll-opt-${i}" value="${opt.replace(/"/g,'&quot;')}"
+        placeholder="Option ${i+1}"
+        maxlength="100"
+        oninput="pollOptions[${i}]=this.value;updatePollHidden()"
+        style="flex:1;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:12px;font-family:'Exo 2',sans-serif;">
+      <button type="button" onclick="removePollOption(${i})"
+        style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(255,60,60,0.3);background:rgba(255,60,60,0.06);color:#ff6464;cursor:pointer;font-size:14px;flex-shrink:0;">×</button>
+    </div>
+  `).join('');
+  if (btn) btn.style.display = pollOptions.length >= 5 ? 'none' : 'inline-block';
+  updatePollHidden();
+}
+
+function updatePollHidden() {
+  const hidden = document.getElementById('poll-options-hidden');
+  if (hidden) hidden.value = JSON.stringify(pollOptions.filter(o => o.trim()));
+}
+
+// Reset poll when form resets
+function resetPollOptions() {
+  pollOptions = [];
+  renderPollOptions();
+}
+</script>
+
+<script>
+/* ── ACCORDION ── */
+function toggleAccordion(id) {
+  const item = document.getElementById(id);
+  if (!item) return;
+  const isOpen = item.classList.contains('open');
+  document.querySelectorAll('.mobile-accordion-item.open').forEach(function(el) { el.classList.remove('open'); });
+  if (!isOpen) item.classList.add('open');
+}
+
+/* ── STICKY BAR: show only on home page ── */
+(function() {
+  function updateStickyBar() {
+    const bar = document.getElementById('sticky-bottom-bar');
+    if (!bar) return;
+    const homePage = document.getElementById('page-home');
+    const isHome = homePage && homePage.classList.contains('active');
+    bar.style.display = isHome ? 'flex' : 'none';
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    updateStickyBar();
+    const observer = new MutationObserver(updateStickyBar);
+    document.querySelectorAll('.page').forEach(function(p) {
+      observer.observe(p, { attributes: true, attributeFilter: ['class'] });
+    });
+  });
+})();
+</script>
+</body>
+</html>
