@@ -5,14 +5,24 @@
 // ── Nav dropdown toggle ───────────────────────────────────────
 function toggleRepNav(e) {
   e && e.stopPropagation();
-  const dd = document.getElementById('rep-nav-dropdown');
-  if (dd) dd.classList.toggle('open');
+  const mega = document.getElementById('rep-mega');
+  const btn  = document.getElementById('rep-nav-btn');
+  if (!mega) return;
+  const isOpen = mega.classList.contains('open');
+  mega.classList.toggle('open');
+  if (btn) btn.classList.toggle('active', !isOpen);
 }
 function closeRepNav() {
-  const dd = document.getElementById('rep-nav-dropdown');
-  if (dd) dd.classList.remove('open');
+  const mega = document.getElementById('rep-mega');
+  const btn  = document.getElementById('rep-nav-btn');
+  if (mega) mega.classList.remove('open');
+  if (btn)  btn.classList.remove('active');
 }
-document.addEventListener('click', () => closeRepNav());
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#rep-nav-wrap') && !e.target.closest('#rep-mega')) {
+    closeRepNav();
+  }
+});
 
 // ── Show reputation page ──────────────────────────────────────
 let _repCurrentTab = 'leaderboard';
