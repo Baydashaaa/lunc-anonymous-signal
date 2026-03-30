@@ -222,25 +222,49 @@
   footer { background: rgba(4,10,20,0.98) !important; }
 }
 /* ── Reputation nav dropdown ── */
-.rep-nav-wrap { position:relative; }
+.rep-nav-wrap { position:static; }
 .rep-nav-btn { position:relative; }
-.rep-nav-dropdown {
-  display:none; position:absolute; top:calc(100% + 8px); left:50%;
-  transform:translateX(-50%);
-  background:var(--surface); border:1px solid var(--border);
-  border-radius:10px; padding:6px; min-width:170px;
-  box-shadow:0 8px 32px rgba(0,0,0,0.5);
-  z-index:300; animation:dropDown 0.15s ease;
+.rep-nav-btn.active { color:var(--accent) !important; border-color:rgba(84,147,247,0.4) !important; background:rgba(84,147,247,0.08) !important; }
+/* Megamenu — attaches to bottom of navbar, full-width feel */
+.rep-mega {
+  display:none;
+  position:fixed;
+  top:80px; /* nav height */
+  left:0; right:0;
+  background:rgba(3,7,15,0.97);
+  border-bottom:1px solid var(--border);
+  backdrop-filter:blur(16px);
+  z-index:299;
+  padding:0 32px;
+  animation:megaSlide 0.18s ease;
 }
-.rep-nav-dropdown.open { display:block; }
-.rep-nav-dropdown button {
-  display:flex; align-items:center; gap:8px; width:100%;
-  background:none; border:none; color:var(--text);
-  font-family:'Exo 2',sans-serif; font-size:12px;
-  padding:9px 12px; border-radius:7px; cursor:pointer;
-  transition:background 0.15s; text-align:left;
+.rep-mega.open { display:block; }
+@keyframes megaSlide {
+  from { opacity:0; transform:translateY(-8px); }
+  to   { opacity:1; transform:translateY(0); }
 }
-.rep-nav-dropdown button:hover { background:rgba(84,147,247,0.08); color:var(--accent); }
+.rep-mega-inner {
+  max-width:900px; margin:0 auto;
+  display:flex; gap:12px; padding:16px 0;
+}
+.rep-mega-item {
+  display:flex; align-items:center; gap:10px;
+  padding:12px 20px; border-radius:10px;
+  cursor:pointer; transition:all 0.2s;
+  border:1px solid transparent;
+  flex:1; text-align:left;
+  background:none; font-family:'Exo 2',sans-serif;
+  color:var(--text);
+}
+.rep-mega-item:hover {
+  background:rgba(84,147,247,0.07);
+  border-color:rgba(84,147,247,0.2);
+  color:var(--accent);
+}
+.rep-mega-item-icon { font-size:20px; }
+.rep-mega-item-text { display:flex; flex-direction:column; gap:2px; }
+.rep-mega-item-title { font-size:12px; font-weight:700; letter-spacing:0.06em; }
+.rep-mega-item-desc { font-size:10px; color:var(--muted); }
 </style>
 </head>
 <body style="min-height:100vh;display:flex;flex-direction:column;">
@@ -293,22 +317,18 @@
  </div>
  <div class="nav-tabs">
  <div class="nav-system" id="nav-system">
+ <!-- Reputation megamenu trigger — FIRST -->
+ <div class="rep-nav-wrap" id="rep-nav-wrap">
+   <button class="nav-tab nav-node rep-nav-btn" id="rep-nav-btn" onclick="toggleRepNav(event)">
+     Reputation
+   </button>
+ </div>
  <button class="nav-tab nav-node" onclick="showPage('board')" data-page="board">Board</button>
  <button class="nav-tab nav-node" onclick="showPage('ask')" data-page="ask">Ask</button>
  <button class="nav-tab nav-node" onclick="showPage('chat')" data-page="chat">Chat</button>
  <button class="nav-tab nav-node" onclick="showPage('vote')" data-page="vote">Vote</button>
  <button class="nav-tab nav-node" onclick="showPage('about')" data-page="about">About</button>
  <button class="nav-tab nav-node" onclick="showPage('bag',event)" data-page="bag" style="color:#f4d03f;">My Bag</button>
- <!-- Reputation dropdown -->
- <div class="rep-nav-wrap" id="rep-nav-wrap">
-   <button class="nav-tab nav-node rep-nav-btn" id="rep-nav-btn" onclick="toggleRepNav(event)">
-     Reputation ▾
-   </button>
-   <div class="rep-nav-dropdown" id="rep-nav-dropdown">
-     <button onclick="showRepPage('leaderboard');closeRepNav()">🏆 Leaderboard</button>
-     <button onclick="showRepPage('how');closeRepNav()">📖 How it works</button>
-   </div>
- </div>
  <svg class="nav-lines" id="nav-lines" style="display:none;"></svg>
  </div>
  <div class="wallet-btn-wrap" id="wallet-wrap">
@@ -408,6 +428,26 @@
   <span></span><span></span><span></span>
  </button>
 </nav>
+
+<!-- Reputation megamenu — slides from navbar -->
+<div class="rep-mega" id="rep-mega">
+  <div class="rep-mega-inner">
+    <button class="rep-mega-item" onclick="showRepPage('leaderboard');closeRepNav()">
+      <span class="rep-mega-item-icon">🏆</span>
+      <span class="rep-mega-item-text">
+        <span class="rep-mega-item-title">Leaderboard</span>
+        <span class="rep-mega-item-desc">Top contributors by REP score</span>
+      </span>
+    </button>
+    <button class="rep-mega-item" onclick="showRepPage('how');closeRepNav()">
+      <span class="rep-mega-item-icon">📖</span>
+      <span class="rep-mega-item-text">
+        <span class="rep-mega-item-title">How it Works</span>
+        <span class="rep-mega-item-desc">Ranks, scoring &amp; rewards explained</span>
+      </span>
+    </button>
+  </div>
+</div>
 
 <!-- Mobile navigation drawer -->
 <div class="nav-mobile-drawer" id="nav-mobile-drawer">
@@ -1135,7 +1175,7 @@
  </div>
  <div id="votes-list"></div>
 </div>
-<div class="page" id="page-treasury" style="max-width:900px;margin:0 auto;padding:40px 20px 80px;">
+<div class="page" id="page-treasury" style="max-width:900px;margin:0 auto;padding:40px 20px 80px;flex-grow:1;">
 
   <!-- Header -->
   <div style="text-align:center;margin-bottom:40px;">
@@ -1654,7 +1694,7 @@
 <!-- ═══ END FOOTER ═══ -->
 
 <!-- REPUTATION PAGE -->
-<div class="page" id="page-reputation" style="max-width:900px;margin:0 auto;padding:40px 20px 80px;">
+<div class="page" id="page-reputation" style="max-width:900px;margin:0 auto;padding:40px 20px 80px;flex-grow:1;">
   <!-- filled by reputation.js -->
 </div>
 
