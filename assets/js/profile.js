@@ -568,7 +568,7 @@ function renderRankProgress(reputation) {
 
     return `
       <div class="title-row" style="${isCurrent ? `border-left:2px solid ${r.color};padding-left:10px;margin-left:-12px;` : ''}">
-        <div style="width:110px;font-size:11px;font-weight:700;color:${achieved ? r.color : 'var(--muted)'};
+        <div style="width:110px;font-size:11px;font-weight:700;color:${r.color};opacity:${achieved ? 1 : 0.45};
           ${achieved ? `text-shadow:0 0 8px ${r.glow};` : ''}">
           ${r.icon} ${r.name}
           ${isCurrent ? '<span style="font-size:9px;opacity:0.7;"> ← you</span>' : ''}
@@ -582,7 +582,7 @@ function renderRankProgress(reputation) {
             ${r.minScore === 0 ? 'Starting rank' : r.minScore.toLocaleString() + ' REP'}
           </div>
         </div>
-        <div style="font-size:10px;color:${achieved ? r.color : 'var(--muted)'};min-width:80px;text-align:right;">
+        <div style="font-size:10px;color:${r.color};opacity:${achieved ? 1 : 0.45};min-width:80px;text-align:right;">
           ${achieved ? '✅ ' : ''}${r.discountLabel}
         </div>
       </div>`;
