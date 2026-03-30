@@ -399,7 +399,6 @@ function renderProfilePage() {
   if (!address) return;
 
   const profile = loadProfile(address) || {};
-  const title = getUserTitle(address);
   const topCount = getTopAnswerCount(address);
   // Wallet short
   document.getElementById('profile-wallet-short').textContent = address.slice(0,12) + '...' + address.slice(-6);
@@ -407,13 +406,10 @@ function renderProfilePage() {
   // Display name
   document.getElementById('profile-display-name').textContent = profile.nickname || ('Anonymous#' + address.slice(-4).toUpperCase());
 
-  // Title badge — show name + discount
+  // Title badge — show loading until real data arrives
   const titleEl = document.getElementById('profile-title-badge');
-  if (title) {
-    titleEl.innerHTML = `${title.name} <span style="font-size:10px;opacity:0.7;margin-left:6px;">${title.discountLabel}</span>`;
-    titleEl.style.color = title.color;
-  } else {
-    titleEl.textContent = 'No title yet — ask your first question!';
+  if (titleEl) {
+    titleEl.textContent = '…';
     titleEl.style.color = 'var(--muted)';
   }
 
