@@ -195,7 +195,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Restore last page from sessionStorage (only within same tab session)
   const savedPage = (() => { try { return sessionStorage.getItem('currentPage'); } catch(e) { return null; } })();
   if (history.replaceState) history.replaceState(null, '', window.location.pathname);
-  showPage(savedPage || 'home');
+  if (savedPage === 'treasury') {
+    if (typeof showPage_treasury === 'function') showPage_treasury();
+  } else if (savedPage === 'profile') {
+    if (typeof openProfile === 'function') openProfile();
+  } else {
+    showPage(savedPage || 'home');
+  }
   const input = document.getElementById('tag-raw-input');
   if (!input) return;
   input.addEventListener('keydown', function(e) {
