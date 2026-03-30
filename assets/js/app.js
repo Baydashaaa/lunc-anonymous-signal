@@ -197,24 +197,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if (history.replaceState) history.replaceState(null, '', window.location.pathname);
   if (savedPage === 'treasury') {
     if (typeof showPage_treasury === 'function') showPage_treasury();
+  } else if (savedPage && savedPage.startsWith('reputation')) {
+    const tab = savedPage.split(':')[1] || 'leaderboard';
+    if (typeof showRepPage === 'function') showRepPage(tab);
   } else if (savedPage === 'profile') {
-    // Show profile shell immediately, wait for wallet then render stats
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    const pg = document.getElementById('page-profile');
-    if (pg) pg.classList.add('active');
-    // Poll until wallet is restored (max 3s), then render full profile
-    let waited = 0;
-    const poll = setInterval(() => {
-      waited += 100;
-      if (globalWalletAddress) {
-        clearInterval(poll);
-        if (typeof renderProfilePage === 'function') renderProfilePage();
-      } else if (waited >= 3000) {
-        clearInterval(poll);
-        // Wallet not restored — show page anyway (not connected state)
-        if (typeof renderProfilePage === 'function') renderProfilePage();
-      }
-    }, 100);
+    if (typeof openProfile === 'function') openProfile();
   } else {
     showPage(savedPage || 'home');
   }
