@@ -221,34 +221,7 @@
   nav { background: rgba(3,7,15,0.98) !important; }
   footer { background: rgba(4,10,20,0.98) !important; }
 }
-/* ── Reputation nav dropdown ── */
-.rep-nav-wrap { position:relative; }
-.rep-nav-btn.active { color:var(--accent) !important; border-color:rgba(84,147,247,0.4) !important; background:rgba(84,147,247,0.08) !important; }
-.rep-dropdown {
-  display:none;
-  position:absolute;
-  top:100%;
-  left:50%;
-  transform:translateX(-50%);
-  margin-top:10px;
-  background:rgba(3,7,15,0.97);
-  border:1px solid var(--border);
-  border-radius:10px;
-  padding:6px;
-  min-width:180px;
-  box-shadow:0 8px 28px rgba(0,0,0,0.5);
-  backdrop-filter:blur(12px);
-  z-index:400;
-}
-.rep-dropdown.open { display:block; }
-.rep-dropdown button {
-  display:flex; align-items:center; gap:10px; width:100%;
-  background:none; border:none; color:var(--text);
-  font-family:'Exo 2',sans-serif; font-size:12px; font-weight:600;
-  padding:10px 12px; border-radius:7px; cursor:pointer;
-  transition:all 0.15s; text-align:left; letter-spacing:0.04em;
-}
-.rep-dropdown button:hover { background:rgba(84,147,247,0.08); color:var(--accent); }
+
 </style>
 </head>
 <body style="min-height:100vh;display:flex;flex-direction:column;">
@@ -301,20 +274,7 @@
  </div>
  <div class="nav-tabs">
  <div class="nav-system" id="nav-system">
- <!-- Reputation dropdown — FIRST -->
- <div class="rep-nav-wrap" id="rep-nav-wrap">
-   <button class="nav-tab nav-node rep-nav-btn" id="rep-nav-btn" onclick="toggleRepNav(event)">
-     Reputation
-   </button>
-   <div class="rep-dropdown" id="rep-dropdown">
-     <button onclick="showRepPage('leaderboard');closeRepNav()">
-       🏆 Leaderboard
-     </button>
-     <button onclick="showRepPage('how');closeRepNav()">
-       📖 How it Works
-     </button>
-   </div>
- </div>
+ <button class="nav-tab nav-node" onclick="showRepPage('leaderboard')">Reputation</button>
  <button class="nav-tab nav-node" onclick="showPage('board')" data-page="board">Board</button>
  <button class="nav-tab nav-node" onclick="showPage('ask')" data-page="ask">Ask</button>
  <button class="nav-tab nav-node" onclick="showPage('chat')" data-page="chat">Chat</button>
