@@ -10,11 +10,10 @@ function toggleRepNav(e) {
   if (!dd || !btn) return;
   const isOpen = dd.classList.contains('open');
   if (!isOpen) {
-    // Position centered under button
     const rect = btn.getBoundingClientRect();
     const ddW  = 200;
-    let left = rect.left + rect.width / 2 - ddW / 2;
-    // Keep within viewport
+    // Align left edge of dropdown to left edge of button, clamp to viewport
+    let left = rect.left;
     left = Math.max(8, Math.min(left, window.innerWidth - ddW - 8));
     dd.style.left = left + 'px';
   }
