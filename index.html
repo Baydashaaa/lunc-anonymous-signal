@@ -396,13 +396,7 @@
 <!-- Mobile navigation drawer -->
 <div class="nav-mobile-drawer" id="nav-mobile-drawer">
  <!-- Wallet connect button at top of drawer -->
- <!-- Connected wallet info in drawer (hidden when not connected) -->
- <div id="mobile-connected-info" style="display:none;margin-bottom:8px;background:rgba(0,200,150,0.06);border:1px solid rgba(0,200,150,0.2);border-radius:12px;padding:12px;">
-  <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:4px;">Connected</div>
-  <div id="mobile-wallet-addr" style="font-size:11px;color:#66ffaa;font-weight:600;margin-bottom:10px;word-break:break-all;"></div>
-  <button onclick="openProfile();toggleMobileNav()" style="width:100%;background:rgba(84,147,247,0.1);border:1px solid rgba(84,147,247,0.3);border-radius:8px;padding:8px;color:#7eb8ff;font-size:12px;cursor:pointer;margin-bottom:6px;">👤 My Profile</button>
-  <button onclick="disconnectWallet();toggleMobileNav()" style="width:100%;background:rgba(255,80,80,0.08);border:1px solid rgba(255,80,80,0.25);border-radius:8px;padding:8px;color:#ff8080;font-size:12px;cursor:pointer;">✕ Disconnect</button>
- </div>
+
  <button class="nav-tab" onclick="mobileNavGo('board')">📋 Board</button>
  <button class="nav-tab" onclick="mobileNavGo('ask')">❓ Ask</button>
  <button class="nav-tab" onclick="mobileNavGo('chat')">💬 Chat</button>
