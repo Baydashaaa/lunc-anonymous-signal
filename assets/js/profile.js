@@ -813,14 +813,30 @@ function triggerAvatarUpload() {
 function handleAvatarUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
-  if (file.size > 500 * 1024) { alert('Image too large. Max 500KB.'); return; }
+  if (file.size > 5 * 1024 * 1024) { alert('Image too large. Max 5MB.'); return; }
+
   const reader = new FileReader();
   reader.onload = function(e) {
-    const address = globalWalletAddress;
-    if (!address) return;
-    const existing = loadProfile(address) || {};
-    saveProfileData(address, { ...existing, avatar: e.target.result });
-    renderProfilePage();
+    // Compress image using canvas before saving
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const MAX_SIZE = 300;
+      let w = img.width, h = img.height;
+      if (w > h) { if (w > MAX_SIZE) { h = h * MAX_SIZE / w; w = MAX_SIZE; } }
+      else        { if (h > MAX_SIZE) { w = w * MAX_SIZE / h; h = MAX_SIZE; } }
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      // Compress to JPEG quality 0.82
+      const compressed = canvas.toDataURL('image/jpeg', 0.82);
+      const address = globalWalletAddress;
+      if (!address) return;
+      const existing = loadProfile(address) || {};
+      saveProfileData(address, { ...existing, avatar: compressed });
+      renderProfilePage();
+    };
+    img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
