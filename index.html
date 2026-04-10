@@ -2106,6 +2106,26 @@ function toggleAccordion(id) {
 })();
 </script>
 
+<!-- MOBILE CONNECTED MODAL -->
+<div id="mobile-connected-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);align-items:flex-end;justify-content:center;">
+  <div style="background:#0d1117;border:1px solid rgba(0,200,150,0.2);border-radius:20px 20px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;color:#fff;">Wallet</div>
+      <button onclick="closeMobileConnectedModal()" style="background:transparent;border:none;color:rgba(255,255,255,0.5);font-size:22px;cursor:pointer;padding:4px 10px;">✕</button>
+    </div>
+    <div style="background:rgba(0,200,150,0.06);border:1px solid rgba(0,200,150,0.2);border-radius:12px;padding:14px;margin-bottom:16px;">
+      <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:6px;">CONNECTED</div>
+      <div id="mcm-address" style="font-size:12px;color:#66ffaa;font-weight:600;word-break:break-all;"></div>
+    </div>
+    <button onclick="openProfile();closeMobileConnectedModal()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(84,147,247,0.1);border:1px solid rgba(84,147,247,0.3);border-radius:12px;padding:13px;color:#7eb8ff;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px;">
+      👤 My Profile
+    </button>
+    <button onclick="disconnectWallet();closeMobileConnectedModal()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(255,80,80,0.08);border:1px solid rgba(255,80,80,0.25);border-radius:12px;padding:13px;color:#ff8080;font-size:14px;font-weight:600;cursor:pointer;">
+      ✕ Disconnect
+    </button>
+  </div>
+</div>
+
 <!-- MOBILE WALLET MODAL -->
 <div id="mobile-wallet-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);align-items:flex-end;justify-content:center;">
   <div style="background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:20px 20px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;">
@@ -2150,12 +2170,26 @@ function openMobileWalletModal() {
 }
 
 function handleMobileNavWalletBtn() {
-  // If connected — open drawer to show profile/disconnect
   if (typeof globalWalletAddress !== 'undefined' && globalWalletAddress) {
-    toggleMobileNav();
+    openMobileConnectedModal();
   } else {
     openMobileWalletModal();
   }
+}
+
+function openMobileConnectedModal() {
+  const modal = document.getElementById('mobile-connected-modal');
+  if (!modal) return;
+  // Fill address
+  const addr = globalWalletAddress;
+  const addrEl = document.getElementById('mcm-address');
+  if (addrEl) addrEl.textContent = addr.slice(0,12)+'...'+addr.slice(-6);
+  modal.style.display = 'flex';
+}
+
+function closeMobileConnectedModal() {
+  const modal = document.getElementById('mobile-connected-modal');
+  if (modal) modal.style.display = 'none';
 }
 function closeMobileWalletModal() {
   const modal = document.getElementById('mobile-wallet-modal');
@@ -2164,6 +2198,9 @@ function closeMobileWalletModal() {
 // Close on backdrop click
 document.getElementById('mobile-wallet-modal')?.addEventListener('click', function(e) {
   if (e.target === this) closeMobileWalletModal();
+});
+document.getElementById('mobile-connected-modal')?.addEventListener('click', function(e) {
+  if (e.target === this) closeMobileConnectedModal();
 });
 </script>
 </body>
