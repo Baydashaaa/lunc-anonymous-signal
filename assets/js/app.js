@@ -991,6 +991,18 @@ function setWalletConnected(address) {
   }
   // Обновляем My Bag при подключении кошелька
   renderOracleBag();
+
+  // Load profile from Worker (profile.js loads after app.js)
+  setTimeout(() => {
+    if (typeof loadProfileFromWorker === 'function') {
+      loadProfileFromWorker(address).then(() => {
+        if (typeof renderBoard === 'function') renderBoard();
+        if (typeof renderProfilePage === 'function' && document.getElementById('page-profile')?.classList.contains('active')) {
+          renderProfilePage();
+        }
+      });
+    }
+  }, 300);
 }
 
 window.openBagWalletPicker = function() {
