@@ -396,7 +396,7 @@
 
  <div style="width:100%;max-width:320px;margin-top:8px;display:flex;flex-direction:column;gap:8px;">
   <div class="wallet-btn-wrap" id="wallet-wrap-mobile" style="width:100%;">
-   <button class="wallet-btn" style="width:100%;justify-content:center;" onclick="toggleWalletDropdown();toggleMobileNav()">
+   <button class="wallet-btn" style="width:100%;justify-content:center;" onclick="openMobileWalletModal();toggleMobileNav()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;">
      <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 12h2"/><path d="M2 10V5a2 2 0 012-2h16a2 2 0 012 2v5"/>
     </svg>
@@ -2057,6 +2057,58 @@ function toggleAccordion(id) {
     });
   });
 })();
+</script>
+
+<!-- MOBILE WALLET MODAL -->
+<div id="mobile-wallet-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);align-items:flex-end;justify-content:center;">
+  <div style="background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:20px 20px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div style="font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;color:#fff;">Connect Wallet</div>
+      <button onclick="closeMobileWalletModal()" style="background:transparent;border:none;color:rgba(255,255,255,0.5);font-size:22px;cursor:pointer;padding:4px 10px;">✕</button>
+    </div>
+
+    <div style="font-size:10px;letter-spacing:0.12em;color:rgba(255,255,255,0.4);margin-bottom:10px;">EXTENSION WALLETS</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+      <button onclick="connectWallet('keplr-ext');closeMobileWalletModal()" style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:14px;cursor:pointer;color:#fff;font-size:14px;font-weight:600;">
+        <span style="font-size:22px;">🔑</span> Keplr
+      </button>
+      <button onclick="connectWallet('galaxy');closeMobileWalletModal()" style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:14px;cursor:pointer;color:#fff;font-size:14px;font-weight:600;">
+        <span style="font-size:22px;">🌌</span> Galaxy
+      </button>
+    </div>
+
+    <div style="font-size:10px;letter-spacing:0.12em;color:rgba(255,255,255,0.4);margin-bottom:10px;">MOBILE WALLETS</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px;">
+      <button onclick="connectWallet('keplr-mobile');closeMobileWalletModal()" style="display:flex;flex-direction:column;align-items:center;gap:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:14px 8px;cursor:pointer;color:#fff;font-size:12px;font-weight:600;">
+        <span style="font-size:26px;">🔑</span> Keplr
+      </button>
+      <button onclick="connectWallet('galaxy-mobile');closeMobileWalletModal()" style="display:flex;flex-direction:column;align-items:center;gap:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:14px 8px;cursor:pointer;color:#fff;font-size:12px;font-weight:600;">
+        <span style="font-size:26px;">🌌</span> Galaxy
+      </button>
+      <button onclick="connectWallet('luncdash');closeMobileWalletModal()" style="display:flex;flex-direction:column;align-items:center;gap:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:14px 8px;cursor:pointer;color:#fff;font-size:12px;font-weight:600;">
+        <span style="font-size:26px;">🌙</span> Luncdash
+      </button>
+    </div>
+
+    <button onclick="closeMobileWalletModal()" style="width:100%;background:transparent;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px;color:rgba(255,255,255,0.4);font-size:13px;cursor:pointer;">
+      Cancel
+    </button>
+  </div>
+</div>
+
+<script>
+function openMobileWalletModal() {
+  const modal = document.getElementById('mobile-wallet-modal');
+  if (modal) { modal.style.display='flex'; }
+}
+function closeMobileWalletModal() {
+  const modal = document.getElementById('mobile-wallet-modal');
+  if (modal) { modal.style.display='none'; }
+}
+// Close on backdrop click
+document.getElementById('mobile-wallet-modal')?.addEventListener('click', function(e) {
+  if (e.target === this) closeMobileWalletModal();
+});
 </script>
 </body>
 </html>
