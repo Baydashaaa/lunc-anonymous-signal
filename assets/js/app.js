@@ -1106,7 +1106,7 @@ window.sendChatMessage = async function() {
     document.getElementById('chat-ring').style.stroke = 'var(--accent)';
     btn.textContent = 'Send Message →'; btn.disabled = false;
     statusEl.style.cssText = 'display:block;border-radius:8px;padding:10px 14px;font-size:12px;background:rgba(102,255,170,0.06);border:1px solid rgba(102,255,170,0.25);color:var(--green);margin-top:10px;';
-    statusEl.innerHTML = '✅ Sent! <a href="https://finder.terra.money/classic/tx/' + result.transactionHash + '" target="_blank" style="color:var(--green);text-decoration:underline;">' + result.transactionHash.slice(0,16) + '...</a><br><span style="font-size:10px;opacity:0.7;">Message will appear after blockchain confirmation (~6s)</span>';
+    statusEl.innerHTML = '✅ Sent! <a href="https://finder.terraclassic.community/columbus-5/tx/' + result.transactionHash + '" target="_blank" style="color:var(--green);text-decoration:underline;">' + result.transactionHash.slice(0,16) + '...</a><br><span style="font-size:10px;opacity:0.7;">Message will appear after blockchain confirmation (~6s)</span>';
     setTimeout(() => { loadChatFromChain(); }, 8000);
     setTimeout(() => { statusEl.style.display = 'none'; }, 10000);
   } catch(e) {
@@ -1174,17 +1174,20 @@ function renderChatMessages(msgs) {
 
     // System message — protocol announcement
     if (m.isSystem) {
+      const isPool = m.text.includes('Weekly Pool') || m.text.includes('Daily');
+      const icon = isPool ? '🎰' : '🏛';
+      const label = m.text.includes('Q&A') ? 'New Question Asked' : 'Oracle Draw Entry';
+      const color = isPool ? 'rgba(123,92,255,0.18)' : 'rgba(245,197,24,0.08)';
+      const borderColor = isPool ? 'rgba(123,92,255,0.25)' : 'rgba(245,197,24,0.2)';
+      const labelColor = isPool ? 'var(--accent)' : 'var(--gold)';
       return `<div id="msg-${m.txHash}" style="padding:8px 0;border-bottom:1px solid rgba(30,51,88,0.3);">
-        <div style="display:flex;align-items:center;gap:10px;background:rgba(123,92,255,0.06);border:1px solid rgba(123,92,255,0.18);border-radius:10px;padding:11px 14px;">
-          <div style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--accent-dark),var(--accent));display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">📡</div>
+        <div style="display:flex;align-items:center;gap:10px;background:${color};border:1px solid ${borderColor};border-radius:10px;padding:11px 14px;">
+          <div style="font-size:20px;flex-shrink:0;">${icon}</div>
           <div style="flex:1;min-width:0;">
-            <div style="font-size:9px;color:var(--accent);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:2px;">Protocol Activity</div>
-            <div style="font-size:12px;color:var(--text);font-weight:600;">${m.text}</div>
+            <div style="font-size:9px;color:${labelColor};letter-spacing:0.12em;text-transform:uppercase;margin-bottom:2px;">${label}</div>
+            <div style="font-size:12px;color:var(--muted);">${m.amount} LUNC → Protocol Treasury</div>
           </div>
-          <div style="text-align:right;flex-shrink:0;">
-            ${m.amount ? `<div style="font-size:11px;color:var(--gold);font-weight:700;">${m.amount} LUNC</div>` : ''}
-            <a href="https://finder.terra.money/classic/tx/${m.txHash}" target="_blank" style="font-size:9px;color:var(--muted);text-decoration:none;">🔗 ${m.time}</a>
-          </div>
+          <a href="https://finder.terraclassic.community/columbus-5/tx/${m.txHash}" target="_blank" style="font-size:9px;color:var(--muted);text-decoration:none;flex-shrink:0;">🔗 ${m.time}</a>
         </div>
       </div>`;
     }
@@ -1212,7 +1215,7 @@ function renderChatMessages(msgs) {
             ${rankBadge}
             <span style="font-size:9px;background:rgba(102,255,170,0.12);color:var(--green);padding:1px 7px;border-radius:4px;letter-spacing:0.05em;">✓ ON-CHAIN</span>
             ${m.amount ? `<span style="font-size:9px;color:var(--gold);background:rgba(245,197,24,0.08);border:1px solid rgba(245,197,24,0.2);padding:1px 7px;border-radius:4px;">${m.amount} LUNC</span>` : ''}
-            <a href="https://finder.terra.money/classic/tx/${m.txHash}" target="_blank"
+            <a href="https://finder.terraclassic.community/columbus-5/tx/${m.txHash}" target="_blank"
               style="font-size:9px;color:var(--muted);text-decoration:none;margin-left:auto;white-space:nowrap;flex-shrink:0;"
               onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">
               🔗 ${m.time}
@@ -1281,7 +1284,7 @@ async function loadChatFromChain() {
       const ts = txMeta?.timestamp ? new Date(txMeta.timestamp) : null;
       const timeStr = ts ? ts.toLocaleDateString([], {month:'short',day:'numeric'}) + ' ' + ts.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
       msgs.push({ author: short, fullAddr: sender, text: memo.slice(0, 256), amount: luncFormatted, txHash: txMeta?.txhash || '', time: timeStr, ts: ts ? ts.getTime() : 0,
-        isSystem: memo.startsWith('Terra Oracle') || memo.startsWith('Oracle Draw') || luncAmount >= 50000 * 1000000
+        isSystem: ['Terra Oracle Q&A — Weekly Pool','Terra Oracle Q&A — Treasury','Oracle Draw — Daily','Oracle Draw — Weekly'].includes(memo.trim())
       });
     } catch(e) { continue; }
   }
@@ -1289,7 +1292,86 @@ async function loadChatFromChain() {
   renderChatMessages(msgs);
 }
 
-function renderChatPage() { loadChatFromChain(); }
+
+// ── POOL MILESTONE BANNER ─────────────────────────────────────────────────
+const DAILY_POOL_WALLET  = 'terra1amp68zg7vph3nq84ummnfma4dz753ezxfqa9px';
+const WEEKLY_POOL_WALLET = 'terra1p5l6q95kfl3hes7edy76tywav9f79n6xlkz6qz';
+
+const POOL_MILESTONES = [
+  { min: 5000000,    label: '💎 JACKPOT TERRITORY', color: '#00ffff', glow: 'rgba(0,255,255,0.3)',   bg: 'rgba(0,255,255,0.06)',   border: 'rgba(0,255,255,0.25)'  },
+  { min: 1000000,    label: '⚡ ON FIRE',           color: '#ffd700', glow: 'rgba(255,215,0,0.3)',   bg: 'rgba(255,215,0,0.06)',   border: 'rgba(255,215,0,0.25)'  },
+  { min: 500000,     label: '🔥 HEATING UP',        color: '#ff8844', glow: 'rgba(255,136,68,0.3)',  bg: 'rgba(255,136,68,0.06)',  border: 'rgba(255,136,68,0.25)' },
+  { min: 100000,     label: '🌱 GROWING',           color: '#66ffaa', glow: 'rgba(102,255,170,0.3)', bg: 'rgba(102,255,170,0.05)', border: 'rgba(102,255,170,0.2)' },
+  { min: 0,          label: '🌑 JUST STARTED',      color: '#6b82a8', glow: 'rgba(107,130,168,0.2)', bg: 'rgba(107,130,168,0.04)', border: 'rgba(107,130,168,0.15)' },
+];
+
+function getPoolMilestone(lunc) {
+  return POOL_MILESTONES.find(m => lunc >= m.min) || POOL_MILESTONES[POOL_MILESTONES.length - 1];
+}
+
+async function fetchPoolBalance(walletAddr) {
+  try {
+    const res = await fetch(`https://terra-classic-lcd.publicnode.com/cosmos/bank/v1beta1/balances/${walletAddr}`, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return 0;
+    const data = await res.json();
+    const uluna = data.balances?.find(b => b.denom === 'uluna');
+    return uluna ? parseInt(uluna.amount) / 1000000 : 0;
+  } catch(e) { return 0; }
+}
+
+async function renderPoolMilestoneBanner() {
+  const container = document.getElementById('chat-pool-milestone');
+  if (!container) return;
+
+  const [daily, weekly] = await Promise.all([
+    fetchPoolBalance(DAILY_POOL_WALLET),
+    fetchPoolBalance(WEEKLY_POOL_WALLET),
+  ]);
+
+  const pools = [
+    { name: 'DAILY POOL',  amount: daily,  icon: '☀️' },
+    { name: 'WEEKLY POOL', amount: weekly, icon: '📅' },
+  ];
+
+  container.innerHTML = pools.map(pool => {
+    const ms = getPoolMilestone(pool.amount);
+    const formatted = pool.amount >= 1000000
+      ? (pool.amount / 1000000).toFixed(2) + 'M'
+      : pool.amount >= 1000
+      ? Math.round(pool.amount / 1000) + 'K'
+      : Math.round(pool.amount).toString();
+
+    // Progress to next milestone
+    const nextMs = POOL_MILESTONES.find(m => m.min > pool.amount);
+    const pct = nextMs
+      ? Math.min(100, (pool.amount / nextMs.min) * 100)
+      : 100;
+
+    return `
+    <div style="flex:1;min-width:200px;background:${ms.bg};border:1px solid ${ms.border};border-radius:12px;padding:14px 16px;position:relative;overflow:hidden;">
+      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% -20%,${ms.glow},transparent 70%);pointer-events:none;"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="font-size:16px;">${pool.icon}</span>
+        <div>
+          <div style="font-size:9px;letter-spacing:0.15em;color:var(--muted);text-transform:uppercase;">${pool.name}</div>
+          <div style="font-size:9px;color:${ms.color};font-weight:700;letter-spacing:0.1em;">${ms.label}</div>
+        </div>
+      </div>
+      <div style="font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:800;color:${ms.color};line-height:1;margin-bottom:8px;text-shadow:0 0 20px ${ms.glow};">
+        ${formatted} <span style="font-size:13px;opacity:0.7;">LUNC</span>
+      </div>
+      ${nextMs ? `
+      <div style="background:rgba(255,255,255,0.06);border-radius:4px;height:3px;margin-bottom:4px;overflow:hidden;">
+        <div style="height:100%;width:${pct}%;background:${ms.color};border-radius:4px;transition:width 1s ease;opacity:0.8;"></div>
+      </div>
+      <div style="font-size:9px;color:var(--muted);">
+        ${(nextMs.min - pool.amount).toLocaleString(undefined,{maximumFractionDigits:0})} LUNC to next level
+      </div>` : `<div style="font-size:9px;color:${ms.color};">🏆 Maximum level reached!</div>`}
+    </div>`;
+  }).join('');
+}
+
+function renderChatPage() { loadChatFromChain(); renderPoolMilestoneBanner(); }
 renderChatPage();
 setInterval(loadChatFromChain, 30000);
 
