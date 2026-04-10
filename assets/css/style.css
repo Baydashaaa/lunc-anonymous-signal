@@ -338,7 +338,7 @@ canvas {
   body {
     overflow-x: hidden;
   }
-  * {
+  img, video, canvas, svg, iframe {
     max-width: 100%;
   }
   table {
