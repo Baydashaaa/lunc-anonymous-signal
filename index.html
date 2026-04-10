@@ -1008,47 +1008,94 @@
  <span style="font-size:10px;font-family:monospace;color:var(--accent);word-break:break-all;">terra15jt5a9ycsey4hd6nlqgqxccl9aprkmg2mxmfc6</span>
  </div>
 </div>
-<div class="page" id="page-chat">
- <div class="page-header">
- <div class="tag">Community Chat</div>
- <h1>DAO <span>Chat</span></h1>
- <p class="subtitle">Pay 5,000 LUNC · Speak to validators & developers · Shape governance</p>
+<div class="page" id="page-chat" style="max-width:860px;padding:32px 24px 0;">
+
+ <!-- Header -->
+ <div style="text-align:center;margin-bottom:24px;">
+  <div class="tag">On-Chain Community</div>
+  <h1 style="margin-bottom:8px;">DAO <span>Chat</span></h1>
+  <p class="subtitle">Every message stored forever on Terra Classic · 5,000 LUNC per message</p>
  </div>
- <div class="chat-page-wrap">
- <div class="note" style="margin-bottom:20px;">
- Earn a free <strong style="color:var(--gold);white-space:nowrap;">Weekly Draw entry</strong> every <strong style="color:var(--accent);white-space:nowrap;">10 messages</strong>. Up to <strong style="color:var(--accent);white-space:nowrap;">2 entries per day</strong>. Fees are directed to the Protocol Treasury.
+
+ <!-- Info bar -->
+ <div style="display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;margin-bottom:20px;">
+  <div style="display:flex;align-items:center;gap:6px;background:rgba(232,200,64,0.08);border:1px solid rgba(232,200,64,0.2);border-radius:20px;padding:6px 14px;">
+   <span style="font-size:13px;">🎰</span>
+   <span style="font-size:11px;color:var(--gold);">Every 10 msgs = <strong>+1 Draw entry</strong> (max 2/day)</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px;background:rgba(84,147,247,0.08);border:1px solid rgba(84,147,247,0.2);border-radius:20px;padding:6px 14px;">
+   <span style="font-size:13px;">🔗</span>
+   <span style="font-size:11px;color:var(--accent);">Verified on-chain ·永久存储</span>
+  </div>
  </div>
- <div class="chat-page-messages" id="chat-page-messages">
- <div style="text-align:center;color:var(--muted);font-size:12px;padding:20px;">Loading messages...</div>
+
+ <!-- Messages area -->
+ <div id="chat-page-messages" style="
+   min-height:420px;
+   padding:0 0 24px;
+   display:flex;
+   flex-direction:column;
+   gap:0;
+ ">
+  <div style="text-align:center;color:var(--muted);font-size:12px;padding:40px 20px;">
+   <div style="font-size:28px;margin-bottom:10px;">⏳</div>
+   Loading messages from blockchain...
+  </div>
  </div>
- <div class="chat-page-input-wrap">
- <div id="chat-page-connect-prompt" style="text-align:center;padding:8px 0 16px;">
- <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">Connect wallet to send messages · 5,000 LUNC per message</div>
- <button class="btn btn-primary" onclick="openBagWalletPicker()" style="width:100%;">🔑 Connect Wallet to Chat</button>
+
+ <!-- Sticky input -->
+ <div style="position:sticky;bottom:0;background:linear-gradient(to top,var(--bg) 85%,transparent);padding:16px 0 24px;margin-top:8px;">
+  <!-- Not connected -->
+  <div id="chat-page-connect-prompt" style="text-align:center;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;">
+   <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">Connect your wallet to join the conversation</div>
+   <button class="btn btn-primary" onclick="openBagWalletPicker()" style="width:100%;padding:14px;">🔑 Connect Wallet</button>
+  </div>
+
+  <!-- Connected form -->
+  <div id="chat-page-form" style="display:none;">
+   <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;">
+    <!-- Addr bar -->
+    <div style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border);background:rgba(0,255,176,0.03);">
+     <div style="width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0;"></div>
+     <span style="font-size:10px;color:var(--green);">Connected</span>
+     <span style="font-size:10px;font-family:monospace;color:var(--muted);" id="chat-page-addr"></span>
+    </div>
+    <!-- Textarea row -->
+    <div style="display:flex;align-items:flex-end;gap:0;">
+     <textarea id="chat-page-input"
+      placeholder="Write your message... (stored on Terra Classic forever)"
+      maxlength="256"
+      rows="2"
+      style="flex:1;background:transparent;border:none;color:var(--text);font-family:'Exo 2',sans-serif;font-size:13px;padding:14px 16px;outline:none;resize:none;line-height:1.6;min-height:52px;max-height:120px;"
+      oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';"
+     ></textarea>
+     <!-- Counter + Send -->
+     <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;padding:10px 12px 10px 0;">
+      <span id="chat-page-count" style="font-size:10px;color:var(--muted);">256</span>
+      <button onclick="sendChatMessage()" id="chat-page-send-btn"
+       style="background:linear-gradient(135deg,var(--accent-dark),var(--accent));border:none;border-radius:10px;color:#fff;font-family:'Exo 2',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;padding:10px 16px;cursor:pointer;transition:all 0.2s;white-space:nowrap;"
+       onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+       SEND →
+      </button>
+     </div>
+    </div>
+    <!-- Cost row -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-top:1px solid var(--border);background:rgba(255,255,255,0.02);">
+     <span style="font-size:10px;color:var(--muted);">Cost: <strong style="color:var(--text);">5,000 LUNC</strong> · Keplr will confirm</span>
+     <div style="display:flex;align-items:center;gap:6px;">
+      <svg width="28" height="28" viewBox="0 0 36 36" style="transform:rotate(-90deg);">
+       <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="3"/>
+       <circle id="chat-ring" cx="18" cy="18" r="14" fill="none" stroke="var(--accent)" stroke-width="3"
+        stroke-dasharray="87.96" stroke-dashoffset="87.96"
+        stroke-linecap="round" style="transition:stroke-dashoffset 0.2s,stroke 0.2s;"/>
+      </svg>
+     </div>
+    </div>
+   </div>
+   <div id="chat-tx-status" style="display:none;border-radius:10px;padding:12px 16px;font-size:12px;margin-top:10px;"></div>
+  </div>
  </div>
- <div id="chat-page-form" style="display:none;">
- <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
- <span style="font-size:10px;color:var(--green);">✓ Connected:</span>
- <span style="font-size:10px;font-family:monospace;color:var(--muted);" id="chat-page-addr"></span>
- </div>
- <textarea class="chat-page-textarea" id="chat-page-input" placeholder="Share your thoughts with validators and developers..." maxlength="256"></textarea>
- <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:8px;">
- <svg width="36" height="36" viewBox="0 0 36 36" style="transform:rotate(-90deg);flex-shrink:0;">
- <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="3"/>
- <circle id="chat-ring" cx="18" cy="18" r="14" fill="none" stroke="var(--accent)" stroke-width="3"
- stroke-dasharray="87.96" stroke-dashoffset="87.96"
- stroke-linecap="round" style="transition:stroke-dashoffset 0.2s,stroke 0.2s;"/>
- </svg>
- <span id="chat-page-count" style="font-size:11px;color:var(--muted);min-width:28px;text-align:right;">256</span>
- </div>
- <div class="chat-send-row">
- <div class="chat-send-info">Cost: <strong>5,000 LUNC</strong> · Keplr will ask to confirm</div>
- <button class="btn btn-primary" onclick="sendChatMessage()" id="chat-page-send-btn">Send Message →</button>
- </div>
- <div id="chat-tx-status" style="display:none;border-radius:8px;padding:10px 14px;font-size:12px;margin-top:10px;"></div>
- </div>
- </div>
- </div>
+
 </div>
 <div class="page" id="page-vote">
  <div class="page-header">
