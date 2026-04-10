@@ -1161,25 +1161,71 @@ function renderChatMessages(msgs) {
   cachedMsgs = msgs;
   const container = document.getElementById('chat-page-messages');
   if (!msgs || msgs.length === 0) {
-    container.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:40px 20px;">No messages yet — be the first to speak!</div>';
+    container.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:60px 20px;"><div style="font-size:32px;margin-bottom:12px;">💬</div>No messages yet — be the first to speak!</div>';
     return;
   }
   const all = getChatReactions();
   const myReactions = JSON.parse(localStorage.getItem('my_chat_reactions') || '{}');
-  container.innerHTML = msgs.map(m => `
-    <div class="chat-page-msg verified-msg" id="msg-${m.txHash}">
-      <div class="chat-page-msg-header">
-        <span class="chat-page-msg-author" style="font-family:monospace;">${_getProfileAvatar(m.fullAddr) ? `<img src="${getProfileAvatar(m.fullAddr)}" style="width:18px;height:18px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:5px;">` : ''}${_getDisplayName(m.fullAddr, m.author)}</span>
-        ${m.fullAddr && window._walletScores && typeof getRankBadgeHTML === 'function' ? getRankBadgeHTML(window._walletScores[m.fullAddr] || 0) : ''}
-        <span style="font-size:8px;background:rgba(102,255,170,0.15);color:var(--green);padding:1px 6px;border-radius:4px;">✓ ON-CHAIN</span>
-        ${m.amount ? `<span style="font-size:8px;color:var(--gold);background:rgba(245,197,24,0.1);padding:1px 6px;border-radius:4px;">${m.amount} LUNC</span>` : ''}
-        <span class="chat-page-msg-time"><a href="https://finder.terra.money/classic/tx/${m.txHash}" target="_blank" style="color:var(--muted);text-decoration:none;font-size:9px;">🔗 ${m.time}</a></span>
+
+  container.innerHTML = msgs.map(m => {
+    const displayName = _getDisplayName(m.fullAddr, m.author);
+    const avatar = _getProfileAvatar(m.fullAddr);
+    const initials = displayName.slice(0,2).toUpperCase();
+
+    // System message — protocol announcement
+    if (m.isSystem) {
+      return `<div id="msg-${m.txHash}" style="padding:8px 0;border-bottom:1px solid rgba(30,51,88,0.3);">
+        <div style="display:flex;align-items:center;gap:10px;background:rgba(123,92,255,0.06);border:1px solid rgba(123,92,255,0.18);border-radius:10px;padding:11px 14px;">
+          <div style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--accent-dark),var(--accent));display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">📡</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:9px;color:var(--accent);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:2px;">Protocol Activity</div>
+            <div style="font-size:12px;color:var(--text);font-weight:600;">${m.text}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            ${m.amount ? `<div style="font-size:11px;color:var(--gold);font-weight:700;">${m.amount} LUNC</div>` : ''}
+            <a href="https://finder.terra.money/classic/tx/${m.txHash}" target="_blank" style="font-size:9px;color:var(--muted);text-decoration:none;">🔗 ${m.time}</a>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    // Avatar: profile image or colored initials
+    const avatarHtml = avatar
+      ? `<img src="${avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+      : `<span style="font-size:12px;font-weight:700;color:var(--accent);">${initials}</span>`;
+
+    const rankBadge = m.fullAddr && window._walletScores && typeof getRankBadgeHTML === 'function'
+      ? getRankBadgeHTML(window._walletScores[m.fullAddr] || 0) : '';
+
+    return `
+    <div class="chat-page-msg" id="msg-${m.txHash}" style="padding:14px 0;border-bottom:1px solid rgba(30,51,88,0.35);">
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <!-- Avatar -->
+        <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,rgba(84,147,247,0.2),rgba(123,92,255,0.25));border:1px solid rgba(84,147,247,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">
+          ${avatarHtml}
+        </div>
+        <!-- Content -->
+        <div style="flex:1;min-width:0;">
+          <!-- Header row -->
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;flex-wrap:wrap;">
+            <span style="font-size:13px;font-weight:700;color:var(--text);">${displayName}</span>
+            ${rankBadge}
+            <span style="font-size:9px;background:rgba(102,255,170,0.12);color:var(--green);padding:1px 7px;border-radius:4px;letter-spacing:0.05em;">✓ ON-CHAIN</span>
+            ${m.amount ? `<span style="font-size:9px;color:var(--gold);background:rgba(245,197,24,0.08);border:1px solid rgba(245,197,24,0.2);padding:1px 7px;border-radius:4px;">${m.amount} LUNC</span>` : ''}
+            <a href="https://finder.terra.money/classic/tx/${m.txHash}" target="_blank"
+              style="font-size:9px;color:var(--muted);text-decoration:none;margin-left:auto;white-space:nowrap;flex-shrink:0;"
+              onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">
+              🔗 ${m.time}
+            </a>
+          </div>
+          <!-- Message text -->
+          <div style="font-size:14px;line-height:1.65;color:rgba(232,240,255,0.92);word-break:break-word;">${m.text}</div>
+          <!-- Reactions -->
+          ${buildReactionsRow(m.txHash, all, myReactions)}
+        </div>
       </div>
-      <div class="chat-page-msg-text">${m.text}</div>
-      ${buildReactionsRow(m.txHash, all, myReactions)}
-    </div>
-  `).join('');
-  container.scrollTop = container.scrollHeight;
+    </div>`;
+  }).join('');
 }
 
 async function loadChatFromChain() {
@@ -1234,7 +1280,9 @@ async function loadChatFromChain() {
       const luncFormatted = (luncAmount / 1000000).toLocaleString(undefined, {maximumFractionDigits: 0});
       const ts = txMeta?.timestamp ? new Date(txMeta.timestamp) : null;
       const timeStr = ts ? ts.toLocaleDateString([], {month:'short',day:'numeric'}) + ' ' + ts.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
-      msgs.push({ author: short, fullAddr: sender, text: memo.slice(0, 256), amount: luncFormatted, txHash: txMeta?.txhash || '', time: timeStr, ts: ts ? ts.getTime() : 0 });
+      msgs.push({ author: short, fullAddr: sender, text: memo.slice(0, 256), amount: luncFormatted, txHash: txMeta?.txhash || '', time: timeStr, ts: ts ? ts.getTime() : 0,
+        isSystem: memo.startsWith('Terra Oracle') || memo.startsWith('Oracle Draw') || luncAmount >= 50000 * 1000000
+      });
     } catch(e) { continue; }
   }
   msgs.sort((a, b) => a.ts - b.ts);
