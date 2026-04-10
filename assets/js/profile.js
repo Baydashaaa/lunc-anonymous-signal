@@ -371,6 +371,44 @@ function loadProfile(address) {
 function saveProfileData(address, data) {
   if (!address) return;
   localStorage.setItem(getProfileKey(address), JSON.stringify(data));
+  // Sync to Worker (async, non-blocking)
+  syncProfileToWorker(address, data);
+}
+
+async function syncProfileToWorker(address, data) {
+  try {
+    await fetch(`${WORKER_URL}/profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        wallet: address,
+        nickname: data.nickname || null,
+        avatar: data.avatar || null,
+      }),
+    });
+  } catch(e) {
+    console.warn('Profile sync failed:', e.message);
+  }
+}
+
+async function loadProfileFromWorker(address) {
+  if (!address) return null;
+  try {
+    const res = await fetch(`${WORKER_URL}/profile?wallet=${address}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.nickname || data.avatar) {
+      // Merge with localStorage — worker is source of truth
+      const local = loadProfile(address) || {};
+      const merged = { ...local, ...data };
+      localStorage.setItem(getProfileKey(address), JSON.stringify(merged));
+      return merged;
+    }
+    return null;
+  } catch(e) {
+    console.warn('Profile load from worker failed:', e.message);
+    return null;
+  }
 }
 
 function getProfileNickname(address) {
@@ -399,6 +437,13 @@ function openProfile() {
   try { sessionStorage.setItem('currentPage', 'profile'); } catch(e) {}
   renderProfilePage();
   smoothScrollTop();
+  // Load fresh profile from worker in background
+  const addr = globalWalletAddress;
+  if (addr) {
+    loadProfileFromWorker(addr).then(data => {
+      if (data) renderProfilePage(); // re-render with server data
+    });
+  }
 }
 
 // ── Fetch question stats from worker ─────────────────────────
@@ -809,3 +854,22 @@ window.submitAnswer = function(qi) {
   saveQuestions(questions);
   renderBoard();
 };
+
+// ── Load profile from Worker when wallet connects ─────────────
+// Hooks into setWalletConnected to fetch profile from server
+const _profileWalletHook = window.setWalletConnected;
+setTimeout(() => {
+  if (typeof window.setWalletConnected === 'function') {
+    const _prev = window.setWalletConnected;
+    window.setWalletConnected = function(address) {
+      _prev(address);
+      // Load profile from Worker — updates localStorage then re-renders
+      loadProfileFromWorker(address).then(data => {
+        if (data) {
+          if (typeof renderBoard === 'function') renderBoard();
+          if (typeof renderChatMessages === 'function' && typeof cachedMsgs !== 'undefined') renderChatMessages(cachedMsgs);
+        }
+      });
+    };
+  }
+}, 600);
