@@ -377,14 +377,15 @@ function saveProfileData(address, data) {
 
 async function syncProfileToWorker(address, data) {
   try {
+    const payload = { wallet: address, nickname: data.nickname || null };
+    // Only send avatar if it exists — don't overwrite with null
+    if (data.avatar !== undefined && data.avatar !== null) {
+      payload.avatar = data.avatar;
+    }
     await fetch(`${WORKER_URL}/profile`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        wallet: address,
-        nickname: data.nickname || null,
-        avatar: data.avatar || null,
-      }),
+      body: JSON.stringify(payload),
     });
   } catch(e) {
     console.warn('Profile sync failed:', e.message);
