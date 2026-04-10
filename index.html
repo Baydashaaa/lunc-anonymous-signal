@@ -395,7 +395,6 @@
 
 <!-- Mobile navigation drawer -->
 <div class="nav-mobile-drawer" id="nav-mobile-drawer">
- <!-- Wallet connect button at top of drawer -->
 
  <button class="nav-tab" onclick="mobileNavGo('board')">📋 Board</button>
  <button class="nav-tab" onclick="mobileNavGo('ask')">❓ Ask</button>
@@ -404,8 +403,19 @@
  <button class="nav-tab" onclick="mobileNavGo('about')">ℹ️ About</button>
  <button class="nav-tab" onclick="mobileNavGo('bag')" style="color:#f4d03f;">My Bag</button>
  <button class="nav-tab" onclick="mobileNavGoFn('showPage_treasury')">💰 Treasury</button>
- <button class="nav-tab" onclick="showRepPage('leaderboard');closeMobileMenu()">🏆 Leaderboard</button>
- <button class="nav-tab" onclick="showRepPage('how');closeMobileMenu()">📖 How it works</button>
+
+ <!-- Reputation section -->
+ <div style="width:100%;margin-top:4px;">
+  <button onclick="toggleMobileRepMenu()" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:transparent;border:none;border-top:1px solid rgba(255,255,255,0.06);color:rgba(255,255,255,0.6);font-size:11px;letter-spacing:0.1em;padding:10px 4px;cursor:pointer;">
+   <span>⭐ REPUTATION</span>
+   <span id="rep-menu-arrow" style="font-size:10px;transition:transform 0.2s;">▼</span>
+  </button>
+  <div id="mobile-rep-menu" style="display:none;padding-left:8px;">
+   <button class="nav-tab" onclick="showRepPage('leaderboard');closeMobileMenu()" style="font-size:11px;">🏆 Leaderboard</button>
+   <button class="nav-tab" onclick="showRepPage('how');closeMobileMenu()" style="font-size:11px;">📖 How it works</button>
+   <button class="nav-tab" onclick="showRepPage('stats');closeMobileMenu()" style="font-size:11px;">📊 Your Stats</button>
+  </div>
+ </div>
 
  <div style="width:100%;max-width:320px;margin-top:8px;">
   <a class="lottery-btn" href="https://baydashaaa.github.io/oracle-draw" target="_blank" style="width:100%;justify-content:center;text-decoration:none;">
@@ -2158,6 +2168,15 @@ function toggleAccordion(id) {
 </div>
 
 <script>
+function toggleMobileRepMenu() {
+  const menu = document.getElementById('mobile-rep-menu');
+  const arrow = document.getElementById('rep-menu-arrow');
+  if (!menu) return;
+  const open = menu.style.display === 'none';
+  menu.style.display = open ? 'block' : 'none';
+  if (arrow) arrow.style.transform = open ? 'rotate(180deg)' : '';
+}
+
 function openMobileWalletModal() {
   const modal = document.getElementById('mobile-wallet-modal');
   if (modal) { modal.style.display='flex'; }
