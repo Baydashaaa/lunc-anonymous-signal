@@ -208,6 +208,13 @@
 <style>body{min-height:100vh;display:flex;flex-direction:column;}footer,.site-footer{margin-top:auto;flex-shrink:0;}nav{flex-shrink:0;}.page{width:100%;}.page.active{display:block;}.page#page-reputation.active,.page#page-treasury.active{flex:1;min-height:calc(100vh - 80px);}</style>
 <style>
 @media (max-width: 768px), (hover: none) {
+  /* Mobile wallet button in navbar */
+  .mobile-nav-right { display: none; }
+  @media (max-width: 768px) {
+    .mobile-nav-right { display: flex !important; }
+    #nav-wallet-btn { display: flex !important; }
+  }
+
   /* Disable heavy GPU effects on mobile */
   .orb-1, .orb-2 { display: none !important; }
   #bg-canvas { display: none !important; }
@@ -375,10 +382,16 @@
  </a>
  </div>
 
- <!-- Hamburger button (mobile only) -->
- <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">
-  <span></span><span></span><span></span>
- </button>
+ <!-- Wallet + Hamburger buttons in navbar (mobile) -->
+ <div style="display:flex;align-items:center;gap:8px;" class="mobile-nav-right">
+  <button id="nav-wallet-btn" onclick="openMobileWalletModal()" style="display:none;align-items:center;gap:6px;background:rgba(84,147,247,0.12);border:1px solid rgba(84,147,247,0.35);border-radius:20px;padding:7px 14px;color:#7eb8ff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">
+   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;flex-shrink:0;"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 12h2"/><path d="M2 10V5a2 2 0 012-2h16a2 2 0 012 2v5"/></svg>
+   <span id="nav-wallet-btn-label">Connect</span>
+  </button>
+  <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileNav()" aria-label="Menu">
+   <span></span><span></span><span></span>
+  </button>
+ </div>
 </nav>
 
 
@@ -1706,15 +1719,29 @@ document.addEventListener('click', function(e) {
 });
 
 // Sync mobile wallet label with desktop
+// Update all wallet labels when connected
 const _origSetWalletConnectedMobile = window.setWalletConnected;
-if (typeof setWalletConnected !== 'undefined') {
-  const _prev = window.setWalletConnected;
-  window.setWalletConnected = function(address) {
-    _prev(address);
-    const mobileLabel = document.getElementById('wallet-btn-label-mobile');
-    if (mobileLabel) mobileLabel.textContent = address.slice(0,8)+'...'+address.slice(-4);
-  };
-}
+setTimeout(() => {
+  if (typeof window.setWalletConnected === 'function') {
+    const _prev = window.setWalletConnected;
+    window.setWalletConnected = function(address) {
+      _prev(address);
+      const short = address.slice(0,6)+'...'+address.slice(-4);
+      // Mobile drawer label
+      const mobileLabel = document.getElementById('wallet-btn-label-mobile');
+      if (mobileLabel) mobileLabel.textContent = short;
+      // Navbar wallet button
+      const navLabel = document.getElementById('nav-wallet-btn-label');
+      if (navLabel) navLabel.textContent = short;
+      const navBtn = document.getElementById('nav-wallet-btn');
+      if (navBtn) {
+        navBtn.style.background = 'rgba(0,200,150,0.12)';
+        navBtn.style.borderColor = 'rgba(0,200,150,0.4)';
+        navBtn.style.color = '#66ffaa';
+      }
+    };
+  }
+}, 500);
 </script>
 
 <style>
