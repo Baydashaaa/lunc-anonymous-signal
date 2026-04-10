@@ -1,4 +1,16 @@
 if (history.scrollRestoration) history.scrollRestoration = 'manual';
+// ── Safe profile helpers (defined in profile.js, may load later) ──────────
+function _getDisplayName(address, fallback) {
+  if (!address) return fallback || 'Anonymous';
+  if (typeof getDisplayName === 'function') return getDisplayName(address);
+  return fallback || ('Anonymous#' + address.slice(-4).toUpperCase());
+}
+function _getProfileAvatar(address) {
+  if (!address) return null;
+  if (typeof getProfileAvatar === 'function') return getProfileAvatar(address);
+  return null;
+}
+
 
 // Fast smooth scroll to top (300ms, ease-out)
 function smoothScrollTop() {
@@ -343,7 +355,7 @@ function renderBoard() {
     return `
     <div class="q-card" id="qcard-${qi}">
       <div class="q-meta">
-        ${q.isAdmin ? `<span class="badge-admin">🛡️ Admin</span>` : `${(typeof getProfileAvatar === 'function' && q.wallet && getProfileAvatar(q.wallet)) ? `<img src="${getProfileAvatar(q.wallet)}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:4px;">` : ''}<span class="q-alias">${(typeof getDisplayName === 'function' && q.wallet) ? getDisplayName(q.wallet) : q.alias}</span>`}
+        ${q.isAdmin ? `<span class="badge-admin">🛡️ Admin</span>` : `${_getProfileAvatar(q.wallet) ? `<img src="${getProfileAvatar(q.wallet)}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:4px;">` : ''}<span class="q-alias">${_getDisplayName(q.wallet, q.alias)}</span>`}
         ${!q.isAdmin && q.wallet && window._walletScores ? getRankBadgeHTML(window._walletScores[q.wallet] || 0) : (q.title && !q.isAdmin ? `<span class="badge-title">${q.title}</span>` : '')}
         <span class="q-category">${q.category}</span>
         <span class="q-ref" style="margin-left:auto;">${q.time}&nbsp;&nbsp;${q.id}</span>
@@ -365,7 +377,7 @@ function renderBoard() {
         ${q.answers.map((a, ai) => `
           <div class="answer-item ${a.isAdmin ? 'admin-answer' : ''}">
             <div class="answer-meta">
-              ${a.isAdmin ? `<span class="badge-admin">🛡️ Admin</span>` : `${(typeof getProfileAvatar === 'function' && a.wallet && getProfileAvatar(a.wallet)) ? `<img src="${getProfileAvatar(a.wallet)}" style="width:18px;height:18px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:4px;">` : ''}<span class="q-alias">${(typeof getDisplayName === 'function' && a.wallet) ? getDisplayName(a.wallet) : a.alias}</span>`}
+              ${a.isAdmin ? `<span class="badge-admin">🛡️ Admin</span>` : `${_getProfileAvatar(a.wallet) ? `<img src="${getProfileAvatar(a.wallet)}" style="width:18px;height:18px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:4px;">` : ''}<span class="q-alias">${_getDisplayName(a.wallet, a.alias)}</span>`}
               ${!a.isAdmin && a.wallet && window._walletScores ? getRankBadgeHTML(window._walletScores[a.wallet] || 0) : (a.title && !a.isAdmin ? `<span class="badge-title">${a.title}</span>` : '')}
             </div>
             <div class="answer-text">${a.text}</div>
@@ -1140,7 +1152,7 @@ function renderChatMessages(msgs) {
   container.innerHTML = msgs.map(m => `
     <div class="chat-page-msg verified-msg" id="msg-${m.txHash}">
       <div class="chat-page-msg-header">
-        <span class="chat-page-msg-author" style="font-family:monospace;">${(typeof getProfileAvatar === 'function' && m.fullAddr && getProfileAvatar(m.fullAddr)) ? `<img src="${getProfileAvatar(m.fullAddr)}" style="width:18px;height:18px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:5px;">` : ''}${(typeof getDisplayName === 'function' && m.fullAddr) ? getDisplayName(m.fullAddr) : m.author}</span>
+        <span class="chat-page-msg-author" style="font-family:monospace;">${_getProfileAvatar(m.fullAddr) ? `<img src="${getProfileAvatar(m.fullAddr)}" style="width:18px;height:18px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:5px;">` : ''}${_getDisplayName(m.fullAddr, m.author)}</span>
         ${m.fullAddr && window._walletScores && typeof getRankBadgeHTML === 'function' ? getRankBadgeHTML(window._walletScores[m.fullAddr] || 0) : ''}
         <span style="font-size:8px;background:rgba(102,255,170,0.15);color:var(--green);padding:1px 6px;border-radius:4px;">✓ ON-CHAIN</span>
         ${m.amount ? `<span style="font-size:8px;color:var(--gold);background:rgba(245,197,24,0.1);padding:1px 6px;border-radius:4px;">${m.amount} LUNC</span>` : ''}
