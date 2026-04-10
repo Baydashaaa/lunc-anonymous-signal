@@ -378,6 +378,11 @@ function getProfileNickname(address) {
   return p?.nickname || null;
 }
 
+function getProfileAvatar(address) {
+  const p = loadProfile(address);
+  return p?.avatar || null;
+}
+
 function getDisplayName(address) {
   if (!address) return 'Anonymous';
   const nick = getProfileNickname(address);
@@ -749,6 +754,10 @@ function saveProfile() {
 
   toggleProfileEdit();
   renderProfilePage();
+
+  // Re-render board and chat so nickname shows everywhere immediately
+  if (typeof renderBoard === 'function') renderBoard();
+  if (typeof renderChatMessages === 'function' && typeof cachedMsgs !== 'undefined') renderChatMessages(cachedMsgs);
 }
 
 // ─── AVATAR ───────────────────────────────────────────────────
