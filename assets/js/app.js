@@ -14,6 +14,11 @@ function _getProfileAvatar(address) {
 
 // Fast smooth scroll to top (300ms, ease-out)
 function smoothScrollTop() {
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  if (isMobile) {
+    window.scrollTo(0, 0);
+    return;
+  }
   const start = window.scrollY;
   if (start === 0) return;
   const duration = 300;
