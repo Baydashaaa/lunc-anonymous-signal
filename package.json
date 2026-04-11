@@ -1,0 +1,14 @@
+{
+  "name": "terra-oracle-scripts",
+  "version": "1.0.0",
+  "description": "Terra Oracle Classic — automation scripts",
+  "type": "module",
+  "scripts": {
+    "distribute": "node scripts/treasury-distribute.js"
+  },
+  "dependencies": {
+    "@terra-money/feather.js": "^1.3.5",
+    "bip39": "^3.1.0",
+    "node-fetch": "^3.3.2"
+  }
+}
