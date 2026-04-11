@@ -691,11 +691,11 @@
     <div style="display:flex;flex-direction:column;gap:20px;width:300px;flex-shrink:0;">
 
       <!-- DAO Chat -->
-      <div onclick="showPage('chat')" class="zk-module" style="flex:1;--mod-c1:#00D4FF;--mod-c2:#7B5CFF;">
+      <div onclick="showPage('chat')" class="zk-module" style="flex:1;--mod-c1:#00D4FF;--mod-c2:#7B5CFF;position:relative;overflow:hidden;">
+        <img src="assets/img/chat-v2.png" style="position:absolute;left:calc(50% + 10px);bottom:-50px;transform:translateX(-50%);width:324px;height:324px;object-fit:contain;opacity:0.28;pointer-events:none;z-index:0;">
         <div class="zk-module-bar"></div>
-        <div class="zk-module-inner">
+        <div class="zk-module-inner" style="position:relative;z-index:1;">
           <div class="zk-module-tag" style="color:rgba(0,212,255,0.65);">&#9678; ACTIVE MODULE</div>
-          <div style="font-size:30px;margin-bottom:10px;">💬</div>
           <div style="font-weight:700;font-size:16px;margin-bottom:8px;color:#fff;" class="zk-module-title">DAO Chat</div>
           <div style="font-size:13px;color:#8aaccc;line-height:1.75;" class="zk-module-desc">On-chain messages stored forever on Terra Classic blockchain. Every message costs 5,000 LUNC.</div>
           <div style="margin-top:16px;font-size:12px;color:#00D4FF;letter-spacing:0.08em;font-weight:600;" class="zk-module-cta">5,000 LUNC per message →</div>
