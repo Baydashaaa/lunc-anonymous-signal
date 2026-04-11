@@ -1,0 +1,26 @@
+name: Streak Milestone Payouts
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # every hour
+  workflow_dispatch:
+
+jobs:
+  payout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install deps
+        run: npm install @terra-money/feather.js
+
+      - name: Process streak payouts
+        env:
+          RESERVE_MNEMONIC: ${{ secrets.RESERVE_MNEMONIC }}
+          ACTIONS_SECRET:   ${{ secrets.ACTIONS_SECRET }}
+          WORKER_URL:       https://terra-oracle-questions.vladislav-baydan.workers.dev
+        run: node scripts/streak-payout.js
