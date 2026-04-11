@@ -481,7 +481,17 @@ async function fetchQuestionStats(address) {
   }
 }
 
-// ─── STREAK FETCH ─────────────────────────────────────────────
+// ─── DRAW REP FETCH ───────────────────────────────────────────
+async function fetchDrawRep(address) {
+  try {
+    const res = await fetch(`${WORKER_URL}/rep/draw?wallet=${address}`);
+    if (!res.ok) throw new Error('Worker error');
+    return await res.json();
+  } catch(e) {
+    return { total: 0, history: [] };
+  }
+}
+
 async function fetchStreakData(address) {
   try {
     const res = await fetch(`${WORKER_URL}/streak?wallet=${address}`);
@@ -614,12 +624,13 @@ function renderProfilePage() {
   document.getElementById('stat-top-answers').textContent = '…';
   document.getElementById('stat-messages').textContent = '…';
 
-  // Load question stats from worker + chat stats from chain + streak in parallel
+  // Load question stats from worker + chat stats from chain + streak + draw REP in parallel
   Promise.all([
     fetchQuestionStats(address),
     fetchChatStats(address),
     fetchStreakData(address),
-  ]).then(([qStats, chatStats, streakData]) => {
+    fetchDrawRep(address),
+  ]).then(([qStats, chatStats, streakData, drawRep]) => {
     const { myQuestions, myAnswers, totalUpvotes, topAnswers, allQuestions } = qStats;
 
     document.getElementById('stat-questions').textContent = myQuestions.length;
@@ -629,7 +640,7 @@ function renderProfilePage() {
     document.getElementById('stat-messages').textContent = chatStats.msgCount;
 
     // Calculate reputation + rank
-    const baseReputation = calcReputation(qStats, chatStats);
+    const baseReputation = calcReputation(qStats, chatStats) + (drawRep?.total || 0);
     const streakMultiplier = streakData?.multiplier || 1.0;
     const reputation = Math.round(baseReputation * streakMultiplier);
     const rank       = getRank(reputation);
@@ -644,43 +655,6 @@ function renderProfilePage() {
 
     // Render reputation block
     renderReputationBlock(reputation, rank, nextRank);
-
-    // Trusted User — золотая рамка аватара при 30-day milestone
-    const avatarWrap = document.getElementById('profile-avatar-wrap');
-    if (avatarWrap) {
-      const isTrusted = (streakData?.milestones || []).includes(30);
-      if (isTrusted) {
-        avatarWrap.style.border = '2px solid transparent';
-        avatarWrap.style.backgroundImage = 'linear-gradient(rgba(10,14,26,1), rgba(10,14,26,1)), linear-gradient(135deg, #ffd700, #ffaa00, #ffe566, #ffd700)';
-        avatarWrap.style.backgroundOrigin = 'border-box';
-        avatarWrap.style.backgroundClip = 'padding-box, border-box';
-        avatarWrap.style.boxShadow = '0 0 12px rgba(255,215,0,0.5), 0 0 24px rgba(255,170,0,0.25)';
-        // Анимация блеска через CSS class
-        if (!document.getElementById('trusted-avatar-style')) {
-          const s = document.createElement('style');
-          s.id = 'trusted-avatar-style';
-          s.textContent = `
-            @keyframes trustedGlow {
-              0%   { box-shadow: 0 0 10px rgba(255,215,0,0.4), 0 0 20px rgba(255,170,0,0.2); }
-              50%  { box-shadow: 0 0 18px rgba(255,215,0,0.8), 0 0 36px rgba(255,170,0,0.45); }
-              100% { box-shadow: 0 0 10px rgba(255,215,0,0.4), 0 0 20px rgba(255,170,0,0.2); }
-            }
-            #profile-avatar-wrap.trusted-glow {
-              animation: trustedGlow 2s ease-in-out infinite;
-            }
-          `;
-          document.head.appendChild(s);
-        }
-        avatarWrap.classList.add('trusted-glow');
-        avatarWrap.onmouseover = null;
-        avatarWrap.onmouseout  = null;
-      } else {
-        avatarWrap.style.border = '2px solid rgba(84,147,247,0.3)';
-        avatarWrap.style.backgroundImage = '';
-        avatarWrap.style.boxShadow = '';
-        avatarWrap.classList.remove('trusted-glow');
-      }
-    }
 
     renderMessageProgress(chatStats);
     renderRankProgress(reputation);
