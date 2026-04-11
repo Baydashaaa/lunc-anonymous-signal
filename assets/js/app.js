@@ -598,12 +598,20 @@ async function connectKeplr() {
     // Update Pay button — async fetch real title from worker
     const _addr = accounts[0].address;
     if (typeof fetchQuestionStats === 'function') {
-      fetchQuestionStats(_addr).then(stats => {
+      fetchQuestionStats(_addr).then(async stats => {
         const { myQuestions, totalUpvotes } = stats;
         const _title = (typeof getUserTitleFromStats === 'function')
           ? getUserTitleFromStats(myQuestions.length, totalUpvotes)
           : null;
-        const _discPct = _title ? (_title.discount || 0) : 0;
+        let _discPct = _title ? (_title.discount || 0) : 0;
+        // Check streak discount
+        try {
+          const _sr = await fetch(`${WORKER_URL}/streak?wallet=${_addr}`);
+          if (_sr.ok) {
+            const _sd = await _sr.json();
+            if ((_sd.currentStreak || 0) >= 7) _discPct = Math.max(_discPct, 25);
+          }
+        } catch(e) {}
         const _discAmt = Math.round(200000 * (_discPct / 100));
         const _price   = 200000 - _discAmt;
         const _btnEl   = document.getElementById('verify-btn');
@@ -779,6 +787,18 @@ async function autoPayAndUnlock() {
         discountPct = _t ? (_t.discount || 0) : 0;
       } catch(e) {}
     }
+
+    // ── Apply streak discount (7+ days = 25% off) ────────────────
+    // Takes the higher of rank discount vs streak discount
+    try {
+      const _streakRes = await fetch(`${WORKER_URL}/streak?wallet=${sender}`);
+      if (_streakRes.ok) {
+        const _streakData = await _streakRes.json();
+        if ((_streakData.currentStreak || 0) >= 7) {
+          discountPct = Math.max(discountPct, 25);
+        }
+      }
+    } catch(e) {}
 
     // Discount is % of total 200,000 LUNC, subtracted from Treasury portion
     // Weekly Pool: always 100,000 LUNC (fixed)
