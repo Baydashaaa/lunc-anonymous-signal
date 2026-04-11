@@ -1,16 +1,14 @@
 // ─── TREASURY DISTRIBUTION SCRIPT ───────────────────────────
-// Runs every Wednesday at 20:00 UTC via GitHub Actions
+// Uses @cosmjs for signing — no feather.js dependency
 // Distributes Protocol Treasury balance to 4 wallets:
-//   20% → REWARDS_WALLET  (REP weekly rewards)
-//   20% → RESERVE_WALLET  (protocol stability buffer)
+//   20% → REWARDS_WALLET   (REP weekly rewards)
+//   20% → RESERVE_WALLET   (protocol stability buffer)
 //   50% → LIQUIDITY_WALLET (manual liquidity provision)
-//   10% → DEV_WALLET       (development & operations)
+//   10% → DEV_WALLET        (development & operations)
 
-import { LCDClient, MnemonicKey, MsgSend, Coin, MsgMultiSend } from '@terra-money/feather.js';
 import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing';
-import fetch from 'node-fetch';
+import { SigningStargateClient, GasPrice } from '@cosmjs/stargate';
 
-// ── Wallets ───────────────────────────────────────────────────
 const WALLETS = {
   treasury:  'terra1549z8zd9hkggzlwf0rcuszhc9rs9fxqfy2kagt',
   rewards:   'terra1ty6fxd9u0jzae5lpzcs56rfclxg4q32hw5x4ce',
@@ -19,7 +17,6 @@ const WALLETS = {
   dev:       'terra17g55uzkm6cr5fcl3vzcrmu73v8as4yvf2kktzr',
 };
 
-// ── Distribution percentages ──────────────────────────────────
 const DISTRIBUTION = {
   rewards:   0.20,
   reserve:   0.20,
@@ -27,19 +24,17 @@ const DISTRIBUTION = {
   dev:       0.10,
 };
 
-// ── Network config ────────────────────────────────────────────
+const RPC_ENDPOINTS = [
+  'https://terra-classic-rpc.publicnode.com',
+  'https://rpc.terraclassic.community',
+];
 const LCD_ENDPOINTS = [
   'https://terra-classic-lcd.publicnode.com',
   'https://lcd.terraclassic.community',
 ];
-const CHAIN_ID = 'columbus-5';
-
-// ── Minimum balance to distribute (1M LUNC) ───────────────────
-const MIN_BALANCE_ULUNA = 1_000_000_000_000; // 1,000,000 LUNC
-
-// ── Gas settings ─────────────────────────────────────────────
-const GAS_PRICE_ULUNA = '28.325';
-const GAS_ADJUSTMENT   = 1.4;
+const GAS_PRICE   = GasPrice.fromString('28.325uluna');
+const GAS_RESERVE = 500_000_000; // 500 LUNC reserved for gas
+const MIN_BALANCE = 1_000_000_000_000; // 1,000,000 LUNC minimum
 
 async function fetchBalance(address) {
   for (const lcd of LCD_ENDPOINTS) {
@@ -56,124 +51,65 @@ async function fetchBalance(address) {
   throw new Error('All LCD endpoints failed');
 }
 
+async function getClient(mnemonic) {
+  const wallet = await DirectSecp256k1HdWallet.fromMnemonic(mnemonic, { prefix: 'terra' });
+  const [account] = await wallet.getAccounts();
+  for (const rpc of RPC_ENDPOINTS) {
+    try {
+      const client = await SigningStargateClient.connectWithSigner(rpc, wallet, { gasPrice: GAS_PRICE });
+      console.log(`Connected: ${rpc}`);
+      return { client, address: account.address };
+    } catch(e) {
+      console.warn(`RPC ${rpc} failed:`, e.message);
+    }
+  }
+  throw new Error('All RPC endpoints failed');
+}
+
 async function run() {
   const mnemonic = process.env.TREASURY_MNEMONIC;
-  if (!mnemonic) throw new Error('ORACLE_MNEMONIC env variable not set');
+  if (!mnemonic) throw new Error('TREASURY_MNEMONIC not set');
 
-  console.log('=== Treasury Distribution Script ===');
+  console.log('=== Treasury Distribution ===');
   console.log(`Date: ${new Date().toISOString()}`);
-  console.log(`Treasury: ${WALLETS.treasury}`);
 
-  // Fetch treasury balance
-  console.log('\nFetching treasury balance...');
   const balanceUluna = await fetchBalance(WALLETS.treasury);
-  const balanceLunc  = Number(balanceUluna) / 1_000_000;
-  console.log(`Balance: ${balanceLunc.toLocaleString()} LUNC (${balanceUluna} uluna)`);
+  console.log(`Balance: ${(Number(balanceUluna)/1_000_000).toLocaleString()} LUNC`);
 
-  // Check minimum threshold
-  if (balanceUluna < BigInt(MIN_BALANCE_ULUNA)) {
-    console.log(`\nBalance below minimum threshold (${MIN_BALANCE_ULUNA / 1_000_000} LUNC). Skipping distribution.`);
+  if (balanceUluna < BigInt(MIN_BALANCE)) {
+    console.log('Below minimum threshold (1,000,000 LUNC). Skipping.');
     process.exit(0);
   }
 
-  // Reserve ~0.5M LUNC for gas fees across all transactions
-  const GAS_RESERVE = BigInt(500_000_000_000); // 500,000 LUNC
-  const distributableUluna = balanceUluna - GAS_RESERVE;
-
-  console.log(`\nDistributable amount: ${Number(distributableUluna) / 1_000_000} LUNC`);
-
-  // Calculate amounts
+  const distributable = balanceUluna - BigInt(GAS_RESERVE);
   const amounts = {};
-  let totalAllocated = BigInt(0);
   for (const [key, pct] of Object.entries(DISTRIBUTION)) {
-    amounts[key] = BigInt(Math.floor(Number(distributableUluna) * pct));
-    totalAllocated += amounts[key];
+    amounts[key] = BigInt(Math.floor(Number(distributable) * pct));
   }
 
-  console.log('\nDistribution plan:');
+  console.log('\nPlan:');
   for (const [key, amt] of Object.entries(amounts)) {
-    console.log(`  ${key.padEnd(12)} ${(DISTRIBUTION[key]*100).toFixed(0).padStart(3)}%  →  ${(Number(amt)/1_000_000).toLocaleString()} LUNC  →  ${WALLETS[key]}`);
+    console.log(`  ${key.padEnd(12)} ${DISTRIBUTION[key]*100}%  →  ${(Number(amt)/1_000_000).toLocaleString()} LUNC  →  ${WALLETS[key]}`);
   }
 
-  // Init LCD client
-  const lcd = new LCDClient({
-    [CHAIN_ID]: {
-      lcd:      LCD_ENDPOINTS[0],
-      chainID:  CHAIN_ID,
-      gasAdjustment: GAS_ADJUSTMENT,
-      gasPrices: { uluna: GAS_PRICE_ULUNA },
-      prefix:   'terra',
-    },
-  });
+  const { client, address } = await getClient(mnemonic);
+  if (address !== WALLETS.treasury) throw new Error(`Address mismatch: got ${address}`);
+  console.log(`\nSigner: ${address}`);
 
-  // Init wallet from mnemonic
-  const mk     = new MnemonicKey({ mnemonic });
-  const wallet = lcd.wallet(mk);
-  const sender = mk.accAddress('terra');
-
-  if (sender !== WALLETS.treasury) {
-    throw new Error(`Mnemonic address mismatch: expected ${WALLETS.treasury}, got ${sender}`);
-  }
-
-  console.log(`\nSigner: ${sender}`);
-
-  // Build transactions — one per recipient to avoid complexity
-  const recipients = [
-    { key: 'rewards',   wallet: WALLETS.rewards   },
-    { key: 'reserve',   wallet: WALLETS.reserve   },
-    { key: 'liquidity', wallet: WALLETS.liquidity },
-    { key: 'dev',       wallet: WALLETS.dev       },
-  ];
-
-  let accountInfo;
-  try {
-    accountInfo = await lcd.auth.accountInfo(sender);
-  } catch(e) {
-    throw new Error(`Failed to fetch account info: ${e.message}`);
-  }
-
-  let sequence = accountInfo.getSequenceNumber();
-
-  for (const { key, wallet: recipient } of recipients) {
+  let ok = 0;
+  for (const [key, to] of [['rewards', WALLETS.rewards], ['reserve', WALLETS.reserve], ['liquidity', WALLETS.liquidity], ['dev', WALLETS.dev]]) {
     const amount = amounts[key];
-    if (amount <= BigInt(0)) {
-      console.log(`\nSkipping ${key} — zero amount`);
-      continue;
-    }
-
-    console.log(`\nSending ${(Number(amount)/1_000_000).toLocaleString()} LUNC to ${key} (${recipient})...`);
-
+    if (!amount || amount <= 0n) continue;
+    console.log(`\nSending ${(Number(amount)/1_000_000).toLocaleString()} LUNC → ${key}...`);
     try {
-      const msg = new MsgSend(sender, recipient, { uluna: amount.toString() });
-
-      const tx = await wallet.createAndSignTx({
-        msgs:      [msg],
-        memo:      `Treasury distribution — ${key} ${(DISTRIBUTION[key]*100).toFixed(0)}%`,
-        sequence,
-        chainID:   CHAIN_ID,
-      });
-
-      const result = await lcd.tx.broadcast(tx, CHAIN_ID);
-
-      if (result.code !== 0) {
-        console.error(`  ERROR: tx failed with code ${result.code}: ${result.raw_log}`);
-      } else {
-        console.log(`  SUCCESS: ${result.txhash}`);
-        sequence++;
-      }
-
-      // Wait 6 seconds between transactions
-      await new Promise(r => setTimeout(r, 6000));
-
-    } catch(e) {
-      console.error(`  FAILED: ${e.message}`);
-    }
+      const res = await client.sendTokens(address, to, [{ denom: 'uluna', amount: amount.toString() }], 'auto', `Treasury: ${key} ${DISTRIBUTION[key]*100}%`);
+      if (res.code && res.code !== 0) { console.error(`  ERROR ${res.code}: ${res.rawLog}`); }
+      else { console.log(`  OK: ${res.transactionHash}`); ok++; }
+    } catch(e) { console.error(`  FAILED: ${e.message}`); }
+    await new Promise(r => setTimeout(r, 6000));
   }
 
-  console.log('\n=== Distribution complete ===');
+  console.log(`\n=== Done: ${ok}/4 successful ===`);
 }
 
-run().catch(err => {
-  console.error('Fatal error:', err.message);
-  process.exit(1);
-});
+run().catch(e => { console.error('Fatal:', e.message); process.exit(1); });
