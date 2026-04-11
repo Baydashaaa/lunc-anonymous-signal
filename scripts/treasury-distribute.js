@@ -34,7 +34,7 @@ const LCD_ENDPOINTS = [
 ];
 const GAS_PRICE   = GasPrice.fromString('28.325uluna');
 const GAS_RESERVE = 500_000_000; // 500 LUNC reserved for gas
-const MIN_BALANCE = 1_000_000_000_000; // 1,000,000 LUNC minimum
+const MIN_BALANCE = 100_000_000_000; // 100,000 LUNC minimum
 
 async function fetchBalance(address) {
   for (const lcd of LCD_ENDPOINTS) {
