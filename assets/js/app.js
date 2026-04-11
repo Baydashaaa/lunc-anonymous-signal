@@ -1372,7 +1372,12 @@ async function renderPoolMilestoneBanner() {
 }
 
 function renderChatPage() { loadChatFromChain(); renderPoolMilestoneBanner(); }
-renderChatPage();
+// Wait for all scripts to load before initializing
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => { renderChatPage(); });
+} else {
+  renderChatPage();
+}
 setInterval(loadChatFromChain, 30000);
 
 const _origSetWallet = window.setWalletConnected;
