@@ -7,8 +7,7 @@
     "distribute": "node scripts/treasury-distribute.js"
   },
   "dependencies": {
-    "@terra-money/feather.js": "^2.0.4",
-    "bip39": "^3.1.0",
-    "node-fetch": "^3.3.2"
+    "@cosmjs/proto-signing": "^0.32.4",
+    "@cosmjs/stargate": "^0.32.4"
   }
 }
