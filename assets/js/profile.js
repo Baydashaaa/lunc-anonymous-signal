@@ -519,14 +519,35 @@ function renderStreakBlock(streakData) {
     ? `<span style="font-size:9px;padding:2px 8px;border-radius:10px;background:rgba(30,200,100,0.12);border:1px solid rgba(30,200,100,0.35);color:#4ade80;font-weight:700;">✓ Streak secured today</span>`
     : `<span style="font-size:9px;padding:2px 8px;border-radius:10px;background:rgba(255,170,0,0.1);border:1px solid rgba(255,170,0,0.3);color:#ffaa00;font-weight:700;">⏳ Today not completed</span>`;
 
+  const MILESTONE_TOOLTIPS = {
+    3:  'x1.1 REP on all actions',
+    5:  'x1.2 REP on all actions',
+    7:  'x1.3 REP + 25% off questions',
+    14: 'x1.5 REP + 2 free Weekly entries',
+    30: 'x2.0 REP + Trusted status + +1 Draw entry',
+  };
+
   const msBadges = MILESTONES.map(m => {
     const reached = milestones.includes(m);
-    return `<div style="text-align:center;padding:8px 6px;border-radius:8px;flex:1;min-width:50px;
-      background:${reached ? 'rgba(30,200,100,0.08)' : 'rgba(255,255,255,0.03)'};
-      border:1px solid ${reached ? 'rgba(30,200,100,0.3)' : 'var(--border)'};
-      opacity:${reached ? 1 : 0.45};">
+    const isCurrent = currentStreak >= m;
+    const tooltip = MILESTONE_TOOLTIPS[m];
+    return `<div
+      style="text-align:center;padding:8px 6px;border-radius:8px;flex:1;min-width:50px;
+        background:${reached ? 'rgba(30,200,100,0.08)' : 'rgba(255,255,255,0.03)'};
+        border:1px solid ${reached ? 'rgba(30,200,100,0.3)' : 'var(--border)'};
+        opacity:${reached ? 1 : 0.45};
+        position:relative;cursor:default;"
+      onmouseenter="this.querySelector('.ms-tooltip').style.display='block'"
+      onmouseleave="this.querySelector('.ms-tooltip').style.display='none'">
       <div style="font-size:14px;">${reached ? '✅' : '🔒'}</div>
       <div style="font-size:10px;font-weight:700;color:${reached ? '#4ade80' : 'var(--muted)'};margin-top:2px;">${m}d</div>
+      <div class="ms-tooltip" style="display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
+        background:rgba(10,14,26,0.97);border:1px solid ${reached ? 'rgba(30,200,100,0.4)' : 'rgba(255,255,255,0.15)'};
+        border-radius:7px;padding:6px 10px;font-size:10px;color:${reached ? '#4ade80' : 'var(--muted)'};
+        white-space:nowrap;z-index:100;pointer-events:none;
+        box-shadow:0 4px 16px rgba(0,0,0,0.5);">
+        🎯 ${tooltip}
+      </div>
     </div>`;
   }).join('');
 
