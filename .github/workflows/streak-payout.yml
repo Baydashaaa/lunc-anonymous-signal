@@ -16,7 +16,7 @@ jobs:
           node-version: '20'
 
       - name: Install deps
-        run: npm install @terra-money/feather.js
+        run: npm install @terra-money/terra.js
 
       - name: Process streak payouts
         env:
