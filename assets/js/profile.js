@@ -427,14 +427,14 @@ function getDisplayName(address) {
 }
 
 // ─── OPEN PROFILE PAGE ────────────────────────────────────────
-function openProfile() {
+function openProfile(skipHistory) {
   document.getElementById('wallet-dropdown').classList.remove('open');
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('page-profile').classList.add('active');
+  if (!skipHistory && history.pushState) history.pushState({ page: 'profile' }, '', '#profile');
   try { sessionStorage.setItem('currentPage', 'profile'); } catch(e) {}
   smoothScrollTop();
-  // Load from Worker first, then render
   const addr = globalWalletAddress;
   if (addr) {
     loadProfileFromWorker(addr).then(() => renderProfilePage());
