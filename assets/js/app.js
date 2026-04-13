@@ -161,7 +161,7 @@ if (document.readyState === 'loading') {
 }
 
 // ─── NAVIGATION ───────────────────────────────────────────────
-function showPage(name, e) {
+function showPage(name, e, skipHistory) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   const pg = document.getElementById('page-' + name);
@@ -171,12 +171,27 @@ function showPage(name, e) {
   if (name === 'vote') { applyStoredVotes(); applyVoteStates(); renderVotes(); }
   if (name === 'chat') renderChatPage();
   if (name === 'bag')  renderOracleBag();
-  // Clear URL hash when navigating away from treasury
-  if (history.replaceState) history.replaceState(null, '', window.location.pathname);
-  // Save current page in sessionStorage (resets on tab close)
+  if (!skipHistory && history.pushState) {
+    history.pushState({ page: name }, '', '#' + name);
+  }
   try { sessionStorage.setItem('currentPage', name); } catch(e) {}
   smoothScrollTop();
 }
+
+// Handle browser Back/Forward
+window.addEventListener('popstate', function(e) {
+  const name = (e.state && e.state.page) || (location.hash ? location.hash.slice(1) : 'home');
+  if (name === 'treasury') {
+    if (typeof showPage_treasury === 'function') showPage_treasury(null, null, true);
+  } else if (name && name.startsWith('reputation')) {
+    const tab = name.split(':')[1] || 'leaderboard';
+    if (typeof showRepPage === 'function') showRepPage(tab, true);
+  } else if (name === 'profile') {
+    if (typeof openProfile === 'function') openProfile(true);
+  } else {
+    showPage(name || 'home', null, true);
+  }
+});
 
 // ─── Treasury logic moved to assets/js/treasury.js ───────────
 
@@ -211,18 +226,20 @@ function removeTag(tag) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Restore last page from sessionStorage (only within same tab session)
-  const savedPage = (() => { try { return sessionStorage.getItem('currentPage'); } catch(e) { return null; } })();
-  if (history.replaceState) history.replaceState(null, '', window.location.pathname);
+  // Restore page from URL hash first, then sessionStorage
+  const hash = location.hash ? location.hash.slice(1) : null;
+  const savedPage = hash || (() => { try { return sessionStorage.getItem('currentPage'); } catch(e) { return null; } })();
+  // Set initial history entry so Back works from first page
+  if (history.replaceState) history.replaceState({ page: savedPage || 'home' }, '', location.href);
   if (savedPage === 'treasury') {
-    if (typeof showPage_treasury === 'function') showPage_treasury();
+    if (typeof showPage_treasury === 'function') showPage_treasury(null, null, true);
   } else if (savedPage && savedPage.startsWith('reputation')) {
     const tab = savedPage.split(':')[1] || 'leaderboard';
-    if (typeof showRepPage === 'function') showRepPage(tab);
+    if (typeof showRepPage === 'function') showRepPage(tab, true);
   } else if (savedPage === 'profile') {
-    if (typeof openProfile === 'function') openProfile();
+    if (typeof openProfile === 'function') openProfile(true);
   } else {
-    showPage(savedPage || 'home');
+    showPage(savedPage || 'home', null, true);
   }
   const input = document.getElementById('tag-raw-input');
   if (!input) return;
