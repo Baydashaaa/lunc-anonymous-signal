@@ -163,12 +163,12 @@ async function loadTreasuryData() {
   if (btn) { btn.textContent='↻ Refresh'; btn.disabled=false; }
   tLoadRecentTxs();
 }
-function showPage_treasury(e) {
+function showPage_treasury(e, _unused, skipHistory) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
   const pg = document.getElementById('page-treasury');
   if (pg) pg.classList.add('active');
-  if (history.replaceState) history.replaceState(null,'','#treasury');
+  if (!skipHistory && history.pushState) history.pushState({ page: 'treasury' }, '', '#treasury');
   try { sessionStorage.setItem('currentPage', 'treasury'); } catch(e) {}
   if (typeof smoothScrollTop==='function') smoothScrollTop();
   loadTreasuryData();
