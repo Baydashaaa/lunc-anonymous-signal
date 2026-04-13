@@ -5,25 +5,23 @@
 // ── Show reputation page ──────────────────────────────────────
 let _repCurrentTab = 'leaderboard';
 
-function showRepPage(tab) {
+function showRepPage(tab, skipHistory) {
   tab = tab || _repCurrentTab;
   _repCurrentTab = tab;
 
-  // Hide all pages, show reputation
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   const pg = document.getElementById('page-reputation');
   if (!pg) return;
   pg.classList.add('active');
-  // Activate reputation nav tab
   const repTab = document.querySelector('.nav-node');
   if (repTab) repTab.classList.add('active');
+  if (!skipHistory && history.pushState) history.pushState({ page: 'reputation:' + tab }, '', '#reputation:' + tab);
   try { sessionStorage.setItem('currentPage', 'reputation:' + tab); } catch(e) {}
 
   window.scrollTo(0, 0);
   renderRepPage(tab);
 
-  // Force reflow so mobile browser recalculates scrollable area
   requestAnimationFrame(() => {
     document.body.style.overflow = '';
     window.scrollTo(0, 0);
