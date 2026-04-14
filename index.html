@@ -429,6 +429,7 @@
  <button class="nav-tab" onclick="mobileNavGo('vote')">🗳️ Vote</button>
  <button class="nav-tab" onclick="mobileNavGo('about')">ℹ️ About</button>
  <button class="nav-tab" onclick="mobileNavGo('bag')" style="color:#f4d03f;">My Bag</button>
+ <button class="nav-tab" onclick="mobileNavGo('audit')" style="color:#00FFB0;">🔍 Wallet Audit</button>
  <button class="nav-tab" onclick="mobileNavGoFn('showPage_treasury')">💰 Treasury</button>
 
  <!-- Reputation section -->
@@ -2652,6 +2653,274 @@ function confirmLuncdashAddr() {
 document.getElementById('luncdash-modal').addEventListener('click', function(e) {
   if (e.target === this) closeLuncdashModal();
 });
+</script>
+
+<div class="page" id="page-audit" style="max-width:900px;margin:0 auto;padding:40px 20px 80px;">
+
+  <div style="text-align:center;margin-bottom:40px;">
+    <div style="display:inline-flex;align-items:center;gap:12px;background:rgba(0,255,176,0.06);border:1px solid rgba(0,255,176,0.2);border-radius:16px;padding:10px 24px;margin-bottom:20px;">
+      <span style="font-size:18px;">🔍</span>
+      <span style="font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.2em;color:#00FFB0;">WALLET AUDIT</span>
+    </div>
+    <h1 style="font-family:'Rajdhani',sans-serif;font-size:36px;font-weight:700;color:#fff;margin:0 0 12px;">Dead Weight Scanner</h1>
+    <p style="color:rgba(255,255,255,0.5);font-size:14px;max-width:500px;margin:0 auto;line-height:1.6;">
+      Scan your wallet for dead tokens, dust and forgotten assets on Terra Classic
+    </p>
+  </div>
+
+  <div id="audit-connect-prompt" style="text-align:center;padding:60px 20px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:20px;margin-bottom:32px;">
+    <div style="font-size:48px;margin-bottom:16px;">🔌</div>
+    <div style="font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;color:#fff;margin-bottom:8px;">Connect your wallet to scan</div>
+    <div style="color:rgba(255,255,255,0.4);font-size:13px;">We'll analyze your Terra Classic holdings</div>
+  </div>
+
+  <div id="audit-scan-panel" style="display:none;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <button id="audit-scan-btn" onclick="runWalletAudit()" style="background:linear-gradient(135deg,rgba(0,255,176,0.15),rgba(0,212,255,0.1));border:1px solid rgba(0,255,176,0.4);border-radius:14px;padding:14px 40px;color:#00FFB0;font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;letter-spacing:0.1em;cursor:pointer;">
+        🔍 SCAN WALLET
+      </button>
+      <div id="audit-scan-status" style="margin-top:12px;font-size:12px;color:rgba(255,255,255,0.4);min-height:20px;"></div>
+    </div>
+
+    <div id="audit-results" style="display:none;">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px;">
+        <div style="background:rgba(255,80,80,0.06);border:1px solid rgba(255,80,80,0.2);border-radius:16px;padding:20px;text-align:center;">
+          <div id="audit-dead-count" style="font-family:'Rajdhani',sans-serif;font-size:36px;font-weight:700;color:#ff6464;">0</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:0.1em;margin-top:4px;">DEAD TOKENS</div>
+        </div>
+        <div style="background:rgba(255,200,0,0.06);border:1px solid rgba(255,200,0,0.2);border-radius:16px;padding:20px;text-align:center;">
+          <div id="audit-dust-count" style="font-family:'Rajdhani',sans-serif;font-size:36px;font-weight:700;color:#ffc840;">0</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:0.1em;margin-top:4px;">DUST TOKENS</div>
+        </div>
+        <div style="background:rgba(0,255,176,0.06);border:1px solid rgba(0,255,176,0.2);border-radius:16px;padding:20px;text-align:center;">
+          <div id="audit-lunc-count" style="font-family:'Rajdhani',sans-serif;font-size:36px;font-weight:700;color:#00FFB0;">0</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:0.1em;margin-top:4px;">LUNC BALANCE</div>
+        </div>
+      </div>
+
+      <div id="audit-dead-section" style="display:none;margin-bottom:24px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+          <div style="width:8px;height:8px;border-radius:50%;background:#ff6464;box-shadow:0 0 8px #ff6464;"></div>
+          <span style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.15em;color:rgba(255,255,255,0.7);">DEAD / INACTIVE TOKENS</span>
+        </div>
+        <div id="audit-dead-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+
+      <div id="audit-dust-section" style="display:none;margin-bottom:24px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+          <div style="width:8px;height:8px;border-radius:50%;background:#ffc840;box-shadow:0 0 8px #ffc840;"></div>
+          <span style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.15em;color:rgba(255,255,255,0.7);">DUST / SMALL BALANCES</span>
+        </div>
+        <div id="audit-dust-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+
+      <div id="audit-healthy-section" style="display:none;margin-bottom:24px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+          <div style="width:8px;height:8px;border-radius:50%;background:#00FFB0;box-shadow:0 0 8px #00FFB0;"></div>
+          <span style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.15em;color:rgba(255,255,255,0.7);">ACTIVE ASSETS</span>
+        </div>
+        <div id="audit-healthy-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+
+      <div id="audit-recovery-cta" style="display:none;background:linear-gradient(135deg,rgba(123,92,255,0.1),rgba(0,212,255,0.05));border:1px solid rgba(123,92,255,0.3);border-radius:20px;padding:28px;text-align:center;margin-top:32px;">
+        <div style="font-size:32px;margin-bottom:12px;">💎</div>
+        <div style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:#fff;margin-bottom:8px;">Recovery coming soon</div>
+        <div style="color:rgba(255,255,255,0.5);font-size:13px;max-width:400px;margin:0 auto 20px;line-height:1.6;">
+          Turn your dead tokens into LUNC through Oracle Recovery Protocol.
+        </div>
+        <button onclick="joinRecoveryWaitlist()" style="background:rgba(123,92,255,0.2);border:1px solid rgba(123,92,255,0.5);border-radius:12px;padding:12px 32px;color:#c8b0ff;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.1em;cursor:pointer;">
+          JOIN WAITLIST
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══ WALLET AUDIT ═══ */
+const LCD_AUDIT = 'https://terra-classic-lcd.publicnode.com';
+const DUST_ULUNC = 1000000;
+const KNOWN_HEALTHY = new Set(['uluna','uusd','ukrw','usdr','umnt','ueur','ucny','ujpy','ugbp','uinr','ucad','uchf','uhkd','usgd','uthb','usek','unok','udkk','uidr','uphp','umyr','utwd']);
+
+function _getAuditAddr() {
+  return window.globalWalletAddress || window.connectedAddress || null;
+}
+
+async function fetchCW20Info(addr) {
+  try {
+    const q = btoa(JSON.stringify({token_info:{}}));
+    const r = await fetch(`${LCD_AUDIT}/terra/wasm/v1beta1/contracts/${addr}/store?query_msg=${q}`,{signal:AbortSignal.timeout(4000)});
+    const d = await r.json();
+    return d?.query_result || null;
+  } catch(e){return null;}
+}
+
+async function fetchRecentTxCount(addr) {
+  try {
+    const r = await fetch(`${LCD_AUDIT}/cosmos/tx/v1beta1/txs?events=wasm._contract_address%3D'${addr}'&pagination.limit=5&order_by=ORDER_BY_DESC`,{signal:AbortSignal.timeout(5000)});
+    const d = await r.json();
+    const total = parseInt(d?.pagination?.total||'0');
+    const lastTs = d?.tx_responses?.[0]?.timestamp;
+    const daysSinceLast = lastTs ? Math.floor((Date.now()-new Date(lastTs).getTime())/(86400000)) : 999;
+    return {total, daysSinceLast};
+  } catch(e){return {total:0,daysSinceLast:999};}
+}
+
+async function runWalletAudit() {
+  const addr = _getAuditAddr();
+  if (!addr) {alert('Please connect your wallet first');return;}
+  const btn = document.getElementById('audit-scan-btn');
+  const status = document.getElementById('audit-scan-status');
+  const results = document.getElementById('audit-results');
+  btn.disabled = true; btn.textContent = '⏳ Scanning...';
+  results.style.display = 'none';
+  ['audit-dead-section','audit-dust-section','audit-healthy-section'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display='none';
+  });
+  document.getElementById('audit-recovery-cta').style.display='none';
+
+  try {
+    status.textContent = '📡 Fetching balances...';
+    const res = await fetch(`${LCD_AUDIT}/cosmos/bank/v1beta1/balances/${addr}?pagination.limit=500`,{signal:AbortSignal.timeout(6000)});
+    const data = await res.json();
+    const balances = data?.balances || [];
+
+    const dead=[], dust=[], healthy=[];
+    let luncBalance = '0';
+
+    for (let i=0; i<balances.length; i++) {
+      const bal = balances[i];
+      const denom = bal.denom;
+      const amount = parseInt(bal.amount||'0');
+      status.textContent = `🔍 Analyzing ${i+1}/${balances.length}...`;
+
+      if (denom === 'uluna') {
+        luncBalance = (amount/1e6).toLocaleString(undefined,{maximumFractionDigits:2});
+        amount >= DUST_ULUNC
+          ? healthy.push({name:'LUNC',denom,display:(amount/1e6).toLocaleString(undefined,{maximumFractionDigits:2})+' LUNC',daysSinceLast:0,totalTx:1})
+          : dust.push({name:'LUNC dust',denom,display:(amount/1e6).toFixed(6)+' LUNC',daysSinceLast:0});
+        continue;
+      }
+      if (denom === 'uusd') {
+        amount >= DUST_ULUNC
+          ? healthy.push({name:'USTC',denom,display:(amount/1e6).toFixed(2)+' USTC',daysSinceLast:0,totalTx:1})
+          : dust.push({name:'USTC dust',denom,display:(amount/1e6).toFixed(6)+' USTC',daysSinceLast:0});
+        continue;
+      }
+      if (KNOWN_HEALTHY.has(denom)) {
+        const name = denom.replace('u','').toUpperCase();
+        amount >= DUST_ULUNC
+          ? healthy.push({name,denom,display:(amount/1e6).toFixed(2)+' '+name,daysSinceLast:0,totalTx:1})
+          : dust.push({name:name+' dust',denom,display:(amount/1e6).toFixed(6),daysSinceLast:0});
+        continue;
+      }
+      if (denom.startsWith('terra1') && denom.length > 30) {
+        const [info, txData] = await Promise.all([fetchCW20Info(denom), fetchRecentTxCount(denom)]);
+        const name = info?.name || info?.symbol || denom.slice(0,10)+'...';
+        const symbol = info?.symbol || '?';
+        const decimals = parseInt(info?.decimals||'6');
+        const displayAmt = (amount/Math.pow(10,decimals)).toLocaleString(undefined,{maximumFractionDigits:2});
+        const display = `${displayAmt} ${symbol}`;
+        const {daysSinceLast, total} = txData;
+        if (amount < DUST_ULUNC) {
+          dust.push({name,symbol,denom,display,daysSinceLast});
+        } else if (total === 0 || daysSinceLast > 180) {
+          dead.push({name,symbol,denom,display,daysSinceLast,totalTx:total,isDead:true});
+        } else if (daysSinceLast > 90) {
+          dead.push({name,symbol,denom,display,daysSinceLast,totalTx:total,isDead:false});
+        } else {
+          healthy.push({name,symbol,denom,display,daysSinceLast,totalTx:total});
+        }
+        continue;
+      }
+      if (denom.startsWith('ibc/') || denom.length > 20) {
+        amount < DUST_ULUNC
+          ? dust.push({name:'IBC/Unknown',denom:denom.slice(0,20)+'...',display:(amount/1e6).toFixed(4),daysSinceLast:0})
+          : healthy.push({name:'IBC Token',denom:denom.slice(0,20)+'...',display:(amount/1e6).toFixed(2),daysSinceLast:0,totalTx:1});
+      }
+    }
+
+    document.getElementById('audit-dead-count').textContent = dead.length;
+    document.getElementById('audit-dust-count').textContent = dust.length;
+    document.getElementById('audit-lunc-count').textContent = luncBalance;
+
+    const renderToken = (t, type) => {
+      const colors = {dead:'#ff6464',inactive:'#ffa040',dust:'#ffc840',active:'#00FFB0'};
+      const icons = {dead:'💀',inactive:'⚠️',dust:'🌫️',active:'✅'};
+      const bgMap = {dead:'rgba(255,80,80,0.04)',inactive:'rgba(255,160,64,0.04)',dust:'rgba(255,200,0,0.03)',active:'rgba(0,255,176,0.03)'};
+      const borderMap = {dead:'rgba(255,80,80,0.15)',inactive:'rgba(255,160,64,0.15)',dust:'rgba(255,200,0,0.12)',active:'rgba(0,255,176,0.12)'};
+      const label = type==='dead'?'DEAD':type==='inactive'?'INACTIVE':type==='dust'?'DUST':'ACTIVE';
+      const reason = type==='dead'?(t.totalTx===0?'No transactions ever':'Last activity '+t.daysSinceLast+'d ago')
+                   : type==='inactive'?'Last activity '+t.daysSinceLast+'d ago'
+                   : type==='dust'?'Balance too small'
+                   : t.daysSinceLast>0?'Active '+t.daysSinceLast+'d ago':'Active';
+      return `<div style="display:flex;align-items:center;justify-content:space-between;background:${bgMap[type]};border:1px solid ${borderMap[type]};border-radius:12px;padding:14px 16px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:36px;height:36px;border-radius:10px;background:${bgMap[type]};border:1px solid ${borderMap[type]};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">${icons[type]}</div>
+          <div>
+            <div style="font-family:'Rajdhani',sans-serif;font-weight:700;color:#fff;font-size:15px;">${t.name}${t.symbol&&t.symbol!==t.name?' <span style="font-size:11px;color:rgba(255,255,255,0.35);">'+t.symbol+'</span>':''}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px;">${reason}</div>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;margin-left:12px;">
+          <div style="font-family:'Rajdhani',sans-serif;font-weight:700;color:${colors[type]};font-size:15px;">${t.display}</div>
+          <div style="font-size:10px;color:${colors[type]};opacity:0.6;margin-top:2px;letter-spacing:0.05em;">${label}</div>
+        </div>
+      </div>`;
+    };
+
+    if (dead.length > 0) {
+      document.getElementById('audit-dead-section').style.display='block';
+      document.getElementById('audit-dead-list').innerHTML = dead.map(t=>renderToken(t,t.isDead?'dead':'inactive')).join('');
+    }
+    if (dust.length > 0) {
+      document.getElementById('audit-dust-section').style.display='block';
+      document.getElementById('audit-dust-list').innerHTML = dust.map(t=>renderToken(t,'dust')).join('');
+    }
+    if (healthy.length > 0) {
+      document.getElementById('audit-healthy-section').style.display='block';
+      document.getElementById('audit-healthy-list').innerHTML = healthy.map(t=>renderToken(t,'active')).join('');
+    }
+    if (dead.length > 0) document.getElementById('audit-recovery-cta').style.display='block';
+
+    results.style.display='block';
+    status.textContent = `✅ Done · ${balances.length} assets · ${dead.length} dead · ${dust.length} dust · ${healthy.length} active`;
+    btn.textContent='🔄 RESCAN'; btn.disabled=false;
+
+  } catch(e) {
+    status.textContent = '❌ '+( e.message||'Error');
+    btn.textContent='🔍 SCAN WALLET'; btn.disabled=false;
+  }
+}
+
+function joinRecoveryWaitlist() {
+  const addr = _getAuditAddr();
+  if (!addr){alert('Connect wallet first');return;}
+  try{
+    const wl=JSON.parse(localStorage.getItem('recovery_waitlist')||'[]');
+    if(!wl.includes(addr)){wl.push(addr);localStorage.setItem('recovery_waitlist',JSON.stringify(wl));}
+  }catch(e){}
+  const btn=event.target;
+  btn.textContent='✅ JOINED';btn.style.color='#00FFB0';btn.style.borderColor='rgba(0,255,176,0.5)';btn.disabled=true;
+}
+
+function updateAuditUI() {
+  const addr = _getAuditAddr();
+  const prompt = document.getElementById('audit-connect-prompt');
+  const panel = document.getElementById('audit-scan-panel');
+  if (!prompt||!panel) return;
+  if (addr){prompt.style.display='none';panel.style.display='block';}
+  else{prompt.style.display='block';panel.style.display='none';}
+}
+
+setTimeout(function(){
+  if (typeof window.setWalletConnected==='function'){
+    const _p=window.setWalletConnected;
+    window.setWalletConnected=function(a){_p(a);updateAuditUI();};
+  }
+  updateAuditUI();
+},600);
+document.addEventListener('DOMContentLoaded',function(){setTimeout(updateAuditUI,800);});
 </script>
 </body>
 </html>
