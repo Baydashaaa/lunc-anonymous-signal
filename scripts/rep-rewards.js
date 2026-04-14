@@ -42,11 +42,13 @@ async function main() {
   const balRes  = await fetch('https://terra-classic-lcd.publicnode.com/cosmos/bank/v1beta1/balances/' + REWARDS_WALLET);
   const balData = await balRes.json();
   const balAmt  = parseInt(balData.balances?.find(b => b.denom === 'uluna')?.amount || '0');
-  // Use 20% of balance (matching Treasury distribution schedule)
-  const poolUluna = Math.floor(balAmt * 0.20);
+  // Use full balance — this wallet IS already the 20% REP Rewards allocation from Treasury
+  // Reserve ~5% as gas buffer for sending multiple txs
+  const GAS_RESERVE = Math.max(1_000_000, Math.floor(balAmt * 0.05));
+  const poolUluna   = Math.floor(balAmt - GAS_RESERVE);
 
   console.log(`💰 Rewards wallet balance: ${balAmt / 1e6} LUNC`);
-  console.log(`💰 This week's pool (20%): ${poolUluna / 1e6} LUNC`);
+  console.log(`💰 This week's pool (full balance - gas): ${poolUluna / 1e6} LUNC`);
 
   if (poolUluna < 1000000) {
     console.log('⚠️ Pool too small (< 1 LUNC). Skipping payout.');
