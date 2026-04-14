@@ -1434,7 +1434,7 @@ window.setWalletConnected = function(address) {
   const adminPanel = document.getElementById('admin-panel');
   if (adminPanel) {
     adminPanel.style.display = address === ADMIN_WALLET ? 'block' : 'none';
-    if (address === ADMIN_WALLET) { applyVoteStates(); updateAdminPanel(); }
+    if (address === ADMIN_WALLET) { applyVoteStates(); updateAdminPanel(); setTimeout(_adminInitOptions, 100); }
   }
   applyStoredVotes(); applyVoteStates(); renderVotes();
 }
@@ -1598,31 +1598,107 @@ window.adminStopVote = async function(voteId) {
 window.adminToggleVote = function(voteId, newStatus) { if (newStatus === 'active') adminStartVote(voteId); else adminStopVote(voteId); }
 
 function updateAdminPanel() {
-  const panel = document.getElementById('admin-panel'); if (!panel || panel.style.display === 'none') return;
-  const monthly = VOTES_DATA.find(v => v.id === 'monthly-liquidity');
-  const statusEl = document.getElementById('admin-monthly-status');
-  if (statusEl && monthly) { const icons={active:'🟢',stopped:'🔴',upcoming:'🟡',closed:'⚫'}; statusEl.textContent = `Status: ${icons[monthly.status]||'⚪'} ${monthly.status.toUpperCase()} · Started: ${monthly.startedAt?new Date(monthly.startedAt).toLocaleDateString():'—'} · Timer: ${monthly.timer}`; }
+  const panel = document.getElementById('admin-panel');
+  if (!panel || panel.style.display === 'none') return;
   const otherEl = document.getElementById('admin-other-votes');
-  if (otherEl) {
-    const states = getVoteStates(); const others = VOTES_DATA.filter(v => v.id !== 'monthly-liquidity');
-    if (!others.length) { otherEl.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:8px 0;">No other votes configured.</div>'; }
-    else { otherEl.innerHTML = others.map(v => { const s=states[v.id]?.status||v.status; const icons={active:'🟢',stopped:'🔴',upcoming:'🟡',closed:'⚫'}; return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);"><div><span style="font-size:12px;color:var(--text);">${v.title}</span><span style="font-size:10px;color:var(--muted);margin-left:8px;">${icons[s]||'⚪'} ${(s||'unknown').toUpperCase()}</span></div><div style="display:flex;gap:6px;"><button onclick="adminToggleVote('${v.id}','active')" style="font-size:10px;padding:5px 12px;border-radius:6px;border:1px solid rgba(102,255,170,0.3);background:rgba(102,255,170,0.08);color:var(--green);cursor:pointer;font-family:'Exo 2',sans-serif;font-weight:700;">▶</button><button onclick="adminToggleVote('${v.id}','stopped')" style="font-size:10px;padding:5px 12px;border-radius:6px;border:1px solid rgba(255,60,60,0.25);background:rgba(255,60,60,0.06);color:#ff6464;cursor:pointer;font-family:'Exo 2',sans-serif;font-weight:700;">■</button></div></div>`; }).join(''); }
+  if (!otherEl) return;
+  if (!VOTES_DATA.length) {
+    otherEl.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0;">No votes yet. Create one above.</div>';
+    return;
   }
+  const statusColors = { active: '#66ffaa', stopped: '#ff6464', upcoming: '#ffc840', closed: '#888' };
+  const statusIcons  = { active: '●', stopped: '■', upcoming: '◎', closed: '○' };
+  otherEl.innerHTML = VOTES_DATA.map(v => {
+    const s = v.status || 'unknown';
+    const col = statusColors[s] || '#888';
+    const icon = statusIcons[s] || '○';
+    const startBtn = s !== 'active'
+      ? `<button onclick="adminStartVote('${v.id}')" style="font-size:11px;padding:6px 12px;border-radius:6px;border:1px solid rgba(102,255,170,0.3);background:rgba(102,255,170,0.08);color:var(--green);cursor:pointer;font-family:'Exo 2',sans-serif;font-weight:700;">▶</button>`
+      : '';
+    const stopBtn = s === 'active'
+      ? `<button onclick="adminStopVote('${v.id}')" style="font-size:11px;padding:6px 12px;border-radius:6px;border:1px solid rgba(255,60,60,0.25);background:rgba(255,60,60,0.06);color:#ff6464;cursor:pointer;font-family:'Exo 2',sans-serif;font-weight:700;">■</button>`
+      : '';
+    const delBtn = `<button onclick="adminDeleteVote('${v.id}')" style="font-size:11px;padding:6px 10px;border-radius:6px;border:1px solid rgba(255,60,60,0.2);background:rgba(255,60,60,0.05);color:#ff6464;cursor:pointer;" title="Delete vote">🗑</button>`;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${v.title}</div>
+        <div style="font-size:10px;margin-top:3px;color:${col};letter-spacing:0.06em;">${icon} ${s.toUpperCase()} · ${v.timer || ''} · ${v.totalVotes || 0} votes</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">${startBtn}${stopBtn}${delBtn}</div>
+    </div>`;
+  }).join('');
 }
 
 
+// ── Admin form helpers ────────────────────────────────────────
+function _getAdminOptions() {
+  const list = document.getElementById('av-options-list');
+  if (!list) return [];
+  return Array.from(list.querySelectorAll('input[type="text"]'))
+    .map(inp => inp.value.trim()).filter(v => v.length > 0);
+}
+
+function _adminResetForm() {
+  ['av-title','av-desc','av-source'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  const d=document.getElementById('av-days'); if(d) d.value='7';
+  const q=document.getElementById('av-quorum'); if(q) q.value='100';
+  const p=document.getElementById('av-preview'); if(p) p.style.display='none';
+  // Re-init options
+  const list=document.getElementById('av-options-list');
+  if(list) { list.innerHTML=''; _addAdminOption(); _addAdminOption(); }
+}
+
+window.adminAddOption = function() {
+  const list = document.getElementById('av-options-list');
+  if (!list) return;
+  if (list.children.length >= 8) { showAdminToast('Max 8 options', 'red'); return; }
+  const idx = list.children.length;
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:8px;align-items:center;';
+  row.innerHTML = `<input type="text" placeholder="Option ${idx+1}..." maxlength="100"
+    style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Exo 2',sans-serif;font-size:13px;padding:9px 12px;outline:none;">
+    <button onclick="this.parentElement.remove()" style="background:rgba(255,60,60,0.08);border:1px solid rgba(255,60,60,0.2);border-radius:6px;color:#ff6464;font-size:16px;width:32px;height:32px;cursor:pointer;flex-shrink:0;line-height:1;">×</button>`;
+  list.appendChild(row);
+};
+function _addAdminOption() { window.adminAddOption(); }
+
+window.adminPreviewVote = function() {
+  const title = document.getElementById('av-title')?.value.trim();
+  const type  = document.getElementById('av-type')?.value;
+  const days  = document.getElementById('av-days')?.value;
+  const opts  = _getAdminOptions();
+  if (!title || opts.length < 2) { showAdminToast('Fill title and at least 2 options', 'red'); return; }
+  const preview = document.getElementById('av-preview');
+  const previewText = document.getElementById('av-preview-text');
+  if (preview && previewText) {
+    previewText.innerHTML = `<b>${title}</b><br>Type: ${type} · Duration: ${days}d<br>Options:${opts.map((o,i)=>`<br>${i+1}. ${o}`).join('')}`;
+    preview.style.display = 'block';
+  }
+};
+
+window.adminResetForm = function() { _adminResetForm(); };
+
+// Init options on panel show
+function _adminInitOptions() {
+  const list = document.getElementById('av-options-list');
+  if (!list || list.children.length > 0) return;
+  _addAdminOption(); _addAdminOption();
+}
+
 window.adminCreateVote = async function() {
   const title = document.getElementById('av-title')?.value.trim();
-  const desc = document.getElementById('av-desc')?.value.trim();
-  const type = document.getElementById('av-type')?.value || 'weekly';
-  const days = parseInt(document.getElementById('av-days')?.value || '7');
-  const quorum = parseInt(document.getElementById('av-quorum')?.value || '100');
-  const source = document.getElementById('av-source')?.value.trim() || 'Admin proposal';
-  const opts = typeof getAdminOptions === 'function' ? getAdminOptions() : [];
+  const desc  = document.getElementById('av-desc')?.value.trim();
+  const type  = document.getElementById('av-type')?.value || 'weekly';
+  const days  = parseInt(document.getElementById('av-days')?.value || '7');
+  const quorum= parseInt(document.getElementById('av-quorum')?.value || '100');
+  const source= document.getElementById('av-source')?.value.trim() || 'Admin proposal';
+  const opts  = _getAdminOptions();
 
-  if (!title) { showAdminToast('Enter a title', 'red'); return; }
+  if (!title)          { showAdminToast('Enter a title', 'red'); return; }
   if (opts.length < 2) { showAdminToast('Add at least 2 options', 'red'); return; }
-  if (!globalWalletAddress || globalWalletAddress !== ADMIN_WALLET) { showAdminToast('Admin wallet required', 'red'); return; }
+  if (!globalWalletAddress || globalWalletAddress !== ADMIN_WALLET) {
+    showAdminToast('Admin wallet not connected', 'red'); return;
+  }
 
   const durationMs = days * 24 * 60 * 60 * 1000;
   const btn = document.querySelector('[onclick="adminCreateVote()"]');
@@ -1637,11 +1713,11 @@ window.adminCreateVote = async function() {
     });
     const data = await res.json();
     if (!res.ok) { showAdminToast('❌ ' + (data.error || 'Error'), 'red'); return; }
-    if (typeof adminResetForm === 'function') adminResetForm();
+    _adminResetForm();
     showAdminToast('✅ Vote created for all users!', 'green');
     await loadVotesFromWorker();
   } catch(e) {
-    showAdminToast('❌ Network error: ' + e.message, 'red');
+    showAdminToast('❌ ' + (e.message || 'Network error'), 'red');
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '✅ CREATE & START'; }
   }
@@ -1649,6 +1725,11 @@ window.adminCreateVote = async function() {
 
 window.adminDeleteVote = async function(voteId) {
   if (!confirm('Delete this vote permanently?')) return;
+  // Always remove from local VOTES_DATA immediately
+  const idx = VOTES_DATA.findIndex(v => v.id === voteId);
+  if (idx > -1) VOTES_DATA.splice(idx, 1);
+  updateAdminPanel(); renderVotes();
+  // Also remove from Worker if it's a custom vote
   try {
     await fetch(`${WORKER_URL}/votes`, {
       method: 'DELETE',
@@ -1656,13 +1737,9 @@ window.adminDeleteVote = async function(voteId) {
       body: JSON.stringify({ id: voteId }),
       signal: AbortSignal.timeout(6000),
     });
-    await loadVotesFromWorker();
     showAdminToast('🗑 Vote deleted', 'red');
   } catch(e) {
-    const idx = VOTES_DATA.findIndex(v => v.id === voteId);
-    if (idx > -1) VOTES_DATA.splice(idx, 1);
-    updateAdminPanel(); renderVotes();
-    showAdminToast('🗑 Deleted (offline)', 'red');
+    showAdminToast('🗑 Removed locally', 'red');
   }
 };
 
