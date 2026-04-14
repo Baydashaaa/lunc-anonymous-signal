@@ -50,7 +50,7 @@ const DEMO_QUESTIONS = [
     time: '34 min ago',
     votes: 12,
     answers: [
-      { alias: 'Anonymous#8821', isAdmin: false, title: '⚡ Oracle', text: 'No formal proposal yet, but several validators have discussed it in the bi-weekly call. The main blocker is liquidity depth — USTC needs at least $50M TVL before a peg mechanism is viable.', votes: 8, voted: false },
+      { alias: 'Anonymous#8821', isAdmin: false, title: '⚡ Oracle', text: 'No formal proposal yet, but several validators have discussed it in the bi-weekly call. The main blocker is liquidity depth - USTC needs at least $50M TVL before a peg mechanism is viable.', votes: 8, voted: false },
       { alias: 'Admin', isAdmin: true, title: null, text: 'This is being tracked. A governance discussion thread will be opened within the next 2 weeks following the SDK upgrade completion. Stay tuned to the official Terra Classic channels.', votes: 24, voted: false },
     ],
     voted: false,
@@ -94,7 +94,7 @@ async function loadQuestionsFromWorker() {
       time: q.time || (q.createdAt ? (() => { const d = new Date(q.createdAt * 1000); return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear(); })() : 'unknown'),
       ...q,
     }));
-    // Restore voted state — from worker data (wallet-based) + localStorage fallback
+    // Restore voted state - from worker data (wallet-based) + localStorage fallback
     const votedQ  = JSON.parse(localStorage.getItem('voted_questions') || '{}');
     const votedA  = JSON.parse(localStorage.getItem('voted_answers') || '{}');
     for (const q of questions) {
@@ -124,7 +124,7 @@ async function loadQuestionsFromWorker() {
   }
 }
 
-// saveQuestions — no-op, worker handles persistence
+// saveQuestions - no-op, worker handles persistence
 function saveQuestions(qs) { questions = qs; }
 let boardFilter = 'all';
 let boardSort = 'new';
@@ -395,7 +395,7 @@ function renderBoard() {
         </div>
       </div>
       <div class="answers-section ${q.open ? 'open' : ''}" id="answers-${realQi}">
-        ${q.answers.length === 0 ? `<div style="font-size:12px;color:var(--muted);padding:8px 0;">No answers yet — be the first!</div>` : ''}
+        ${q.answers.length === 0 ? `<div style="font-size:12px;color:var(--muted);padding:8px 0;">No answers yet - be the first!</div>` : ''}
         ${q.answers.map((a, ai) => `
           <div class="answer-item ${a.isAdmin ? 'admin-answer' : ''}">
             <div class="answer-meta">
@@ -415,7 +415,7 @@ function renderBoard() {
             <textarea id="atext-${realQi}" placeholder="Share your knowledge anonymously..." rows="4"></textarea>
           </div>
           <div class="form-group">
-            <label>Admin Key <span style="font-size:9px;color:var(--muted);text-transform:none">(optional — leave blank to answer anonymously)</span></label>
+            <label>Admin Key <span style="font-size:9px;color:var(--muted);text-transform:none">(optional - leave blank to answer anonymously)</span></label>
             <div class="admin-key-wrap" id="akwrap-${realQi}">
               <input type="text" id="akey-${realQi}" placeholder="Enter key to post as Admin..." oninput="checkAdminKey(${realQi})" style="-webkit-text-security:disc;text-security:disc;">
               <span class="admin-key-hint" id="akeyhint-${realQi}">optional</span>
@@ -612,7 +612,7 @@ async function connectKeplr() {
     const offlineSigner = window.keplr.getOfflineSigner('columbus-5');
     const accounts = await offlineSigner.getAccounts();
     connectedAddress = accounts[0].address;
-    // Update Pay button — async fetch real title from worker
+    // Update Pay button - async fetch real title from worker
     const _addr = accounts[0].address;
     if (typeof fetchQuestionStats === 'function') {
       fetchQuestionStats(_addr).then(async stats => {
@@ -664,7 +664,7 @@ async function connectKeplr() {
       document.getElementById('ask-form').style.display = 'block';
       const notice = document.getElementById('tx-section');
       notice.style.display = 'block';
-      notice.innerHTML = '<div style="background:rgba(245,197,24,0.08);border:1px solid rgba(245,197,24,0.25);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--gold);">🛡️ Admin wallet detected — payment bypassed</div>';
+      notice.innerHTML = '<div style="background:rgba(245,197,24,0.08);border:1px solid rgba(245,197,24,0.25);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--gold);">🛡️ Admin wallet detected - payment bypassed</div>';
     } else {
       document.getElementById('tx-section').style.display = 'block';
     }
@@ -764,7 +764,7 @@ async function sendLuncDirect(fromAddr, toAddr, amountUluna, memo, chainId) {
   const code   = data?.tx_response?.code ?? data?.code ?? 0;
   if (code !== 0) throw new Error('TX failed: ' + (data?.tx_response?.raw_log || JSON.stringify(data)));
 
-  // Poll for confirmation — max 5 × 4s
+  // Poll for confirmation - max 5 × 4s
   for (let i = 0; i < 5; i++) {
     await new Promise(r => setTimeout(r, 4000));
     try {
@@ -783,7 +783,7 @@ async function sendLuncDirect(fromAddr, toAddr, amountUluna, memo, chainId) {
   return txHash;
 }
 
-// ─── FIX 1: Ask — исправлена fee (200,000 LUNC payment) ──────
+// ─── FIX 1: Ask - исправлена fee (200,000 LUNC payment) ──────
 async function autoPayAndUnlock() {
   if (!connectedAddress) { alert('Connect wallet first!'); return; }
   const btn = document.getElementById('verify-btn');
@@ -793,7 +793,7 @@ async function autoPayAndUnlock() {
     const accounts = await window.keplr.getOfflineSigner('columbus-5').getAccounts();
     const sender = accounts[0].address;
 
-    // ── Apply title discount — fetch real stats from worker ──────
+    // ── Apply title discount - fetch real stats from worker ──────
     let discountPct = 0;
     if (typeof fetchQuestionStats === 'function') {
       try {
@@ -826,19 +826,19 @@ async function autoPayAndUnlock() {
     const totalLunc   = 100000 + (100000 - discountAmt);                       // e.g. 190,000
 
     const discountLabel = discountPct > 0
-      ? ` (${discountPct}% off — saved ${discountAmt.toLocaleString()} LUNC)`
+      ? ` (${discountPct}% off - saved ${discountAmt.toLocaleString()} LUNC)`
       : '';
 
     // Send to Weekly Draw Pool first
     const txHash1 = await sendLuncDirect(
       sender, LOTTERY_WALLET, toWeekly,
-      'Terra Oracle Q&A — Weekly Pool', 'columbus-5'
+      'Terra Oracle Q&A - Weekly Pool', 'columbus-5'
     );
 
     // Send to Treasury (discounted amount)
     const txHash2 = await sendLuncDirect(
       sender, TREASURY_WALLET, toTreasury,
-      'Terra Oracle Q&A — Treasury', 'columbus-5'
+      'Terra Oracle Q&A - Treasury', 'columbus-5'
     );
 
     // Store primary tx hash (Weekly Pool tx) for question record
@@ -881,7 +881,7 @@ async function verifyTX() {
       const toAddr = val.to_address || val.toAddress;
       const coins = val.amount || [];
       const lunc = Array.isArray(coins) ? coins.find(c => c.denom === 'uluna') : (coins.denom === 'uluna' ? coins : null);
-      // Accept payment to Treasury OR Weekly Pool (split payment — either tx is valid proof)
+      // Accept payment to Treasury OR Weekly Pool (split payment - either tx is valid proof)
       const MIN_ACCEPTED = 150000 * 1e6; // 150,000 LUNC minimum (max discount = 25%)
       if ((toAddr === TREASURY_WALLET || toAddr === LOTTERY_WALLET || toAddr === PROTOCOL_WALLET) && lunc) {
         foundAmount += parseInt(lunc.amount);
@@ -1019,7 +1019,7 @@ function setWalletConnected(address) {
     const txSection  = document.getElementById('tx-section');
     const askForm    = document.getElementById('ask-form');
     if (verifiedTx) verifiedTx.value = 'ADMIN_BYPASS';
-    if (txSection)  { txSection.style.display = 'block'; txSection.innerHTML = '<div style="background:rgba(245,197,24,0.08);border:1px solid rgba(245,197,24,0.25);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--gold);">🛡️ Admin wallet detected — payment bypassed</div>'; }
+    if (txSection)  { txSection.style.display = 'block'; txSection.innerHTML = '<div style="background:rgba(245,197,24,0.08);border:1px solid rgba(245,197,24,0.25);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--gold);">🛡️ Admin wallet detected - payment bypassed</div>'; }
     if (askForm)    askForm.style.display = 'block';
   }
 
@@ -1100,7 +1100,7 @@ document.getElementById('chat-page-input').addEventListener('input', function() 
   counter.textContent = remaining;
 });
 
-// ─── FIX 2: Chat — исправлена fee (5,000 LUNC payment) ───────
+// ─── FIX 2: Chat - исправлена fee (5,000 LUNC payment) ───────
 window.sendChatMessage = async function() {
   const text = document.getElementById('chat-page-input').value.trim();
   const statusEl = document.getElementById('chat-tx-status');
@@ -1118,7 +1118,7 @@ window.sendChatMessage = async function() {
     const result = { transactionHash: txHash };
     const short = sender.slice(0,8)+'...'+sender.slice(-4);
 
-    // ✅ Streak: Chat — платное действие (5,000 LUNC)
+    // ✅ Streak: Chat - платное действие (5,000 LUNC)
     fetch(`${WORKER_URL}/streak/activity`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1137,7 +1137,7 @@ window.sendChatMessage = async function() {
       if (data.milestoneEntry && data.newCount) {
         setTimeout(() => {
           statusEl.style.cssText = 'display:block;border-radius:8px;padding:10px 14px;font-size:12px;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.3);color:#a78bfa;margin-top:10px;';
-          statusEl.innerHTML = '🎉 Milestone reached! <strong>' + data.newCount + ' messages</strong> — you earned a free Weekly Draw entry! Total entries earned: <strong>' + data.entriesEarned + '</strong>';
+          statusEl.innerHTML = '🎉 Milestone reached! <strong>' + data.newCount + ' messages</strong> - you earned a free Weekly Draw entry! Total entries earned: <strong>' + data.entriesEarned + '</strong>';
           setTimeout(() => { statusEl.style.display = 'none'; }, 8000);
         }, 3000);
       }
@@ -1205,7 +1205,7 @@ function renderChatMessages(msgs) {
   cachedMsgs = msgs;
   const container = document.getElementById('chat-page-messages');
   if (!msgs || msgs.length === 0) {
-    container.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:60px 20px;"><div style="font-size:32px;margin-bottom:12px;">💬</div>No messages yet — be the first to speak!</div>';
+    container.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:60px 20px;"><div style="font-size:32px;margin-bottom:12px;">💬</div>No messages yet - be the first to speak!</div>';
     return;
   }
   const all = getChatReactions();
@@ -1216,7 +1216,7 @@ function renderChatMessages(msgs) {
     const avatar = _getProfileAvatar(m.fullAddr);
     const initials = displayName.slice(0,2).toUpperCase();
 
-    // System message — protocol announcement
+    // System message - protocol announcement
     if (m.isSystem) {
       const isPool = m.text.includes('Weekly Pool') || m.text.includes('Daily');
       const icon = isPool ? '🎰' : '🏛';
@@ -1292,11 +1292,11 @@ async function loadChatFromChain() {
     return;
   }
   // LCD v1beta1: txs[] = tx bodies, tx_responses[] = metadata (hash, timestamp)
-  // They are parallel arrays — same index = same transaction
+  // They are parallel arrays - same index = same transaction
   const txBodies    = txList.txs || [];
   const txResponses = txList.tx_responses || [];
   if (!txBodies.length && !txResponses.length) {
-    if (!cachedMsgs.length) container.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:40px;">No messages yet — be the first!</div>';
+    if (!cachedMsgs.length) container.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:40px;">No messages yet - be the first!</div>';
     return;
   }
   const msgs = [];
@@ -1328,7 +1328,7 @@ async function loadChatFromChain() {
       const ts = txMeta?.timestamp ? new Date(txMeta.timestamp) : null;
       const timeStr = ts ? ts.toLocaleDateString([], {month:'short',day:'numeric'}) + ' ' + ts.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
       msgs.push({ author: short, fullAddr: sender, text: memo.slice(0, 256), amount: luncFormatted, txHash: txMeta?.txhash || '', time: timeStr, ts: ts ? ts.getTime() : 0,
-        isSystem: ['Terra Oracle Q&A — Weekly Pool','Terra Oracle Q&A — Treasury','Oracle Draw — Daily','Oracle Draw — Weekly'].includes(memo.trim())
+        isSystem: ['Terra Oracle Q&A - Weekly Pool','Terra Oracle Q&A - Treasury','Oracle Draw - Daily','Oracle Draw - Weekly'].includes(memo.trim())
       });
     } catch(e) { continue; }
   }
@@ -1422,7 +1422,7 @@ if (document.readyState === 'loading') {
 } else {
   renderChatPage();
 }
-setInterval(loadChatFromChain, 60000); // 60s poll — reduced from 30s for performance
+setInterval(loadChatFromChain, 60000); // 60s poll - reduced from 30s for performance
 
 const _origSetWallet = window.setWalletConnected;
 window.setWalletConnected = function(address) {
@@ -1473,7 +1473,7 @@ function generateMonthlyLiquidityVote() {
   try { savedVotes = JSON.parse(localStorage.getItem(voteKey) || 'null'); } catch(e) {}
   return {
     id: 'monthly-liquidity', type: 'monthly', status, voteKey,
-    title: `Liquidity Pool Pairs — ${displayMonth} ${displayYear}`,
+    title: `Liquidity Pool Pairs - ${displayMonth} ${displayYear}`,
     desc: status === 'active' ? `Which LUNC trading pair should receive liquidity incentives for ${displayMonth}? Voting is open 20–25 of each month.` : `Monthly liquidity vote for ${displayMonth} ${displayYear}. Voting opens on the 20th and closes on the 25th.`,
     source: '🗓 Runs every month · 20th → 25th · Auto-generated',
     timer: timerStr, totalVotes: savedVotes ? savedVotes.totalVotes : 0, quorum: 200,
@@ -1512,9 +1512,9 @@ async function loadVotesFromWorker() {
 }
 
 const VOTES_DATA = [
-  { id: 'v1', type: 'weekly', status: 'active', title: 'Protocol Development Priority — Week 11', desc: 'What should the development team focus on this week?', source: 'Based on community chat discussions', timer: '3d 14h remaining', totalVotes: 234, quorum: 100, options: [{ label: 'SDK 0.53 upgrade testing & QA', votes: 112 }, { label: 'MM 2.0 activation preparation', votes: 78 }, { label: 'USTC re-peg research', votes: 44 }], userVoted: null },
+  { id: 'v1', type: 'weekly', status: 'active', title: 'Protocol Development Priority - Week 11', desc: 'What should the development team focus on this week?', source: 'Based on community chat discussions', timer: '3d 14h remaining', totalVotes: 234, quorum: 100, options: [{ label: 'SDK 0.53 upgrade testing & QA', votes: 112 }, { label: 'MM 2.0 activation preparation', votes: 78 }, { label: 'USTC re-peg research', votes: 44 }], userVoted: null },
   generateMonthlyLiquidityVote(),
-  { id: 'v3', type: 'special', status: 'active', title: 'Terra Oracle — Reward Distribution Model', desc: 'Should we switch from "winner takes all" to top-3 distribution for Q&A rewards?', source: 'Proposal by community member · Terra Oracle governance', timer: '6d 2h remaining', totalVotes: 156, quorum: 100, options: [{ label: '70% winner + 30% voters', votes: 89 }, { label: 'Top-3 split (60/25/15)', votes: 41 }, { label: 'Keep current model', votes: 26 }], userVoted: null }
+  { id: 'v3', type: 'special', status: 'active', title: 'Terra Oracle - Reward Distribution Model', desc: 'Should we switch from "winner takes all" to top-3 distribution for Q&A rewards?', source: 'Proposal by community member · Terra Oracle governance', timer: '6d 2h remaining', totalVotes: 156, quorum: 100, options: [{ label: '70% winner + 30% voters', votes: 89 }, { label: 'Top-3 split (60/25/15)', votes: 41 }, { label: 'Keep current model', votes: 26 }], userVoted: null }
 ];
 
 // Filter out locally deleted static votes
@@ -1807,7 +1807,7 @@ function renderOracleBag() {
   notConn.style.display = 'none';
   conn.style.display    = 'block';
 
-  // Mock data — replace with real API from Paco later
+  // Mock data - replace with real API from Paco later
   const mockNFTs = [
     { id: 47,  type: 'common',    entries: 1,  pool: 'daily',  inCurrentRound: true  },
     { id: 12,  type: 'rare',      entries: 5,  pool: 'weekly', inCurrentRound: true  },
@@ -1870,7 +1870,7 @@ function renderOracleBag() {
           <td style="padding:12px 14px;">
             ${h.result==='won'
               ? `<span style="color:#66ffaa;font-weight:700;">🏆 ${h.prize}</span>`
-              : `<span style="color:var(--muted);">—</span>`}
+              : `<span style="color:var(--muted);">-</span>`}
           </td>
         </tr>`).join('');
     }
