@@ -2233,6 +2233,7 @@ const WQR_CONFIGS = {
 const _isMobile = () => /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.matchMedia('(hover:none)').matches;
 let _wqrClient = null;
 let _wqrActive = false;
+window._wqrClient = null;
 
 function openWalletQRModal(walletType) {
   const cfg = WQR_CONFIGS[walletType];
@@ -2269,7 +2270,7 @@ async function _startWC(walletType, cfg) {
     if (!_wqrActive) return;
     statusEl.textContent = 'Generating QR...';
 
-    _wqrClient = await SignClient.init({
+    _wqrClient = window._wqrClient = await SignClient.init({
       projectId: window._wcProjectId,
       metadata: {
         name: 'Terra Oracle Classic',
@@ -2359,6 +2360,36 @@ document.getElementById('wallet-qr-modal').addEventListener('click', function(e)
   }
   if (!tryPatch()) {
     const iv = setInterval(() => { if (tryPatch()) clearInterval(iv); }, 100);
+    setTimeout(() => clearInterval(iv), 8000);
+  }
+})();
+
+/* ─── Patch disconnectWallet to also close WC session ─── */
+(function() {
+  function tryPatchDisconnect() {
+    if (typeof window.disconnectWallet === 'function') {
+      const _orig = window.disconnectWallet;
+      window.disconnectWallet = async function() {
+        if (window._wqrClient) {
+          try {
+            const sessions = window._wqrClient.session?.getAll() || [];
+            for (const s of sessions) {
+              await window._wqrClient.disconnect({
+                topic: s.topic,
+                reason: { code: 6000, message: 'User disconnected' }
+              });
+            }
+          } catch(e) { console.warn('[WC disconnect]', e.message); }
+          window._wqrClient = null;
+        }
+        return _orig.apply(this, arguments);
+      };
+      return true;
+    }
+    return false;
+  }
+  if (!tryPatchDisconnect()) {
+    const iv = setInterval(() => { if (tryPatchDisconnect()) clearInterval(iv); }, 100);
     setTimeout(() => clearInterval(iv), 8000);
   }
 })();
