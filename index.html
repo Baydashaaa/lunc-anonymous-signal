@@ -368,6 +368,7 @@
 <div id="wallet-connected-panel" style="display:none;">
   <div class="wallet-connected-info" id="wallet-connected-addr"></div>
   <button class="wallet-profile-btn" onclick="openProfile()">👤 My Profile</button>
+  <button class="wallet-profile-btn" onclick="showPage('audit');toggleWalletDropdown()" style="background:rgba(0,255,176,0.06);border-color:rgba(0,255,176,0.2);color:#00FFB0;">🔍 Wallet Audit</button>
   <button class="wallet-disconnect" onclick="disconnectWallet()">✕ Disconnect</button>
 </div>
  </div>
@@ -2158,6 +2159,9 @@ function toggleAccordion(id) {
     </div>
     <button onclick="openProfile();closeMobileConnectedModal()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(84,147,247,0.1);border:1px solid rgba(84,147,247,0.3);border-radius:12px;padding:13px;color:#7eb8ff;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px;">
       👤 My Profile
+    </button>
+    <button onclick="closeMobileConnectedModal();showPage('audit')" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(0,255,176,0.06);border:1px solid rgba(0,255,176,0.2);border-radius:12px;padding:13px;color:#00FFB0;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px;">
+      🔍 Wallet Audit
     </button>
     <button onclick="disconnectWallet();closeMobileConnectedModal()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(255,80,80,0.08);border:1px solid rgba(255,80,80,0.25);border-radius:12px;padding:13px;color:#ff8080;font-size:14px;font-weight:600;cursor:pointer;">
       ✕ Disconnect
