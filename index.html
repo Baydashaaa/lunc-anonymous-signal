@@ -2745,7 +2745,26 @@ const DUST_ULUNC = 1000000;
 const KNOWN_HEALTHY = new Set(['uluna','uusd','ukrw','usdr','umnt','ueur','ucny','ujpy','ugbp','uinr','ucad','uchf','uhkd','usgd','uthb','usek','unok','udkk','uidr','uphp','umyr','utwd']);
 
 function _getAuditAddr() {
-  return window.globalWalletAddress || window.connectedAddress || null;
+  // 1. JS globals
+  if (window.globalWalletAddress) return window.globalWalletAddress;
+  if (window.connectedAddress) return window.connectedAddress;
+  // 2. wallet-connected-addr DOM element (full address text)
+  const addrEl = document.getElementById('wallet-connected-addr');
+  if (addrEl && addrEl.textContent && addrEl.textContent.trim().startsWith('terra1')) {
+    return addrEl.textContent.trim();
+  }
+  // 3. wallet-connected-panel visible = connected
+  const panel = document.getElementById('wallet-connected-panel');
+  if (panel && panel.style.display !== 'none') {
+    const addr = addrEl ? addrEl.textContent.trim() : null;
+    if (addr) return addr;
+  }
+  // 4. localStorage session
+  try {
+    const s = JSON.parse(localStorage.getItem('wallet_session') || 'null');
+    if (s && s.address && s.expires > Date.now()) return s.address;
+  } catch(e) {}
+  return null;
 }
 
 async function fetchCW20Info(addr) {
@@ -2987,28 +3006,60 @@ function joinRecoveryWaitlist() {
 function updateAuditUI() {
   const addr = _getAuditAddr();
   const prompt = document.getElementById('audit-connect-prompt');
-  const panel = document.getElementById('audit-scan-panel');
-  if (!prompt||!panel) return;
-  if (addr){prompt.style.display='none';panel.style.display='block';}
-  else{prompt.style.display='block';panel.style.display='none';}
+  const scanPanel = document.getElementById('audit-scan-panel');
+  if (!prompt || !scanPanel) return;
+  if (addr) {
+    prompt.style.display = 'none';
+    scanPanel.style.display = 'block';
+  } else {
+    prompt.style.display = 'block';
+    scanPanel.style.display = 'none';
+  }
 }
 
-setTimeout(function(){
-  if (typeof window.setWalletConnected==='function'){
-    const _p=window.setWalletConnected;
-    window.setWalletConnected=function(a){_p(a);updateAuditUI();};
+(function setupAudit() {
+  // Watch audit page becoming active
+  function watchAuditPage() {
+    const auditPage = document.getElementById('page-audit');
+    if (!auditPage) { setTimeout(watchAuditPage, 300); return; }
+    new MutationObserver(function() {
+      if (auditPage.classList.contains('active')) setTimeout(updateAuditUI, 100);
+    }).observe(auditPage, { attributes: true, attributeFilter: ['class'] });
   }
-  // Also patch showPage to update audit UI when audit page opens
-  if (typeof window.showPage==='function'){
-    const _sp=window.showPage;
-    window.showPage=function(name){
-      _sp.apply(this,arguments);
-      if(name==='audit') setTimeout(updateAuditUI,50);
-    };
+
+  // Watch wallet-connected-panel becoming visible
+  function watchWalletPanel() {
+    const walletPanel = document.getElementById('wallet-connected-panel');
+    if (!walletPanel) { setTimeout(watchWalletPanel, 300); return; }
+    new MutationObserver(function() {
+      updateAuditUI();
+    }).observe(walletPanel, { attributes: true, attributeFilter: ['style'] });
   }
-  updateAuditUI();
-},700);
-document.addEventListener('DOMContentLoaded',function(){setTimeout(updateAuditUI,900);});
+
+  // Patch setWalletConnected
+  function patchWallet() {
+    if (typeof window.setWalletConnected === 'function') {
+      const _p = window.setWalletConnected;
+      window.setWalletConnected = function(a) { _p(a); setTimeout(updateAuditUI, 100); };
+    } else {
+      setTimeout(patchWallet, 200);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      watchAuditPage();
+      watchWalletPanel();
+      patchWallet();
+      setTimeout(updateAuditUI, 500);
+    });
+  } else {
+    watchAuditPage();
+    watchWalletPanel();
+    patchWallet();
+    setTimeout(updateAuditUI, 500);
+  }
+})();
 </script>
 </body>
 </html>
