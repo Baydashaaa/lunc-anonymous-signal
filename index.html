@@ -2741,6 +2741,40 @@ document.getElementById('luncdash-modal').addEventListener('click', function(e) 
 <script>
 /* ═══ WALLET AUDIT ═══ */
 const LCD_AUDIT = 'https://terra-classic-lcd.publicnode.com';
+
+// Top active CW20 tokens on Terra Classic — checked on every scan
+const TOP_CW20_TOKENS = [
+  'terra1ex0hjv3wurhj4wgup4jzlzaqj4av6xqd8le4etml7rg9rs207y4s8cdvrp', // TERRA (Terraport)
+  'terra1vhgq25vwuhdhn9xjll0rhl2s67jzw78a4g2t78y5kz89q9lsdskq2pxcj2', // JURIS
+  'terra13ryrrlcskwa05cd94h54c8rnztff9l82pp0zqnfvlwt77za8wjjsld36ms', // WESO
+  'terra12f3f5fzfzxckc0qlv3rmwwkjfhzevpwmx77345n0zuu2678vxf0sm6vvcw', // GRDX (GarudaX)
+  'terra15p8su45k45axng8ue59rl6zph4at27s49u3agr6uqrx3dhcxpg3qt0ekdt', // DO
+  'terra1g6fm3yu79gv0rc8067n2nnfpf0vks6n0wpzaf4u7w48tdrmj98zsy7uu00', // TRIT
+  'terra1x6e64es6yhauhvs3prvpdg2gkqdtfru840wgnhs935x8axr7zxkqzysuxz', // ALPHA
+  'terra1uewxz67jhhhs2tj97pfm2egtk7zqxuhenm4y4m',                     // BASE
+  'terra1v0z94pr8ynzq8zmuyv3j0eraqjs4m5zpm4ptgru459y5fye2at7q0e4jtd', // SELE
+  'terra1vxhnzlr44ajzq84xra07gtvyv5saxmsyz6cd5cewqm479znvsepqzdkk05', // PIZZAB
+  'terra15gjgmln8xj72rf69tx2zlrtcjzzvkcrdvrvfnmxja6kacz07pg0ssflecz', // FOOD
+  'terra14rfnhc2aru7jp304lht3yf903necsnrt4cxd464cftsfcksw0rtsgundnt', // FRG
+  'terra1nuwdr5zaul2gnq88xapq8ythmaw4092kt8lxsl6jd36h47u8vpcqnrmdcm', // LNC
+  'terra1wx48f5g06l9qxw8k4gn3200lmseu85vkgangwyn9xdu66mtfsfxq60hkdt', // LCW
+  'terra1j9q30fspe7tn0nrxpjfnzzdha4xfkyznluwnqrgxshtyv2tfe5kswnrj6c', // LUNW
+  'terra1genyaw32qah4544m0sfgmchegf7emft77u7hug63cc6a72mvpntsfupzmd', // KNEEL
+  'terra1nv36kq4dpxf4d00w4mv4w095ek8kv48f54v46qduruy4fwd2dtzq2uk70j', // TKMN
+  'terra12j3xuxx52cg045qk37ee4k4u4fsgvyuf8d89dh7c9mr706jvxdascahqej', // ROTTI
+  'terra1m58hc296srr6xygrrfyu6u0e32pl8d459nfs55pmegke8zlv94rqsjz882', // CATWIFHAT
+  'terra19fufgpaec6c85nrw9j2a40rshdgcm9rhn6hlj2zmx03utpqkh2ls8jnxkz', // LUPEPE
+  'terra1ljyvgw50u67r3ep7pp7qexgnsgy96fl57q0suut325ehed7eal8qwdtdq4', // ELPACO
+  'terra10quf590wyr8tuf3pp05hgwm94n3dgfnma377uwaynl3tj47df7nskwdxgs', // CNIP
+  'terra14exvtapxa3s3aw3kua8f8rfttwlfqx6xh0ccsu42z78srmphsrksrdfx9f', // THC
+  'terra1le9l8gpwl2f48xluphnwkqrnhwxqt27xhducfzqvncmsh9swavlqjpy7c9', // FUN
+  'terra19eytmx0yd3m5udlv7rh6u429g6ddjm2cndwv5cxndcymrztx4krqz9p4t6', // COFFEE
+  'terra1wez9puj43v4s25vrex7cv3ut3w75w4h6j5e537sujyuxj0r5ne2qp9uwl9', // FROG
+  'terra13y0q6dxwm3h02hqdecqy2uys7d8c4rgj34dpzwk9aa4m5jknj55s3evuu7', // BUTCHER
+  'terra1jy0qqp7nyj5uz34t0w5yav006lak4zgspa6d89c0jlzy7zhknpsqz0q9vs', // HMEME
+  'terra1rk57qhszgdxt7vp6f7xhuqq5k7kdrqz5cevee4jfvyw7rgga6snqv4tj6m', // FUTUREFLARE
+  'terra13d6xlk4d6cfa6c5c7n2ffua5d5fk5ggfq8vsxr34xnxr07nmke0qajzu8y', // ELON
+];
 const DUST_ULUNC = 1000000;
 const KNOWN_HEALTHY = new Set(['uluna','uusd','ukrw','usdr','umnt','ueur','ucny','ujpy','ugbp','uinr','ucad','uchf','uhkd','usgd','uthb','usek','unok','udkk','uidr','uphp','umyr','utwd']);
 
@@ -2787,9 +2821,11 @@ async function fetchRecentTxCount(addr) {
   } catch(e){return {total:0,daysSinceLast:999};}
 }
 
-// Discover CW20 contracts from wallet tx history
+// Discover CW20 contracts from wallet tx history + top tokens list
 async function discoverCW20Contracts(walletAddr) {
   const contracts = new Set();
+  // Always include top known tokens
+  TOP_CW20_TOKENS.forEach(c => contracts.add(c));
   try {
     // Query txs where wallet is sender
     const urls = [
