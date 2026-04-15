@@ -1230,9 +1230,25 @@ canvas {
   }
 
 } /* end @media 900px */
-/* ── Mobile chat: remove page padding-bottom ── */
+
+/* ── Mobile chat fullscreen ── */
 @media (hover:none), (max-width:900px) {
-  #page-chat.active {
+  body.mobile-chat-open {
+    overflow: hidden !important;
+    height: 100vh !important;
+    min-height: unset !important;
+    max-height: 100vh !important;
+  }
+  body.mobile-chat-open html,
+  html:has(body.mobile-chat-open) {
+    overflow: hidden !important;
+    height: 100vh !important;
+  }
+  body.mobile-chat-open #page-chat.active {
+    padding: 8px 12px 0 !important;
+    margin-bottom: 0 !important;
+  }
+  body.mobile-chat-open #chat-input-bar {
     padding-bottom: 0 !important;
     margin-bottom: 0 !important;
   }
