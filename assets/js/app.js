@@ -1417,7 +1417,12 @@ async function renderPoolMilestoneBanner() {
   }).join('');
 }
 
-function renderChatPage() { loadChatFromChain(); renderPoolMilestoneBanner(); }
+function renderChatPage() {
+  // Show cached messages instantly if available
+  if (cachedMsgs.length) renderChatMessages(cachedMsgs);
+  loadChatFromChain();
+  renderPoolMilestoneBanner();
+}
 // Wait for all scripts to load before initializing
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => { renderChatPage(); });
