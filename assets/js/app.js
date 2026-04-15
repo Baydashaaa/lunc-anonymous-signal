@@ -175,41 +175,38 @@ function showPage(name, e, skipHistory) {
   if (name === 'vote') { applyStoredVotes(); applyVoteStates(); renderVotes(); loadVotesFromWorker(); }
   if (name === 'chat') renderChatPage();
   if (name === 'bag')  renderOracleBag();
-  // Mobile chat: fullscreen mode
+  // Mobile chat: hide footer, expand messages area
   const footer = document.querySelector('footer');
   if (_isMobileChat()) {
     if (name === 'chat') {
       if (footer) footer.style.display = 'none';
-      document.body.style.overflow = 'hidden';
-      const nav = document.querySelector('nav');
-      const navH = nav ? nav.offsetHeight : 60;
+      document.body.style.overflow = 'auto';
       const chatPage = document.getElementById('page-chat');
       if (chatPage) {
-        chatPage.style.position = 'fixed';
-        chatPage.style.top = navH + 'px';
-        chatPage.style.left = '0';
-        chatPage.style.right = '0';
-        chatPage.style.bottom = '0';
-        chatPage.style.height = 'calc(100dvh - ' + navH + 'px)';
-        chatPage.style.maxHeight = 'calc(100dvh - ' + navH + 'px)';
-        chatPage.style.maxWidth = '100%';
         chatPage.style.padding = '8px 12px 0';
-        chatPage.style.display = 'flex';
-        chatPage.style.flexDirection = 'column';
-        chatPage.style.overflow = 'hidden';
-        chatPage.style.background = 'var(--bg)';
-        chatPage.style.zIndex = '10';
       }
       const msgs = document.getElementById('chat-page-messages');
-      if (msgs) { msgs.style.flex = '1'; msgs.style.overflowY = 'auto'; msgs.style.minHeight = '0'; }
+      if (msgs) {
+        // Set messages height to fill available screen space
+        const nav = document.querySelector('nav');
+        const navH = nav ? nav.offsetHeight : 60;
+        const inputBar = document.getElementById('chat-input-bar');
+        const inputH = inputBar ? inputBar.offsetHeight : 140;
+        const badgeEl = document.querySelector('.chat-mobile-badge');
+        const badgeH = badgeEl ? badgeEl.offsetHeight + 8 : 30;
+        const available = window.innerHeight - navH - inputH - badgeH - 16;
+        msgs.style.minHeight = Math.max(available, 300) + 'px';
+        msgs.style.overflowY = 'auto';
+      }
       const inputBar = document.getElementById('chat-input-bar');
-      if (inputBar) { inputBar.style.flexShrink = '0'; inputBar.style.padding = '8px 0 16px'; }
+      if (inputBar) { inputBar.style.padding = '8px 0 16px'; }
     } else {
       if (footer) footer.style.display = '';
       document.body.style.overflow = '';
-      // Reset chat page styles when leaving
       const chatPage = document.getElementById('page-chat');
       if (chatPage) chatPage.removeAttribute('style');
+      const msgs = document.getElementById('chat-page-messages');
+      if (msgs) msgs.removeAttribute('style');
     }
   }
   if (!skipHistory && history.pushState) {
