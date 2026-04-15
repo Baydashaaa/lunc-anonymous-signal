@@ -232,19 +232,23 @@
   </script>
 
 <style>body{min-height:100vh;display:flex;flex-direction:column;}footer,.site-footer{margin-top:auto;flex-shrink:0;}nav{flex-shrink:0;}.page{width:100%;}.page.active{display:block;}.page#page-reputation.active,.page#page-treasury.active{flex:1;min-height:calc(100vh - 80px);}
-.page#page-chat.active{display:flex;flex-direction:column;}
-#chat-page-messages{flex:1;overflow-y:auto;min-height:0;scrollbar-width:thin;scrollbar-color:rgba(123,92,255,0.4) transparent;}
-#chat-page-messages .chat-page-msg:first-child{margin-top:auto;}
-#chat-input-bar{flex-shrink:0;}
+/* Desktop: internal scroll */
 #chat-page-messages::-webkit-scrollbar{width:4px;}
 #chat-page-messages::-webkit-scrollbar-track{background:transparent;}
 #chat-page-messages::-webkit-scrollbar-thumb{background:linear-gradient(180deg,rgba(123,92,255,0.6),rgba(0,212,255,0.4));border-radius:4px;}
 #chat-page-messages::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,rgba(123,92,255,0.9),rgba(0,212,255,0.7));}
-@media(hover:none),(max-width:600px){
-  .chat-desktop-header{display:none!important;margin:0!important;}
+@media(min-width:601px){
+  .page#page-chat.active{display:flex;flex-direction:column;height:calc(100vh - 80px);}
+  #chat-page-messages{flex:1;overflow-y:auto;min-height:0;scrollbar-width:thin;scrollbar-color:rgba(123,92,255,0.4) transparent;}
+  #chat-page-messages .chat-page-msg:first-child{margin-top:auto;}
+  #chat-input-bar{flex-shrink:0;}
+}
+/* Mobile: normal scroll + fixed input bar */
+@media(max-width:600px),(hover:none) and (max-width:900px){
+  .chat-desktop-header{display:none!important;}
   .chat-mobile-badge{display:block!important;}
-  #page-chat{padding-top:8px!important;}
-  #chat-input-bar{padding-bottom:12px!important;}
+  #page-chat{padding-top:8px!important;padding-bottom:140px!important;}
+  #chat-input-bar{position:fixed!important;bottom:0!important;left:0!important;right:0!important;padding:10px 16px 20px!important;background:var(--bg)!important;border-top:1px solid var(--border)!important;z-index:100!important;}
 }
 </style>
 <style>
@@ -1055,14 +1059,14 @@
 <div class="page" id="page-chat" style="max-width:860px;padding:32px 24px 0;">
 
  <!-- Header -->
- <div class="chat-desktop-header" style="text-align:center;margin-bottom:24px;">
+ <div style="text-align:center;margin-bottom:24px;">
   <div class="tag">On-Chain Community</div>
   <h1 style="margin-bottom:8px;">DAO <span>Chat</span></h1>
   <p class="subtitle">Every message stored forever on Terra Classic · 5,000 LUNC per message</p>
  </div>
 
  <!-- Info bar -->
- <div class="chat-desktop-header" style="display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:24px;">
+ <div style="display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:24px;">
   <div style="display:flex;align-items:center;gap:6px;background:rgba(232,200,64,0.08);border:1px solid rgba(232,200,64,0.2);border-radius:20px;padding:7px 16px;">
    <span style="font-size:13px;">🎰</span>
    <span style="font-size:11px;color:var(--gold);">Every 10th message = <strong>+1 Weekly Draw entry</strong></span>
@@ -1083,7 +1087,6 @@
 
  <!-- Input bar -->
  <div id="chat-input-bar" style="padding:12px 0 32px;">
-  <div class="chat-mobile-badge" style="display:none;text-align:center;margin-bottom:8px;"><span style="font-size:10px;color:var(--gold);">🎰 Every 10th message = <strong>+1 Weekly Draw entry</strong></span></div>
   <div id="chat-page-connect-prompt" style="text-align:center;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;">
    <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">Connect your wallet to join the conversation</div>
    <button class="btn btn-primary" onclick="openBagWalletPicker()" style="width:100%;padding:14px;">🔑 Connect Wallet</button>
