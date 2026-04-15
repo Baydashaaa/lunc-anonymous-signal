@@ -175,20 +175,40 @@ function showPage(name, e, skipHistory) {
   if (name === 'vote') { applyStoredVotes(); applyVoteStates(); renderVotes(); loadVotesFromWorker(); }
   if (name === 'chat') renderChatPage();
   if (name === 'bag')  renderOracleBag();
-  // Mobile chat: hide footer, lock body scroll, set dynamic top
+  // Mobile chat: fullscreen mode
   const footer = document.querySelector('footer');
   if (_isMobileChat()) {
     if (name === 'chat') {
       if (footer) footer.style.display = 'none';
       document.body.style.overflow = 'hidden';
-      // Set top offset dynamically based on actual nav height
       const nav = document.querySelector('nav');
       const navH = nav ? nav.offsetHeight : 60;
       const chatPage = document.getElementById('page-chat');
-      if (chatPage) chatPage.style.top = navH + 'px';
+      if (chatPage) {
+        chatPage.style.position = 'fixed';
+        chatPage.style.top = navH + 'px';
+        chatPage.style.left = '0';
+        chatPage.style.right = '0';
+        chatPage.style.bottom = '0';
+        chatPage.style.height = 'auto';
+        chatPage.style.maxWidth = '100%';
+        chatPage.style.padding = '8px 12px 0';
+        chatPage.style.display = 'flex';
+        chatPage.style.flexDirection = 'column';
+        chatPage.style.overflow = 'hidden';
+        chatPage.style.background = 'var(--bg)';
+        chatPage.style.zIndex = '10';
+      }
+      const msgs = document.getElementById('chat-page-messages');
+      if (msgs) { msgs.style.flex = '1'; msgs.style.overflowY = 'auto'; msgs.style.minHeight = '0'; }
+      const inputBar = document.getElementById('chat-input-bar');
+      if (inputBar) { inputBar.style.flexShrink = '0'; inputBar.style.padding = '8px 0 16px'; }
     } else {
       if (footer) footer.style.display = '';
       document.body.style.overflow = '';
+      // Reset chat page styles when leaving
+      const chatPage = document.getElementById('page-chat');
+      if (chatPage) chatPage.removeAttribute('style');
     }
   }
   if (!skipHistory && history.pushState) {
