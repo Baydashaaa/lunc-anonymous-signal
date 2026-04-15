@@ -1273,6 +1273,8 @@ function renderChatMessages(msgs) {
       </div>
     </div>`;
   }).join('');
+  // Scroll to latest message
+  requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
 }
 
 async function loadChatFromChain() {
