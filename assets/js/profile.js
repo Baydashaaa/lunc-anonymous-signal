@@ -180,7 +180,7 @@ function getUserTitleFromStats(qCount, upvotes) {
 // ── On-chain chat stats fetch ────────────────────────────────────────────────
 // Reads Treasury wallet txs for the connected wallet over last 7 days.
 // Chat tx: 5,000 LUNC ±1% + non-empty memo → groups by UTC calendar day
-// Free entries: every 10 msgs/day = 1 entry, max 2/day
+// Free entries: every 10th message (total) = +1 Weekly Draw entry
 // Also counts Q&A questions: each = +2 free entries
 // TREASURY_WALLET defined in app.js
 const PROFILE_LCD_NODES = [
@@ -302,13 +302,11 @@ async function fetchChatStats(address) {
   const msgCount = Object.values(days).reduce((s, n) => s + n, 0);
 
   let entriesEarned = qaCount * 2;
-  for (const cnt of Object.values(days)) {
-    entriesEarned += Math.min(Math.floor(cnt / 10), 2);
-  }
+  entriesEarned += Math.floor(msgCount / 10);
 
   const todayKey     = new Date().toISOString().slice(0, 10);
   const todayMsgs    = days[todayKey] || 0;
-  const todayEntries = Math.min(Math.floor(todayMsgs / 10), 2);
+  const todayEntries = Math.floor(todayMsgs / 10);
 
   return { msgCount, entriesEarned, todayMsgs, todayEntries, days, qaCount };
 }
@@ -667,35 +665,26 @@ function renderMessageProgress(stats) {
 
   const { msgCount, entriesEarned, todayMsgs, todayEntries } = stats;
 
-  // Progress to next entry today: X/10 msgs
-  const todayProgress = todayMsgs % 10;
-  const pct = Math.round((todayProgress / 10) * 100);
-
-  // Max daily entries info
-  const maxedToday = todayEntries >= 2;
+  // Progress to next entry: X/10 msgs total
+  const totalProgress = msgCount % 10;
+  const pct = Math.round((totalProgress / 10) * 100);
 
   el.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
       <span style="font-size:11px;color:var(--muted);">💬 Chat messages → free Weekly lottery entries</span>
-      <span style="font-size:11px;color:var(--green);font-weight:700;">${entriesEarned} ${entriesEarned === 1 ? 'entry' : 'entries'} earned this week</span>
+      <span style="font-size:11px;color:var(--green);font-weight:700;">${entriesEarned} ${entriesEarned === 1 ? 'entry' : 'entries'} earned</span>
     </div>
     <div style="background:rgba(255,255,255,0.06);border-radius:4px;height:6px;margin-bottom:10px;overflow:hidden;">
-      <div style="height:100%;border-radius:4px;background:linear-gradient(90deg,#1ec864,#4ade80);width:${maxedToday ? 100 : pct}%;transition:width 0.6s ease;"></div>
+      <div style="height:100%;border-radius:4px;background:linear-gradient(90deg,#1ec864,#4ade80);width:${pct}%;transition:width 0.6s ease;"></div>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
       <div style="font-size:10px;padding:3px 10px;border-radius:20px;
         background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--muted);">
-        Every 10 msgs/day = +1 entry · max 2/day
+        Every 10th message = +1 Weekly Draw entry
       </div>
-      ${maxedToday
-        ? `<div style="font-size:10px;padding:3px 10px;border-radius:20px;
-            background:rgba(30,200,100,0.12);border:1px solid rgba(30,200,100,0.35);color:#4ade80;">
-            ✓ Max entries today (${todayEntries}/2)
-           </div>`
-        : `<div style="font-size:10px;color:var(--muted);padding:3px 0;">
-            Today: ${todayProgress}/10 to next entry
-           </div>`
-      }
+      <div style="font-size:10px;color:var(--muted);padding:3px 0;">
+        ${totalProgress}/10 to next entry
+      </div>
     </div>
   `;
 }
@@ -818,7 +807,7 @@ function renderHistoryTab(tab, myAnswers, myQuestions) {
         </div>
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;" id="chat-stats-days"></div>
         <div style="margin-top:14px;font-size:11px;color:var(--muted);line-height:1.6;">
-          Every <strong style="color:var(--text)">10 messages per day</strong> = 1 free Weekly Draw entry · max 2/day.
+          Every <strong style="color:var(--text)">10th message</strong> = 1 free Weekly Draw entry.
           Messages cost <strong style="color:var(--text)">5,000 LUNC</strong> each and go to the Protocol Treasury.
         </div>
       </div>`;
@@ -840,7 +829,7 @@ function renderHistoryTab(tab, myAnswers, myQuestions) {
       if (daysEl && Object.keys(stats.days).length) {
         const sorted = Object.entries(stats.days).sort((a,b) => b[0].localeCompare(a[0]));
         daysEl.innerHTML = sorted.map(([day, cnt]) => {
-          const entries = Math.min(Math.floor(cnt / 10), 2);
+          const entries = Math.floor(cnt / 10);
           const label   = new Date(day).toLocaleDateString([], {month:'short',day:'numeric'});
           return `<div style="font-size:10px;padding:3px 10px;border-radius:20px;
             background:${entries > 0 ? 'rgba(30,200,100,0.1)' : 'rgba(255,255,255,0.04)'};
