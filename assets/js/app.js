@@ -1273,10 +1273,6 @@ function renderChatMessages(msgs) {
       </div>
     </div>`;
   }).join('');
-  // Push messages to bottom when few, scroll to latest
-  const spacer = document.createElement('div');
-  spacer.style.marginTop = 'auto';
-  container.prepend(spacer);
   requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
 }
 
