@@ -1055,14 +1055,14 @@
 <div class="page" id="page-chat" style="max-width:860px;padding:32px 24px 0;">
 
  <!-- Header -->
- <div style="text-align:center;margin-bottom:24px;">
+ <div class="chat-desktop-header" style="text-align:center;margin-bottom:24px;">
   <div class="tag">On-Chain Community</div>
   <h1 style="margin-bottom:8px;">DAO <span>Chat</span></h1>
   <p class="subtitle">Every message stored forever on Terra Classic · 5,000 LUNC per message</p>
  </div>
 
  <!-- Info bar -->
- <div style="display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:24px;">
+ <div class="chat-desktop-header" style="display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:24px;">
   <div style="display:flex;align-items:center;gap:6px;background:rgba(232,200,64,0.08);border:1px solid rgba(232,200,64,0.2);border-radius:20px;padding:7px 16px;">
    <span style="font-size:13px;">🎰</span>
    <span style="font-size:11px;color:var(--gold);">Every 10th message = <strong>+1 Weekly Draw entry</strong></span>
@@ -1083,6 +1083,7 @@
 
  <!-- Input bar -->
  <div id="chat-input-bar" style="padding:12px 0 32px;">
+  <div class="chat-mobile-badge" style="display:none;text-align:center;margin-bottom:8px;"><span style="font-size:10px;color:var(--gold);">🎰 Every 10th message = <strong>+1 Weekly Draw entry</strong></span></div>
   <div id="chat-page-connect-prompt" style="text-align:center;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;">
    <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">Connect your wallet to join the conversation</div>
    <button class="btn btn-primary" onclick="openBagWalletPicker()" style="width:100%;padding:14px;">🔑 Connect Wallet</button>
