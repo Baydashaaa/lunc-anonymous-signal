@@ -461,14 +461,34 @@ function renderBoard() {
               ${a.isAdmin ? `<span class="badge-admin">🛡️ Admin</span>` : `${_getProfileAvatar(a.wallet) ? `<img src="${getProfileAvatar(a.wallet)}" style="width:18px;height:18px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:4px;">` : ''}<span class="q-alias">${_getDisplayName(a.wallet, a.alias)}</span>`}
               ${!a.isAdmin && a.wallet && window._walletScores ? getRankBadgeHTML(window._walletScores[a.wallet] || 0) : (a.title && !a.isAdmin ? `<span class="badge-title">${a.title}</span>` : '')}
             </div>
+            ${a.replyTo ? `<div style="margin-bottom:8px;padding:6px 10px;background:rgba(84,147,247,0.07);border-left:2px solid var(--accent);border-radius:0 6px 6px 0;">
+              <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:2px;display:flex;align-items:center;gap:4px;"><span>&#x21A9;&#xFE0E;</span>${a.replyTo.author}</div>
+              <div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.replyTo.text}</div>
+            </div>` : ''}
             <div class="answer-text">${a.text}</div>
-            <div class="answer-votes">
+            <div class="answer-votes" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
               <button class="vote-btn ${a.voted ? 'voted' : ''}" onclick="voteAnswer(${realQi},${ai})">👍 ${a.votes}</button>
+              <button
+                data-board-reply-qi="${realQi}"
+                data-board-reply-id="${a.id}"
+                data-board-reply-author="${_getDisplayName(a.wallet, a.alias).replace(/"/g,'&quot;')}"
+                data-board-reply-text="${a.text.replace(/"/g,'&quot;').replace(/\n/g,' ').slice(0,80)}"
+                style="background:none;border:none;color:var(--muted);font-size:11px;font-family:'Exo 2',sans-serif;cursor:pointer;padding:2px 0;display:inline-flex;align-items:center;gap:4px;"
+                onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">
+                <span style="font-style:normal;font-size:12px;line-height:1;">&#x21A9;&#xFE0E;</span> Reply
+              </button>
             </div>
           </div>
         `).join('')}
         <div class="answer-form ${q.formOpen ? 'open' : ''}" id="aform-${realQi}">
           <div class="answer-form-title">Submit anonymous answer</div>
+          <div id="board-reply-block-${realQi}" style="display:none;align-items:flex-start;gap:8px;margin-bottom:12px;padding:8px 10px;background:rgba(84,147,247,0.06);border:1px solid rgba(84,147,247,0.15);border-radius:8px;">
+            <div style="flex:1;padding:4px 8px;background:rgba(84,147,247,0.07);border-left:2px solid var(--accent);border-radius:0 5px 5px 0;">
+              <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:2px;display:flex;align-items:center;gap:4px;"><span>&#x21A9;&#xFE0E;</span><span class="board-reply-author"></span></div>
+              <div class="board-reply-text" style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+            </div>
+            <button onclick="clearBoardReply(${realQi})" style="background:none;border:none;color:var(--muted);font-size:15px;cursor:pointer;padding:2px 6px;line-height:1;flex-shrink:0;">✕</button>
+          </div>
           <div class="form-group">
             <label>Your Answer</label>
             <textarea id="atext-${realQi}" placeholder="Share your knowledge anonymously..." rows="4"></textarea>
@@ -487,17 +507,48 @@ function renderBoard() {
 function toggleAnswers(qi) { questions[qi].open = !questions[qi].open; renderBoard(); }
 function toggleAnswerForm(qi) { questions[qi].formOpen = !questions[qi].formOpen; questions[qi].open = true; renderBoard(); }
 
+// ─── BOARD ANSWER REPLY ───────────────────────────────────────
+window._boardReplyTo = {};
+
+window.setBoardReply = function(qi, answerId, author, text) {
+  window._boardReplyTo[qi] = { answerId, author, text };
+  const block = document.getElementById('board-reply-block-' + qi);
+  if (block) {
+    block.style.display = 'flex';
+    const nameEl = block.querySelector('.board-reply-author');
+    const textEl = block.querySelector('.board-reply-text');
+    if (nameEl) nameEl.textContent = author;
+    if (textEl) textEl.textContent = text.slice(0, 80) + (text.length > 80 ? '...' : '');
+    const textarea = document.getElementById('atext-' + qi);
+    if (textarea) textarea.focus();
+  }
+};
+
+window.clearBoardReply = function(qi) {
+  delete window._boardReplyTo[qi];
+  const block = document.getElementById('board-reply-block-' + qi);
+  if (block) block.style.display = 'none';
+};
+
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('[data-board-reply-qi]');
+  if (!btn) return;
+  const qi = btn.getAttribute('data-board-reply-qi');
+  window.setBoardReply(qi, btn.getAttribute('data-board-reply-id'), btn.getAttribute('data-board-reply-author'), btn.getAttribute('data-board-reply-text'));
+});
+
 async function submitAnswer(qi) {
   const text = document.getElementById('atext-' + qi).value.trim();
   if (!text) { alert('Please write your answer first.'); return; }
   if (!globalWalletAddress) { alert('Connect wallet to answer'); return; }
   const wallet = globalWalletAddress;
   const q = questions[qi];
+  const replyTo = window._boardReplyTo[qi] || null;
   try {
     const res = await fetch(`${WORKER_URL}/answer`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ questionId: q.id, text, wallet }),
+      body: JSON.stringify({ questionId: q.id, text, wallet, replyTo: replyTo ? { answerId: replyTo.answerId, author: replyTo.author, text: replyTo.text.slice(0,80) } : null }),
     });
     if (!res.ok) throw new Error('Failed to post answer');
     const data = await res.json();
@@ -505,9 +556,11 @@ async function submitAnswer(qi) {
       id: data.answerId,
       alias: 'Anonymous#' + wallet.slice(-4).toUpperCase(),
       isAdmin: false, wallet, text, votes: 0, voted: false,
+      replyTo: replyTo ? { answerId: replyTo.answerId, author: replyTo.author, text: replyTo.text.slice(0,80) } : null,
     });
     questions[qi].formOpen = false;
     questions[qi].open = true;
+    window.clearBoardReply(qi);
     renderBoard();
   } catch(e) {
     alert('Failed to post answer: ' + e.message);
