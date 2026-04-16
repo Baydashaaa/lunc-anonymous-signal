@@ -1,6 +1,6 @@
 {
   "_schema": "1.0",
-  "_updated": "2026-04-16T14:44:03.604Z",
+  "_updated": "2026-04-16T14:44:09.517Z",
   "questions": [
     {
       "id": "LUNC-NBIRAHX",
@@ -21,16 +21,6 @@
       "expiresAt": 1775379038,
       "votes": 1,
       "answers": [
-        {
-          "id": "ANS-MNUMTYQT",
-          "wallet": "terra1jhtmkmakjvvtwur05klc7fd72e5n39m4x75c2l",
-          "walletHash": "sha256:m4x75c2l",
-          "alias": "Joker",
-          "text": "+",
-          "createdAt": 1775929938,
-          "votes": 0,
-          "voters": []
-        },
         {
           "id": "ANS-MO1HUDGG",
           "wallet": "terra1jhtmkmakjvvtwur05klc7fd72e5n39m4x75c2l",
