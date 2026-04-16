@@ -318,7 +318,7 @@ canvas {
 
   /* ── Chat ── */
   #chat-page-messages {
-    max-height: 340px;
+    max-height: none;
   }
 
   /* ── Page header ── */
@@ -1230,17 +1230,3 @@ canvas {
   }
 
 } /* end @media 900px */
-
-/* ── Mobile chat: override body min-height ── */
-@media (hover:none) {
-  body.mobile-chat-open {
-    min-height: unset !important;
-    height: 100vh !important;
-    max-height: 100vh !important;
-    overflow: hidden !important;
-  }
-  body.mobile-chat-open #page-chat.active {
-    padding-bottom: 0 !important;
-    margin-bottom: 0 !important;
-  }
-}
