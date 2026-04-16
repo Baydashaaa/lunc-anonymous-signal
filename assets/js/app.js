@@ -1444,8 +1444,15 @@ async function loadChatFromChain() {
     try {
       const txBody = txBodies[i];        // has body.messages, body.memo
       const txMeta = txResponses[i];     // has txhash, timestamp
-      const memo   = txBody?.body?.memo || '';
-      if (!memo || memo.trim() === '') continue;
+      const rawMemo = txBody?.body?.memo || '';
+      if (!rawMemo || rawMemo.trim() === '') continue;
+      // Fix: LCD sometimes returns memo as Latin-1 misread UTF-8 — re-decode
+      let memo = rawMemo;
+      try {
+        const bytes = Uint8Array.from(rawMemo, c => c.charCodeAt(0));
+        const decoded = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+        if (decoded !== rawMemo) memo = decoded;
+      } catch(e) { /* keep original */ }
       const txMsgs = txBody?.body?.messages || [];
       let sender = null, luncAmount = 0;
       for (const msg of txMsgs) {
