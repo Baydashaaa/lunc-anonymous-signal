@@ -843,7 +843,13 @@ async function sendLuncDirect(fromAddr, toAddr, amountUluna, memo, chainId) {
   const finalAuthInfo = signed.authInfoBytes || authInfoP;
   const sigB          = Uint8Array.from(atob(signature.signature), c=>c.charCodeAt(0));
   const txRawP        = concat(encodeField(1,2,finalBody), encodeField(2,2,finalAuthInfo), encodeField(3,2,sigB));
-  const txBase64      = btoa(String.fromCharCode(...txRawP));
+  // btoa with String.fromCharCode fails on large arrays on mobile - use chunked approach
+  let txBase64 = '';
+  const chunkSize = 8192;
+  for (let i = 0; i < txRawP.length; i += chunkSize) {
+    txBase64 += String.fromCharCode(...txRawP.subarray(i, i + chunkSize));
+  }
+  txBase64 = btoa(txBase64);
 
   const res  = await fetch(`${LCD}/cosmos/tx/v1beta1/txs`, {
     method: 'POST',
@@ -1446,13 +1452,13 @@ async function loadChatFromChain() {
       const txMeta = txResponses[i];     // has txhash, timestamp
       const rawMemo = txBody?.body?.memo || '';
       if (!rawMemo || rawMemo.trim() === '') continue;
-      // Fix: LCD sometimes returns memo as Latin-1 misread UTF-8 — re-decode
+      // Fix emoji: LCD may return UTF-8 bytes misread as Latin-1 — re-decode
       let memo = rawMemo;
       try {
-        const bytes = Uint8Array.from(rawMemo, c => c.charCodeAt(0));
+        const bytes = Uint8Array.from(rawMemo, c => c.charCodeAt(0) & 0xFF);
         const decoded = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
         if (decoded !== rawMemo) memo = decoded;
-      } catch(e) { /* keep original */ }
+      } catch(e) { /* keep original if not valid UTF-8 sequence */ }
       const txMsgs = txBody?.body?.messages || [];
       let sender = null, luncAmount = 0;
       for (const msg of txMsgs) {
