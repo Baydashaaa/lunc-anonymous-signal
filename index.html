@@ -1125,15 +1125,13 @@
      <span style="font-size:10px;color:var(--green);">Connected</span>
      <span style="font-size:10px;font-family:monospace;color:var(--muted);" id="chat-page-addr"></span>
     </div>
-    <div style="display:flex;align-items:flex-end;gap:0;">
-     <!-- Reply quote block -->
-     <div id="chat-reply-block" style="display:none;align-items:flex-start;gap:8px;padding:8px 16px 0;width:100%;">
-      <div style="flex:1;padding:6px 10px;background:rgba(84,147,247,0.07);border-left:2px solid var(--accent);border-radius:0 6px 6px 0;">
-       <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:2px;">↩ <span id="chat-reply-author"></span></div>
-       <div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="chat-reply-text"></div>
-      </div>
-      <button onclick="clearChatReply()" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:4px;line-height:1;flex-shrink:0;" title="Cancel reply">✕</button>
+    <!-- Reply quote block -->
+    <div id="chat-reply-block" style="display:none;align-items:flex-start;gap:8px;padding:8px 16px 0;border-bottom:1px solid var(--border);">
+     <div style="flex:1;padding:6px 10px;background:rgba(84,147,247,0.07);border-left:2px solid var(--accent);border-radius:0 6px 6px 0;">
+      <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:2px;">↩ <span id="chat-reply-author"></span></div>
+      <div style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="chat-reply-text"></div>
      </div>
+     <button onclick="clearChatReply()" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:4px 8px;line-height:1;flex-shrink:0;" title="Cancel reply">✕</button>
     </div>
     <div style="display:flex;align-items:flex-end;gap:0;">
      <textarea id="chat-page-input"
