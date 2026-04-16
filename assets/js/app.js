@@ -1357,7 +1357,7 @@ function renderChatMessages(msgs) {
             if (!orig) return '';
             const origName = _getDisplayName(orig.fullAddr, orig.author);
             return `<div style="margin-bottom:8px;padding:6px 10px;background:rgba(84,147,247,0.07);border-left:2px solid var(--accent);border-radius:0 6px 6px 0;cursor:pointer;" onclick="document.getElementById('msg-${orig.txHash}')?.scrollIntoView({behavior:'smooth'})">
-              <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:2px;display:flex;align-items:center;gap:4px;"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M10 2H5C3.3 2 2 3.3 2 5v1M2 6l3-3M2 6l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>${origName}</div>
+              <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:2px;display:flex;align-items:center;gap:4px;"><span style="font-style:normal;">&#x21A9;&#xFE0E;</span>${origName}</div>
               <div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${orig.text.slice(0,80)}</div>
             </div>`;
           })() : ''}
@@ -1372,7 +1372,7 @@ function renderChatMessages(msgs) {
             data-reply-text="${m.text.replace(/"/g,'&quot;').replace(/\n/g,' ').slice(0,80)}"
             style="margin-top:6px;background:none;border:none;color:var(--muted);font-size:11px;font-family:'Exo 2',sans-serif;cursor:pointer;padding:2px 0;letter-spacing:0.03em;display:inline-flex;align-items:center;gap:4px;"
             onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">
-            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style="pointer-events:none;"><path d="M10 2H5C3.3 2 2 3.3 2 5v1M2 6l3-3M2 6l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span style="font-style:normal;font-size:12px;line-height:1;">&#x21A9;&#xFE0E;</span>
             Reply
           </button>
         </div>
