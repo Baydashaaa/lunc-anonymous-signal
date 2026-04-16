@@ -207,6 +207,8 @@ function showPage(name, e, skipHistory) {
         msgs.style.overflowY = 'auto';
       }
       requestAnimationFrame(() => requestAnimationFrame(recalcMsgsHeight));
+      // Also run after 300ms for slow-rendering browsers (Keplr)
+      setTimeout(recalcMsgsHeight, 300);
     } else {
       if (footer) footer.style.display = '';
       document.body.classList.remove('mobile-chat-open');
