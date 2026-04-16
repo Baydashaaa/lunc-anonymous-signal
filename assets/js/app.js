@@ -477,6 +477,14 @@ function renderBoard() {
                 onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">
                 <span style="font-style:normal;font-size:12px;line-height:1;">&#x21A9;&#xFE0E;</span> Reply
               </button>
+              ${a.wallet && a.wallet === (globalWalletAddress || connectedAddress) ? `
+              <button
+                data-delete-qi="${realQi}"
+                data-delete-aid="${a.id}"
+                style="background:none;border:none;color:rgba(255,96,96,0.5);font-size:11px;font-family:'Exo 2',sans-serif;cursor:pointer;padding:2px 0;display:inline-flex;align-items:center;gap:4px;margin-left:auto;"
+                onmouseover="this.style.color='#ff6060'" onmouseout="this.style.color='rgba(255,96,96,0.5)'">
+                🗑 Delete
+              </button>` : ''}
             </div>
           </div>
         `).join('')}
@@ -506,6 +514,33 @@ function renderBoard() {
 
 function toggleAnswers(qi) { questions[qi].open = !questions[qi].open; renderBoard(); }
 function toggleAnswerForm(qi) { questions[qi].formOpen = !questions[qi].formOpen; questions[qi].open = true; renderBoard(); }
+
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('[data-delete-qi]');
+  if (!btn) return;
+  const qi = parseInt(btn.getAttribute('data-delete-qi'));
+  const aid = btn.getAttribute('data-delete-aid');
+  deleteAnswer(qi, aid);
+});
+
+async function deleteAnswer(qi, aid) {
+  if (!confirm('Delete your answer? This cannot be undone.')) return;
+  const q = questions[qi];
+  const answerIdx = q.answers.findIndex(a => a.id === aid);
+  if (answerIdx === -1) return;
+  try {
+    const res = await fetch(`${WORKER_URL}/answer/delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questionId: q.id, answerId: aid, wallet: globalWalletAddress }),
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Failed'); }
+    questions[qi].answers.splice(answerIdx, 1);
+    renderBoard();
+  } catch(e) {
+    alert('Failed to delete: ' + e.message);
+  }
+}
 
 // ─── BOARD ANSWER REPLY ───────────────────────────────────────
 window._boardReplyTo = {};
@@ -543,6 +578,10 @@ async function submitAnswer(qi) {
   if (!globalWalletAddress) { alert('Connect wallet to answer'); return; }
   const wallet = globalWalletAddress;
   const q = questions[qi];
+  // Anti-spam: max 3 answers per question per day per wallet
+  const today = new Date().toISOString().slice(0, 10);
+  const todayAnswers = q.answers.filter(a => a.wallet === wallet && a.createdAt && new Date(a.createdAt * 1000).toISOString().slice(0, 10) === today);
+  if (todayAnswers.length >= 3) { alert('You can only post 3 answers per question per day.'); return; }
   const replyTo = window._boardReplyTo[qi] || null;
   try {
     const res = await fetch(`${WORKER_URL}/answer`, {
