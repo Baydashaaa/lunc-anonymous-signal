@@ -358,9 +358,28 @@ function getUserTitleFromStats(qCount, upvotes) {
 // ─── PROFILE DATA ─────────────────────────────────────────────
 function getProfileKey(address) { return 'profile_' + address; }
 
+// In-memory cache to avoid duplicate Worker requests
+const _profileFetchCache = {};
+
 function loadProfile(address) {
   if (!address) return null;
   try { return JSON.parse(localStorage.getItem(getProfileKey(address)) || 'null'); } catch(e) { return null; }
+}
+
+// Prefetch profiles for multiple addresses at once (deduped, cached)
+async function prefetchProfiles(addresses) {
+  if (!addresses || !addresses.length) return;
+  const unique = [...new Set(addresses.filter(Boolean))];
+  const toFetch = unique.filter(addr => {
+    if (_profileFetchCache[addr]) return false; // already fetching/fetched
+    const p = loadProfile(addr);
+    if (p && (p.nickname || p.avatar)) return false; // already in localStorage
+    return true;
+  });
+  if (!toFetch.length) return;
+  // Mark as fetching to prevent duplicate requests
+  toFetch.forEach(addr => { _profileFetchCache[addr] = true; });
+  await Promise.all(toFetch.map(addr => loadProfileFromWorker(addr).catch(() => null)));
 }
 
 function saveProfileData(address, data) {
