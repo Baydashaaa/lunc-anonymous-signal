@@ -2733,46 +2733,5 @@ document.getElementById('luncdash-modal').addEventListener('click', function(e) 
   if (e.target === this) closeLuncdashModal();
 });
 </script>
-<!-- DEBUG OVERLAY - REMOVE AFTER DEBUGGING -->
-<div id="debug-overlay" style="display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,0.85);color:#0f0;font-family:monospace;font-size:11px;padding:8px;z-index:99999;line-height:1.6;"></div>
-<script>
-function showDebug() {
-  const el = document.getElementById('debug-overlay');
-  if (!el) return;
-  const chat = document.getElementById('page-chat');
-  const msgs = document.getElementById('chat-page-messages');
-  const inputBar = document.getElementById('chat-input-bar');
-  const nav = document.querySelector('nav');
-  const footer = document.querySelector('footer');
-  const chatRect = chat ? chat.getBoundingClientRect() : {};
-  el.style.display = 'block';
-  el.innerHTML = [
-    'window.innerH: ' + window.innerHeight,
-    'body.scrollH: ' + document.body.scrollHeight,
-    'body.clientH: ' + document.body.clientHeight,
-    'nav.H: ' + (nav ? nav.offsetHeight : 'n/a'),
-    'chat top: ' + (chatRect.top|0) + ' bot: ' + (chatRect.bottom|0) + ' H: ' + (chatRect.height|0),
-    'msgs.H: ' + (msgs ? msgs.offsetHeight : 'n/a'),
-    'input.H: ' + (inputBar ? inputBar.offsetHeight : 'n/a'),
-    'footer: ' + (footer ? footer.style.display||'visible' : 'n/a'),
-    'body overflow: ' + document.body.style.overflow,
-    'body minH: ' + document.body.style.minHeight,
-  ].join('<br>');
-}
-// Show debug when chat page is visible
-const _origShow = window.showPage;
-if (typeof _origShow === 'function') {
-  window.showPage = function(name, e, skip) {
-    _origShow(name, e, skip);
-    if (name === 'chat') setTimeout(showDebug, 300);
-    else document.getElementById('debug-overlay').style.display = 'none';
-  };
-}
-// Also show on load if chat is active
-window.addEventListener('load', () => {
-  if (location.hash === '#chat') setTimeout(showDebug, 500);
-});
-</script>
-<!-- END DEBUG -->
 </body>
 </html>
