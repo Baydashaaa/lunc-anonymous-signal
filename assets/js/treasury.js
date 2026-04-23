@@ -21,6 +21,11 @@ const T_LCD_TX = [
   'https://rest.cosmos.directory/terra',
   'https://lcd.terraclassic.community',
 ];
+// FCD nodes — more reliable for tx history queries
+const T_FCD = [
+  'https://terra-classic-fcd.publicnode.com',
+  'https://fcd.terra-classic.hexxagon.io',
+];
 function tFmt(uluna) {
   const n = uluna / 1_000_000;
   if (n >= 1_000_000) return (n/1_000_000).toFixed(2) + 'M LUNC';
@@ -117,6 +122,41 @@ async function tLoadRecentTxs(retries = 5) {
         } catch(e) {
           console.warn(`Treasury txs: ${lcd} failed:`, e.message);
           continue;
+        }
+      }
+    }
+    if (!data) {
+      // Fallback to FCD — different API format but more reliable for tx history
+      for (const fcd of T_FCD) {
+        try {
+          const ctrl = new AbortController();
+          const timer = setTimeout(() => ctrl.abort(), 8000);
+          const url = `${fcd}/v1/txs?account=${wallet}&limit=${limit}`;
+          const r = await fetch(url, { signal: ctrl.signal });
+          clearTimeout(timer);
+          if (!r.ok) continue;
+          const body = await r.json();
+          if (!body.txs) continue;
+          // Convert FCD format to LCD format
+          data = {
+            txs: body.txs.map(tx => ({
+              body: { memo: tx.tx?.value?.memo || '', messages: (tx.tx?.value?.msg || []).map(m => ({
+                '@type': m.type === 'bank/MsgSend' ? '/cosmos.bank.v1beta1.MsgSend' : m.type,
+                from_address: m.value?.from_address || '',
+                to_address: m.value?.to_address || '',
+                amount: m.value?.amount || [],
+              })) }
+            })),
+            tx_responses: body.txs.map(tx => ({
+              txhash: tx.txhash || tx.id || '',
+              timestamp: tx.timestamp || '',
+              code: tx.code || 0,
+            })),
+          };
+          console.log(`Treasury txs: FCD fallback ${fcd} success`);
+          break;
+        } catch(e) {
+          console.warn(`Treasury txs: FCD ${fcd} failed:`, e.message);
         }
       }
     }
