@@ -77,10 +77,24 @@ async function tLoadRecentTxs(retries = 5) {
 
   // Helper: fetch txs for one wallet and parse into unified rows
   async function fetchTxsFor(wallet, limit) {
-    const url = `${T_LCD[0]}/cosmos/tx/v1beta1/txs?events=transfer.recipient%3D%27${wallet}%27&pagination.limit=${limit}&order_by=2`;
-    const r = await fetch(url);
-    if (!r.ok) return [];
-    const data = await r.json();
+    // Try all LCD nodes with timeout fallback
+    let data = null;
+    for (const lcd of T_LCD) {
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 8000);
+        const url = `${lcd}/cosmos/tx/v1beta1/txs?events=transfer.recipient%3D%27${wallet}%27&pagination.limit=${limit}&order_by=2`;
+        const r = await fetch(url, { signal: ctrl.signal });
+        clearTimeout(timer);
+        if (!r.ok) continue;
+        data = await r.json();
+        break; // success — stop trying
+      } catch(e) {
+        console.warn(`Treasury txs: LCD ${lcd} failed:`, e.message);
+        continue;
+      }
+    }
+    if (!data) return [];
     const txBodies    = data.txs || [];
     const txResponses = data.tx_responses || [];
     const results = [];
