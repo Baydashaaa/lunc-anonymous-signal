@@ -1464,11 +1464,43 @@ async function loadChatFromChain() {
   if (!cachedMsgs.length) {
     container.innerHTML = `<div style="text-align:center;padding:40px 20px;"><div style="font-size:22px;margin-bottom:10px;">⏳</div><div style="color:var(--muted);font-size:12px;">Loading messages from blockchain...</div></div>`;
   }
+  // Use Oracle Draw Worker proxy — bypasses CORS/DNS issues and falls back across multiple nodes server-side
   let txList = null;
   try {
-    const res = await fetch(`https://terra-classic-lcd.publicnode.com/cosmos/tx/v1beta1/txs?events=transfer.recipient=%27${CHAT_HISTORY_WALLET}%27&pagination.limit=50&order_by=2`);
-    if (res.ok) { txList = await res.json(); }
-  } catch(e) {}
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 12000);
+    const res = await fetch(
+      `https://oracle-draw.vladislav-baydan.workers.dev/proxy-txs?wallet=${CHAT_HISTORY_WALLET}&limit=50`,
+      { signal: ctrl.signal }
+    );
+    clearTimeout(timer);
+    if (res.ok) {
+      const body = await res.json();
+      // Worker returns FCD-shape: { txs: [{ txhash, timestamp, tx: { value: { memo, msg } } }] }
+      // Convert to LCD-shape that the parser below expects (txs[] + tx_responses[])
+      const rawTxs = body.txs || [];
+      txList = {
+        txs: rawTxs.map(t => ({
+          body: {
+            memo: t.tx?.value?.memo || '',
+            messages: (t.tx?.value?.msg || []).map(m => ({
+              '@type': '/cosmos.bank.v1beta1.MsgSend',
+              from_address: m.value?.from_address || '',
+              to_address:   m.value?.to_address   || '',
+              amount:       m.value?.amount        || [],
+            })),
+          },
+        })),
+        tx_responses: rawTxs.map(t => ({
+          txhash:    t.txhash || '',
+          timestamp: t.timestamp || '',
+          code:      t.code || 0,
+        })),
+      };
+    }
+  } catch(e) {
+    console.warn('Chat: Worker proxy failed:', e.message);
+  }
   if (!txList) {
     if (!cachedMsgs.length) {
       container.innerHTML = `<div style="text-align:center;padding:40px 20px;"><div style="font-size:22px;margin-bottom:10px;">⚠️</div><div style="color:var(--muted);font-size:12px;">Could not reach blockchain nodes</div><button onclick="loadChatFromChain()" style="margin-top:14px;background:rgba(84,147,247,0.1);border:1px solid rgba(84,147,247,0.25);color:var(--accent);border-radius:8px;padding:7px 16px;font-family:'Exo 2',sans-serif;font-size:11px;cursor:pointer;">↻ Retry now</button></div>`;
