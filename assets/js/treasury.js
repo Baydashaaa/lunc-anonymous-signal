@@ -75,44 +75,86 @@ async function tLoadRecentTxs(retries = 5) {
   }
   el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:12px;">Loading transactions...</div>';
 
-  // Helper: fetch txs for one wallet and parse into unified rows
-  async function fetchTxsFor(wallet, limit) {
-    const url = `${T_LCD[0]}/cosmos/tx/v1beta1/txs?events=transfer.recipient%3D%27${wallet}%27&pagination.limit=${limit}&order_by=2`;
-    const r = await fetch(url);
-    if (!r.ok) return [];
-    const data = await r.json();
-    const txBodies    = data.txs || [];
-    const txResponses = data.tx_responses || [];
-    const results = [];
-    const count = Math.max(txBodies.length, txResponses.length);
+  // Helper: fetch txs for one wallet — tries FCD first, falls back to LCD
+  const T_FCD = [
+    'https://fcd.terra-classic.hexxagon.io',
+    'https://terra-classic-fcd.publicnode.com',
+  ];
 
-    const CHAT_AMT = 5000 * 1e6;
-    const QA_WEEKLY_AMT = 100000 * 1e6; // Q&A → Weekly Pool
-    const QA_TREASURY_AMT = 100000 * 1e6; // Q&A → Treasury
-    const DRAW_NFT_MIN = 24750 * 1e6; // ~25k LUNC (Common NFT with tax)
+  async function fetchTxsFor(wallet, limit) {
+    let txs = [];
+
+    // Try FCD first (returns richer tx data with old format)
+    for (const fcd of T_FCD) {
+      try {
+        const url = `${fcd}/v1/txs?account=${wallet}&limit=${limit}`;
+        const r = await fetch(url, {
+          headers: { Accept: 'application/json' },
+          signal: AbortSignal.timeout(8000),
+        });
+        if (!r.ok) continue;
+        const data = await r.json();
+        txs = data.txs || [];
+        if (txs.length) break;
+      } catch(e) { continue; }
+    }
+
+    // Fallback to LCD if FCD failed
+    if (!txs.length) {
+      for (const lcd of T_LCD) {
+        try {
+          const url = `${lcd}/cosmos/tx/v1beta1/txs?events=transfer.recipient%3D%27${wallet}%27&pagination.limit=${limit}&order_by=ORDER_BY_DESC`;
+          const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+          if (!r.ok) continue;
+          const data = await r.json();
+          // Convert LCD format to FCD-like format
+          const bodies = data.txs || [];
+          const metas  = data.tx_responses || [];
+          txs = metas.map((meta, i) => ({
+            txhash:    meta.txhash,
+            timestamp: meta.timestamp,
+            tx: {
+              value: {
+                memo: bodies[i]?.body?.memo || '',
+                msg:  (bodies[i]?.body?.messages || []).map(m => ({
+                  type:  m['@type'] || '',
+                  value: { amount: m.amount, from_address: m.from_address, to_address: m.to_address },
+                })),
+              },
+            },
+          }));
+          if (txs.length) break;
+        } catch(e) { continue; }
+      }
+    }
+
+    const results = [];
+    const CHAT_AMT      = 5000   * 1e6;
+    const QA_AMT        = 100000 * 1e6;
+    const DRAW_NFT_MIN  = 24750  * 1e6;
     const TOL = 0.05;
 
-    for (let i = 0; i < count; i++) {
-      const txBody = txBodies[i];
-      const txMeta = txResponses[i];
-      if (!txMeta) continue;
-
-      const tsRaw = txMeta.timestamp ? new Date(txMeta.timestamp) : null;
+    for (const tx of txs) {
+      const tsRaw = tx.timestamp ? new Date(tx.timestamp) : null;
       const ts = tsRaw
         ? tsRaw.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' + tsRaw.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})
         : '';
       const tsMs = tsRaw ? tsRaw.getTime() : 0;
-      const hash = txMeta.txhash || '';
-      const memo = txBody?.body?.memo || '';
-      const msgs = txBody?.body?.messages || [];
+      const hash = tx.txhash || '';
+      const memo = tx.tx?.value?.memo || tx.tx?.body?.memo || '';
+      const msgs = tx.tx?.value?.msg  || tx.tx?.body?.messages || [];
 
       let rawUluna = 0;
       for (const msg of msgs) {
-        const coins = msg.amount || [];
+        // FCD format
+        const coins = msg.value?.coins || msg.value?.amount || msg.amount || [];
         const lunc = Array.isArray(coins) ? coins.find(c => c.denom === 'uluna') : null;
         if (lunc) { rawUluna = parseInt(lunc.amount); break; }
       }
       if (!rawUluna) continue;
+
+      const QA_WEEKLY_AMT   = QA_AMT;
+      const QA_TREASURY_AMT = QA_AMT;
 
       // Classify by destination wallet + amount
       let label;
