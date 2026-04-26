@@ -88,26 +88,11 @@ async function tLoadRecentTxs(retries = 5) {
   async function fetchTxsFor(wallet, limit) {
     let txs = [];
 
-    // Try FCD first (returns richer tx data with old format)
-    for (const fcd of T_FCD) {
-      try {
-        const url = `${fcd}/v1/txs?account=${wallet}&limit=${limit}`;
-        const r = await fetch(url, {
-          headers: { Accept: 'application/json' },
-          signal: AbortSignal.timeout(8000),
-        });
-        if (!r.ok) continue;
-        const data = await r.json();
-        txs = data.txs || [];
-        if (txs.length) break;
-      } catch(e) { continue; }
-    }
-
-    // Fallback to LCD if FCD failed
+    // Use LCD with query parameter (modern Cosmos SDK syntax)
     if (!txs.length) {
       for (const lcd of T_LCD) {
         try {
-          const url = `${lcd}/cosmos/tx/v1beta1/txs?events=transfer.recipient%3D%27${wallet}%27&pagination.limit=${limit}&order_by=2`;
+          const url = `${lcd}/cosmos/tx/v1beta1/txs?query=${encodeURIComponent(`transfer.recipient='${wallet}'`)}&pagination.limit=${limit}&order_by=2`;
           const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
           if (!r.ok) continue;
           const data = await r.json();
