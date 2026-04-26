@@ -11,21 +11,6 @@ const T_WALLETS = {
 const T_LCD = [
   'https://terra-classic-lcd.publicnode.com',
   'https://lcd.terraclassic.community',
-  'https://rest.cosmos.directory/terra',
-  'https://terra-classic-lcd.hexxagon.io',
-];
-// Nodes that support tx search by events (tx indexer enabled)
-// publicnode returns 500 on /cosmos/tx/v1beta1/txs?events=... so excluded
-const T_LCD_TX = [
-  'https://terra-classic-lcd.hexxagon.io',
-  'https://terra-classic.rpc.thirdweb.com',
-  'https://rest.cosmos.directory/terra',
-  'https://lcd.terraclassic.community',
-];
-// FCD nodes — more reliable for tx history queries
-const T_FCD = [
-  'https://terra-classic-fcd.publicnode.com',
-  'https://fcd.terra-classic.hexxagon.io',
 ];
 function tFmt(uluna) {
   const n = uluna / 1_000_000;
@@ -90,46 +75,40 @@ async function tLoadRecentTxs(retries = 5) {
   }
   el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:12px;">Loading transactions...</div>';
 
-  // Helper: fetch txs for one wallet via Worker proxy (bypasses CORS/DNS issues)
+  // Helper: fetch txs for one wallet and parse into unified rows
   async function fetchTxsFor(wallet, limit) {
-    const WORKER = 'https://oracle-draw.vladislav-baydan.workers.dev';
-    let rawTxs = null;
-    try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 12000);
-      const r = await fetch(`${WORKER}/proxy-txs?wallet=${wallet}&limit=${limit}`, { signal: ctrl.signal });
-      clearTimeout(timer);
-      if (r.ok) {
-        const body = await r.json();
-        rawTxs = body.txs || null;
-      }
-    } catch(e) {
-      console.warn('Treasury txs: Worker proxy failed:', e.message);
-    }
-    if (!rawTxs) return [];
-
+    const url = `${T_LCD[0]}/cosmos/tx/v1beta1/txs?events=transfer.recipient%3D%27${wallet}%27&pagination.limit=${limit}&order_by=2`;
+    const r = await fetch(url);
+    if (!r.ok) return [];
+    const data = await r.json();
+    const txBodies    = data.txs || [];
+    const txResponses = data.tx_responses || [];
     const results = [];
+    const count = Math.max(txBodies.length, txResponses.length);
+
     const CHAT_AMT = 5000 * 1e6;
-    const QA_WEEKLY_AMT = 100000 * 1e6;
-    const QA_TREASURY_AMT = 100000 * 1e6;
-    const DRAW_NFT_MIN = 24750 * 1e6;
+    const QA_WEEKLY_AMT = 100000 * 1e6; // Q&A → Weekly Pool
+    const QA_TREASURY_AMT = 100000 * 1e6; // Q&A → Treasury
+    const DRAW_NFT_MIN = 24750 * 1e6; // ~25k LUNC (Common NFT with tax)
     const TOL = 0.05;
 
-    for (const tx of rawTxs) {
-      const tsRaw = tx.timestamp ? new Date(tx.timestamp) : null;
+    for (let i = 0; i < count; i++) {
+      const txBody = txBodies[i];
+      const txMeta = txResponses[i];
+      if (!txMeta) continue;
+
+      const tsRaw = txMeta.timestamp ? new Date(txMeta.timestamp) : null;
       const ts = tsRaw
         ? tsRaw.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' + tsRaw.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})
         : '';
       const tsMs = tsRaw ? tsRaw.getTime() : 0;
-      const hash = tx.txhash || '';
-      const memo = tx.tx?.value?.memo || '';
-      const msgs = tx.tx?.value?.msg  || [];
+      const hash = txMeta.txhash || '';
+      const memo = txBody?.body?.memo || '';
+      const msgs = txBody?.body?.messages || [];
 
       let rawUluna = 0;
       for (const msg of msgs) {
-        const val = msg.value || {};
-        if ((val.to_address || '') !== wallet) continue;
-        const coins = val.amount || [];
+        const coins = msg.amount || [];
         const lunc = Array.isArray(coins) ? coins.find(c => c.denom === 'uluna') : null;
         if (lunc) { rawUluna = parseInt(lunc.amount); break; }
       }
@@ -141,23 +120,23 @@ async function tLoadRecentTxs(retries = 5) {
         if (rawUluna >= CHAT_AMT*(1-TOL) && rawUluna <= CHAT_AMT*(1+TOL))
           label = 'Chat';
         else if (rawUluna >= QA_TREASURY_AMT*(1-TOL) && rawUluna <= QA_TREASURY_AMT*(1+TOL))
-          label = 'Q&A - Treasury';
+          label = 'Q&A — Treasury';
         else if (memo && memo.toLowerCase().includes('daily'))
-          label = 'Oracle Draw - Daily (10%)';
+          label = 'Oracle Draw — Daily (10%)';
         else if (memo && memo.toLowerCase().includes('weekly'))
-          label = 'Oracle Draw - Weekly (10%)';
+          label = 'Oracle Draw — Weekly (10%)';
         else
           label = memo || 'Transfer';
       } else if (wallet === T_WALLETS.weekly) {
         if (rawUluna >= QA_WEEKLY_AMT*(1-TOL) && rawUluna <= QA_WEEKLY_AMT*(1+TOL))
-          label = 'Q&A - Weekly Pool';
+          label = 'Q&A — Weekly Pool';
         else if (rawUluna >= DRAW_NFT_MIN)
-          label = 'Oracle Draw - Weekly NFT';
+          label = 'Oracle Draw — Weekly NFT';
         else
           label = memo || 'Transfer';
       } else if (wallet === T_WALLETS.daily) {
         if (rawUluna >= DRAW_NFT_MIN)
-          label = 'Oracle Draw - Daily NFT';
+          label = 'Oracle Draw — Daily NFT';
         else
           label = memo || 'Transfer';
       } else {
@@ -195,7 +174,7 @@ async function tLoadRecentTxs(retries = 5) {
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
           <span style="font-size:11px;font-weight:700;color:#66ffaa;font-family:Rajdhani,sans-serif;">+${tx.amount}</span>
-          <a href="https://finder.terraclassic.community/columbus-5/tx/${tx.hash}" target="_blank"
+          <a href="https://finder.terraport.finance/classic/tx/${tx.hash}" target="_blank"
             style="font-size:9px;color:var(--accent);text-decoration:none;background:rgba(84,147,247,0.08);border:1px solid rgba(84,147,247,0.2);border-radius:5px;padding:3px 8px;white-space:nowrap;">
             🔗 ${tx.hash.slice(0,8)}...</a>
         </div>
