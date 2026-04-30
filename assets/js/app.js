@@ -1,13 +1,12 @@
 if (history.scrollRestoration) history.scrollRestoration = 'manual';
 // ── Safe profile helpers (defined in profile.js, may load later) ──────────
 function _getDisplayName(address, fallback) {
-  if (!address) return fallback || 'Anonymous';
-  if (typeof getDisplayName === 'function') return getDisplayName(address);
-  return fallback || ('Anonymous#' + address.slice(-4).toUpperCase());
+  // Fully anonymous — show only wallet address, no nicknames
+  if (!address) return 'Anonymous';
+  return address.slice(0, 8) + '...' + address.slice(-4);
 }
 function _getProfileAvatar(address) {
-  if (!address) return null;
-  if (typeof getProfileAvatar === 'function') return getProfileAvatar(address);
+  // Fully anonymous — no avatars
   return null;
 }
 
