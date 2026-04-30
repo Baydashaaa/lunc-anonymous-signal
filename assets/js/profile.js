@@ -603,10 +603,10 @@ function renderProfilePage() {
 
   // Load question stats from worker + chat stats from chain + streak + draw REP in parallel
   Promise.all([
-    fetchQuestionStats(address),
-    fetchChatStats(address),
-    fetchStreakData(address),
-    fetchDrawRep(address),
+    fetchQuestionStats(address).catch(() => ({ myQuestions: [], myAnswers: [], totalUpvotes: 0, topAnswers: 0, allQuestions: [] })),
+    fetchChatStats(address).catch(() => ({ msgCount: 0, entriesEarned: 0, todayMsgs: 0, todayEntries: 0, days: {}, qaCount: 0 })),
+    fetchStreakData(address).catch(() => null),
+    fetchDrawRep(address).catch(() => null),
   ]).then(([qStats, chatStats, streakData, drawRep]) => {
     const { myQuestions, myAnswers, totalUpvotes, topAnswers, allQuestions } = qStats;
 
@@ -645,7 +645,11 @@ function renderMessageProgress(stats) {
   const el = document.getElementById('message-milestone-section');
   if (!el) return;
 
-  const { msgCount, entriesEarned, todayMsgs, todayEntries } = stats;
+  // Guard against undefined stats (network error or slow load)
+  const msgCount     = stats?.msgCount     ?? 0;
+  const entriesEarned = stats?.entriesEarned ?? 0;
+  const todayMsgs    = stats?.todayMsgs    ?? 0;
+  const todayEntries = stats?.todayEntries  ?? 0;
 
   // Progress to next entry: X/10 msgs total
   const totalProgress = msgCount % 10;
