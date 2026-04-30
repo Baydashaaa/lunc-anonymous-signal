@@ -373,7 +373,7 @@ async function prefetchProfiles(addresses) {
   const toFetch = unique.filter(addr => {
     if (_profileFetchCache[addr]) return false; // already fetching/fetched
     const p = loadProfile(addr);
-    if (p && (p.nickname || p.avatar)) return false; // already in localStorage
+    if (p) return false; // already fetched
     return true;
   });
   if (!toFetch.length) return;
@@ -390,20 +390,7 @@ function saveProfileData(address, data) {
 }
 
 async function syncProfileToWorker(address, data) {
-  try {
-    const payload = { wallet: address, nickname: data.nickname || null };
-    // Only send avatar if it exists - don't overwrite with null
-    if (data.avatar !== undefined && data.avatar !== null) {
-      payload.avatar = data.avatar;
-    }
-    await fetch(`${WORKER_URL}/profile`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-  } catch(e) {
-    console.warn('Profile sync failed:', e.message);
-  }
+  // Disabled — fully anonymous, no profile sync
 }
 
 async function loadProfileFromWorker(address) {
@@ -412,13 +399,7 @@ async function loadProfileFromWorker(address) {
     const res = await fetch(`${WORKER_URL}/profile?wallet=${address}`);
     if (!res.ok) return null;
     const data = await res.json();
-    if (data.nickname || data.avatar) {
-      // Merge with localStorage - worker is source of truth
-      const local = loadProfile(address) || {};
-      const merged = { ...local, ...data };
-      localStorage.setItem(getProfileKey(address), JSON.stringify(merged));
-      return merged;
-    }
+    // Anonymous — don't load or cache nickname/avatar
     return null;
   } catch(e) {
     console.warn('Profile load from worker failed:', e.message);
@@ -427,20 +408,19 @@ async function loadProfileFromWorker(address) {
 }
 
 function getProfileNickname(address) {
-  const p = loadProfile(address);
-  return p?.nickname || null;
+  // Fully anonymous — no nicknames
+  return null;
 }
 
 function getProfileAvatar(address) {
-  const p = loadProfile(address);
-  return p?.avatar || null;
+  // Fully anonymous — no avatars
+  return null;
 }
 
 function getDisplayName(address) {
+  // Fully anonymous — wallet address only
   if (!address) return 'Anonymous';
-  const nick = getProfileNickname(address);
-  if (nick) return nick;
-  return 'Anonymous#' + address.slice(-4).toUpperCase();
+  return address.slice(0, 8) + '...' + address.slice(-4);
 }
 
 // ─── OPEN PROFILE PAGE ────────────────────────────────────────
@@ -601,13 +581,11 @@ function renderProfilePage() {
   const address = globalWalletAddress;
   if (!address) return;
 
-  const profile = loadProfile(address) || {};
+  // Anonymous profile — wallet address only, no nickname/avatar
   const topCount = getTopAnswerCount(address);
-  // Wallet short
-  document.getElementById('profile-wallet-short').textContent = address.slice(0,12) + '...' + address.slice(-6);
-
-  // Display name
-  document.getElementById('profile-display-name').textContent = profile.nickname || ('Anonymous#' + address.slice(-4).toUpperCase());
+  // Wallet address — show full address
+  const walletShortEl = document.getElementById('profile-wallet-short');
+  if (walletShortEl) walletShortEl.textContent = address;
 
   // Title badge - show loading until real data arrives
   const titleEl = document.getElementById('profile-title-badge');
@@ -615,21 +593,6 @@ function renderProfilePage() {
     titleEl.textContent = '…';
     titleEl.style.color = 'var(--muted)';
   }
-
-  // Avatar
-  const img = document.getElementById('profile-avatar-img');
-  const placeholder = document.getElementById('profile-avatar-placeholder');
-  if (profile.avatar) {
-    img.src = profile.avatar;
-    img.style.display = 'block';
-    placeholder.style.display = 'none';
-  } else {
-    img.style.display = 'none';
-    placeholder.style.display = 'block';
-  }
-
-  // Nickname input
-  document.getElementById('profile-nickname-input').value = profile.nickname || '';
 
   // Stats - show loading state
   document.getElementById('stat-questions').textContent = '…';
@@ -899,22 +862,7 @@ function toggleProfileEdit() {
 }
 
 function saveProfile() {
-  const address = globalWalletAddress;
-  if (!address) return;
-  const nickname = document.getElementById('profile-nickname-input').value.trim().slice(0, 24);
-  const existing = loadProfile(address) || {};
-  saveProfileData(address, { ...existing, nickname });
-
-  // Update display name in navbar wallet button
-  const short = address.slice(0,8) + '...' + address.slice(-4);
-  document.getElementById('wallet-btn-label').textContent = nickname || short;
-
-  toggleProfileEdit();
-  renderProfilePage();
-
-  // Re-render board and chat so nickname shows everywhere immediately
-  if (typeof renderBoard === 'function') renderBoard();
-  if (typeof renderChatMessages === 'function' && typeof cachedMsgs !== 'undefined') renderChatMessages(cachedMsgs);
+  // Profiles are fully anonymous — no nickname saving
 }
 
 // ─── AVATAR ───────────────────────────────────────────────────
@@ -923,43 +871,11 @@ function triggerAvatarUpload() {
 }
 
 function handleAvatarUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  if (file.size > 5 * 1024 * 1024) { alert('Image too large. Max 5MB.'); return; }
-
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    // Compress image using canvas before saving
-    const img = new Image();
-    img.onload = function() {
-      const canvas = document.createElement('canvas');
-      const MAX_SIZE = 300;
-      let w = img.width, h = img.height;
-      if (w > h) { if (w > MAX_SIZE) { h = h * MAX_SIZE / w; w = MAX_SIZE; } }
-      else        { if (h > MAX_SIZE) { w = w * MAX_SIZE / h; h = MAX_SIZE; } }
-      canvas.width = w;
-      canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      // Compress to JPEG quality 0.82
-      const compressed = canvas.toDataURL('image/jpeg', 0.82);
-      const address = globalWalletAddress;
-      if (!address) return;
-      const existing = loadProfile(address) || {};
-      saveProfileData(address, { ...existing, avatar: compressed });
-      renderProfilePage();
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
+  // Disabled — fully anonymous
 }
 
 function removeAvatar() {
-  const address = globalWalletAddress;
-  if (!address) return;
-  const existing = loadProfile(address) || {};
-  delete existing.avatar;
-  saveProfileData(address, existing);
-  renderProfilePage();
+  // Disabled — fully anonymous
 }
 
 // ─── PATCH: показывать никнейм вместо Anonymous#xxxx ─────────
